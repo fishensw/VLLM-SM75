@@ -3,6 +3,7 @@
 import asyncio
 import os
 import socket
+import subprocess
 import time
 import warnings
 from collections.abc import AsyncGenerator, Iterable, Mapping
@@ -55,6 +56,43 @@ from vllm.v1.metrics.prometheus import shutdown_prometheus
 from vllm.v1.metrics.stats import IterationStats
 
 logger = init_logger(__name__)
+
+# ---------------------------------------------------------------------------
+# vllm-sm75 overlay: deep-sleep respawn tuning.
+#
+# Respawning an engine is a full cold start (model load + CUDA graph capture),
+# and GPU memory is released asynchronously when the previous engine exits.
+# A single failed attempt used to wedge the API server forever, so attempts
+# are now retried (after reaping orphan processes) and the gate stays armed
+# for later requests instead of marking the engine permanently dead.
+#
+# Timeouts are deliberately generous: a cold start reads the whole model from
+# disk, which on a mechanical HDD with a large model can take many minutes.
+# Every value is overridable via env.
+# ---------------------------------------------------------------------------
+# Attempts per request batch before failing fast.
+VLLM_SM75_RESPAWN_MAX_ATTEMPTS = int(
+    os.environ.get("VLLM_SM75_RESPAWN_MAX_ATTEMPTS", "3")
+)
+# Backoff between attempts, in seconds.
+VLLM_SM75_RESPAWN_BACKOFF_S = float(
+    os.environ.get("VLLM_SM75_RESPAWN_BACKOFF_S", "5")
+)
+# Upper bound for waiting for GPU memory to be released before each retry.
+VLLM_SM75_RESPAWN_GPU_WAIT_S = float(
+    os.environ.get("VLLM_SM75_RESPAWN_GPU_WAIT_S", "120")
+)
+# Wall-clock cap for a single respawn attempt (model load + ready wait).  The
+# model-load step (asyncio.to_thread) has no built-in timeout and can stall on
+# a slow disk; this bounds it so one stuck load cannot hang the gate forever.
+VLLM_SM75_RESPAWN_ATTEMPT_TIMEOUT_S = float(
+    os.environ.get("VLLM_SM75_RESPAWN_ATTEMPT_TIMEOUT_S", "3600")
+)
+# Wall-clock cap for the whole retry loop.  A backstop so a bad respawn cycle
+# cannot hold the gate (and every request behind it) for an unbounded time.
+VLLM_SM75_RESPAWN_TOTAL_BUDGET_S = float(
+    os.environ.get("VLLM_SM75_RESPAWN_TOTAL_BUDGET_S", "7200")
+)
 
 
 class InputStreamError(Exception):
@@ -115,6 +153,19 @@ class AsyncLLM(EngineClient):
         # requests arriving while the engine is down trigger exactly one
         # respawn and all wait for it.
         self._deep_sleep_respawn_lock = asyncio.Lock()
+        # Shared in-flight respawn task.  The respawn must NOT run inside a
+        # request's coroutine: when a client times out and disconnects, uvicorn
+        # cancels that coroutine, which aborted the cold start halfway and left
+        # orphaned engine processes holding GPU memory.  Those orphans then
+        # starved the next respawn ("free memory ... is less than desired GPU
+        # memory utilization"), which is what made concurrent wake-ups fail.
+        # Running it as a detached task + awaiting it under asyncio.shield()
+        # keeps it alive across client disconnects and lets later requests
+        # join the cold start that is already in progress.
+        self._deep_sleep_respawn_task: asyncio.Task | None = None
+        # Set when the last respawn attempt failed: the gate stays armed so a
+        # later request retries instead of the server staying wedged forever.
+        self._deep_sleep_respawn_pending = False
         self.model_config = vllm_config.model_config
         self.observability_config = vllm_config.observability_config
 
@@ -310,8 +361,13 @@ class AsyncLLM(EngineClient):
 
         # vllm-sm75 overlay: deep-sleep gate.  If the engine exited for deep
         # sleep (auto-sleep "exit"), respawn it transparently before
-        # submitting; this request's latency includes the cold start.
-        if self.engine_core.resources.engine_sleeping:
+        # submitting; this request's latency includes the cold start.  The
+        # pending flag also re-enters the gate after a failed attempt so the
+        # request retries instead of being served by a missing engine.
+        if (
+            self.engine_core.resources.engine_sleeping
+            or self._deep_sleep_respawn_pending
+        ):
             await self._await_deep_sleep_respawn()
 
         is_pooling = isinstance(params, PoolingParams)
@@ -1130,31 +1186,238 @@ class AsyncLLM(EngineClient):
         return EngineDeadError()
 
     async def _await_deep_sleep_respawn(self) -> None:
-        # vllm-sm75 overlay: deep-sleep respawn gate.
+        # vllm-sm75 overlay: concurrency-safe deep-sleep respawn gate.
         #
-        # Serializes respawns: concurrent requests that arrive while the
-        # engine is exited share a single respawn and all wait for it.  On
-        # failure the engine is marked dead so later requests fail fast
-        # instead of retrying a broken respawn forever.
+        # Requests arriving while the engine is asleep share ONE respawn: the
+        # first one ("leader") performs it, the rest join the in-flight task
+        # and reuse the outcome.  The respawn runs as a detached task awaited
+        # under asyncio.shield() so a client disconnect (which cancels the
+        # request coroutine) cannot abort the cold start halfway and leave
+        # orphaned engine processes holding GPU memory.
+        #
+        # A failed attempt no longer marks the engine permanently dead (which
+        # wedged the API server until the container was restarted): the gate
+        # stays armed so the next request retries once GPU memory is free.
+        resources = self.engine_core.resources
+
+        # Fast path: engine is awake and no respawn is owed.
+        if not resources.engine_sleeping and not self._deep_sleep_respawn_pending:
+            return
+
         async with self._deep_sleep_respawn_lock:
-            if not self.engine_core.resources.engine_sleeping:
-                return  # another request already respawned it
+            # Re-check under the lock -- an earlier request may have already
+            # finished the work while we waited for the lock.
+            if not resources.engine_sleeping and not self._deep_sleep_respawn_pending:
+                return
+            task = self._deep_sleep_respawn_task
+            if task is None or task.done():
+                # Start (or restart, if a prior attempt's task is finished) a
+                # detached respawn.  It outlives this request so a client
+                # disconnect cannot abort the cold start.  Checking
+                # task.done() -- not just `is None` -- means a finished attempt
+                # is always replaced by a fresh one instead of being re-awaited
+                # (e.g. when the only waiter was cancelled before it completed).
+                task = asyncio.create_task(self._respawn_engine_with_retries())
+                self._deep_sleep_respawn_task = task
+                # Consume the exception if every waiter goes away, to avoid
+                # "Task exception was never retrieved" noise.
+                task.add_done_callback(
+                    lambda t: t.cancelled() or t.exception()
+                )
+                logger.info(
+                    "[deep-sleep] engine exited for deep sleep; respawning it "
+                    "(cold start; this request's latency includes it)"
+                )
+            else:
+                logger.info(
+                    "[deep-sleep] respawn already in progress; joining it "
+                    "instead of starting a second engine"
+                )
+
+        try:
+            # shield(): if this request is cancelled (client timeout), the
+            # shared respawn keeps running for the other waiters.
+            await asyncio.shield(task)
+        finally:
+            # Whoever observes it finished clears the shared slot so a later
+            # request can start a fresh attempt (i.e. retry after a failure).
+            if task.done() and self._deep_sleep_respawn_task is task:
+                self._deep_sleep_respawn_task = None
+
+    async def _respawn_engine_with_retries(self) -> None:
+        """Run the deep-sleep respawn, retrying after reaping orphan engines.
+
+        A failed respawn can leave worker processes alive that still hold GPU
+        memory but are unreachable (the handshake never completed).  They must
+        be reaped and their memory released before the next attempt, otherwise
+        every retry fails with "free memory on device ... is less than desired
+        GPU memory utilization".
+
+        The FIRST attempt is the common case (the engine exited cleanly for
+        deep sleep, so there are no orphans and its GPU memory is released
+        asynchronously); it therefore goes straight to the respawn without the
+        reap / GPU-memory wait that only matter after a failure.
+        """
+        last_exc: BaseException | None = None
+        # Backstop so a bad respawn cycle cannot hold the gate (and every
+        # request behind it) for an unbounded time.
+        deadline = time.monotonic() + VLLM_SM75_RESPAWN_TOTAL_BUDGET_S
+
+        for attempt in range(1, VLLM_SM75_RESPAWN_MAX_ATTEMPTS + 1):
+            if time.monotonic() >= deadline:
+                logger.warning(
+                    "[deep-sleep] respawn total budget (%.0fs) exhausted "
+                    "before attempt %d/%d; deferring to a later request",
+                    VLLM_SM75_RESPAWN_TOTAL_BUDGET_S,
+                    attempt,
+                    VLLM_SM75_RESPAWN_MAX_ATTEMPTS,
+                )
+                break
+
+            # Only retry attempts need to clean up: a clean deep-sleep exit
+            # left no orphans and its GPU memory is being released async.
+            if attempt > 1:
+                await self._reap_orphan_engine()
+                if not await self._wait_for_gpu_memory():
+                    logger.warning(
+                        "[deep-sleep] GPU memory still occupied before respawn "
+                        "attempt %d/%d; attempting anyway",
+                        attempt,
+                        VLLM_SM75_RESPAWN_MAX_ATTEMPTS,
+                    )
+
             t0 = time.monotonic()
-            logger.info(
-                "[deep-sleep] engine exited for deep sleep; respawning it for "
-                "the incoming request (cold start; this request's latency "
-                "includes it)"
-            )
             try:
-                await self.engine_core.respawn_engine()
-            except Exception:
-                self.engine_core.resources.engine_sleeping = False
-                self.engine_core.resources.engine_dead = True
-                logger.exception("[deep-sleep] engine respawn failed")
-                raise EngineDeadError() from None
+                # wait_for() bounds a single attempt: the model-load step
+                # (asyncio.to_thread) has no built-in timeout and can stall on
+                # a slow disk, which would otherwise hang the gate forever.
+                await asyncio.wait_for(
+                    self.engine_core.respawn_engine(),
+                    timeout=VLLM_SM75_RESPAWN_ATTEMPT_TIMEOUT_S,
+                )
+            except Exception as e:  # noqa: BLE001 - retried / reported below
+                last_exc = e
+                logger.warning(
+                    "[deep-sleep] engine respawn attempt %d/%d failed after "
+                    "%.1fs: %s",
+                    attempt,
+                    VLLM_SM75_RESPAWN_MAX_ATTEMPTS,
+                    time.monotonic() - t0,
+                    e,
+                )
+                if attempt < VLLM_SM75_RESPAWN_MAX_ATTEMPTS:
+                    await asyncio.sleep(VLLM_SM75_RESPAWN_BACKOFF_S)
+                continue
+
             logger.info(
-                "[deep-sleep] engine respawned in %.1fs", time.monotonic() - t0
+                "[deep-sleep] engine respawned in %.1fs (attempt %d)",
+                time.monotonic() - t0,
+                attempt,
             )
+            self._deep_sleep_respawn_pending = False
+            return
+
+        # All attempts failed (or the total budget ran out).  Deliberately
+        # leave `engine_sleeping` set: the liveness monitor treats an exit
+        # while sleeping as intentional (it keeps the client alive), whereas
+        # clearing it would make the monitor treat the failure as a crash and
+        # shut the client down for good.  The pending flag lets a later
+        # request retry.  Note: while the engine is down the liveness monitor
+        # has nothing to watch (respawn_engine restarts it on success), so the
+        # brief monitoring gap is harmless.
+        self._deep_sleep_respawn_pending = True
+        logger.error(
+            "[deep-sleep] engine respawn failed after %d attempts; the next "
+            "request will retry",
+            VLLM_SM75_RESPAWN_MAX_ATTEMPTS,
+        )
+        raise EngineDeadError() from last_exc
+
+    async def _reap_orphan_engine(self) -> None:
+        """Shut down engine processes left behind by a failed respawn.
+
+        Those processes hold GPU memory but are unreachable because the API
+        server never completed the handshake with them.
+
+        NOTE: when a prior attempt left a *live but unreachable* engine, the
+        liveness monitor thread is still blocked in
+        ``monitor_engine_liveness()``.  ``shutdown()`` terminates that process,
+        which is what unblocks the monitor; the two operate on the same process
+        lifecycle (the manager serializes terminate/join), so this is safe.
+        """
+        def _shutdown() -> None:
+            manager = getattr(self.engine_core.resources, "engine_manager", None)
+            if manager is None:
+                return
+            try:
+                manager.shutdown(timeout=30)
+            except Exception as e:  # noqa: BLE001 - best effort cleanup
+                logger.warning(
+                    "[deep-sleep] orphan engine cleanup failed: %s", e
+                )
+
+        await asyncio.to_thread(_shutdown)
+
+    async def _wait_for_gpu_memory(self) -> bool:
+        """Wait until every visible GPU has enough free memory for the
+        configured ``gpu_memory_utilization``.
+
+        Returns True when it is safe to respawn (enough free, or the free
+        memory cannot be determined, in which case we do not gate), and False
+        only when GPUs are still occupied after the wait timeout.
+        """
+        try:
+            utilization = self.vllm_config.cache_config.gpu_memory_utilization
+        except Exception:  # noqa: BLE001 - fall back to a sane default
+            utilization = 0.9
+
+        def _enough_free() -> bool | None:
+            try:
+                proc = subprocess.run(
+                    [
+                        "nvidia-smi",
+                        "--query-gpu=memory.free,memory.total",
+                        "--format=csv,noheader,nounits",
+                    ],
+                    capture_output=True,
+                    text=True,
+                    timeout=10,
+                )
+            except Exception:  # noqa: BLE001 - cannot query; do not block
+                return None
+            if proc.returncode != 0:
+                return None
+            enough = True
+            for line in proc.stdout.strip().splitlines():
+                parts = [p.strip() for p in line.split(",")]
+                if len(parts) < 2:
+                    continue
+                try:
+                    free_mib, total_mib = float(parts[0]), float(parts[1])
+                except ValueError:
+                    continue
+                if free_mib < total_mib * utilization:
+                    enough = False
+            return enough
+
+        deadline = time.monotonic() + VLLM_SM75_RESPAWN_GPU_WAIT_S
+        query_warned = False
+        while True:
+            result = await asyncio.to_thread(_enough_free)
+            if result is None:
+                # Cannot query nvidia-smi: do not gate the respawn on memory.
+                if not query_warned:
+                    logger.warning(
+                        "[deep-sleep] cannot query nvidia-smi; proceeding "
+                        "without a GPU-memory gate"
+                    )
+                    query_warned = True
+                return True
+            if result:
+                return True
+            if time.monotonic() >= deadline:
+                return False
+            await asyncio.sleep(2)
 
     async def init_weight_transfer_engine(
         self, request: WeightTransferInitRequest
