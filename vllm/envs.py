@@ -184,6 +184,9 @@ if TYPE_CHECKING:
     VLLM_RAY_EXTRA_ENV_VARS_TO_COPY: str = ""
     VLLM_MARLIN_USE_ATOMIC_ADD: bool = False
     VLLM_MARLIN_INPUT_DTYPE: Literal["int8", "fp8"] | None = None
+    VLLM_FIREFLY: bool = False
+    VLLM_FIREFLY_MIN_M: int = 1024
+    VLLM_FIREFLY_MODE: str = "hard"
     VLLM_HUMMING_ONLINE_QUANT_CONFIG: dict[str, Any] | None = None
     VLLM_HUMMING_INPUT_QUANT_CONFIG: dict[str, Any] | None = None
     VLLM_HUMMING_USE_F16_ACCUM: bool = False
@@ -1513,6 +1516,22 @@ environment_variables: dict[str, Callable[[], Any]] = {
     # The activation dtype for marlin kernel
     "VLLM_MARLIN_INPUT_DTYPE": env_with_choices(
         "VLLM_MARLIN_INPUT_DTYPE", None, ["int8", "fp8"]
+    ),
+    # firefly(SM75): int4 权重混合 prefill 加速。大 M 把 int4 现反量化成 int8 走
+    # CUTLASS(IMMA), 小 M/decode 保持 int4 Marlin(fp16 激活)。见
+    # model_executor/layers/quantization/utils/firefly.py。
+    "VLLM_FIREFLY": lambda: (
+        os.environ.get("VLLM_FIREFLY", "0") == "1"
+    ),
+    # 默认 1024: T10 上 p3_perf_sweep(6144x5120 层)测得 int8 反量化 ~1ms/层
+    # (M 无关地板), crossover M≈854; M>1024 int8 才稳定快于 marlin(1.13-1.33x)。
+    "VLLM_FIREFLY_MIN_M": lambda: int(
+        os.environ.get("VLLM_FIREFLY_MIN_M", "1024")
+    ),
+    # "hard"(默认): 不存干净 int4 副本, prefill 步现从 marlin 布局反回(0.53 字节/
+    # 参数, 27B 能装下); "easy": 另存干净 int4 副本(1.0 字节/参数, 大模型 OOM)。
+    "VLLM_FIREFLY_MODE": lambda: (
+        os.environ.get("VLLM_FIREFLY_MODE", "hard")
     ),
     # The online quantization dtype for humming kernel
     "VLLM_HUMMING_ONLINE_QUANT_CONFIG": lambda: maybe_convert_json_str_or_file(

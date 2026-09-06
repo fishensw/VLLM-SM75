@@ -119,6 +119,7 @@ docker run --detach --rm \
   --env VLLM_USE_FLASHINFER_SAMPLER=0 \
   --env VLLM_USE_NCCL_SYMM_MEM=0 \
   --env VLLM_ALLREDUCE_USE_SYMM_MEM=0 \
+  --env VLLM_FIREFLY=1 \
   --entrypoint vllm \
   vllm-sm75-v0.1.0 \
   serve Qwen/Qwen3.8-27B-FP8 \
@@ -163,6 +164,35 @@ curl http://127.0.0.1:8000/v1/chat/completions \
 These parameters reproduce the validated 4 x Tesla T10, TP4, Qwen3.8 27B FP8
 configuration. Adjust tensor parallelism, model length, concurrency, and GPU
 memory utilization when changing the GPU count, model, or available memory.
+
+## firefly (int4/fp8 weights -> int8 prefill acceleration)
+
+The launch command above enables this by default (`--env VLLM_FIREFLY=1`,
+`MIN_M`/`MODE` use defaults). Related environment variables:
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `VLLM_FIREFLY` | `0` (off) | Set to `1` to enable firefly prefill. Applies to int4 weights + fp16/bf16 activations and W8A8-FP8 (fp8 weights, large-M prefill); other combinations are unaffected (loading and decode remain unchanged) |
+| `VLLM_FIREFLY_MIN_M` | `1024` | Firefly prefill kicks in only when batch M exceeds this value; small M (decode) keeps int4 Marlin. Dequantization is a fixed cost independent of M, so smaller M means a higher overhead ratio — tune up based on measurements |
+| `VLLM_FIREFLY_MODE` | `hard` | `hard` = no clean int4 copy stored; prefill dequantizes on the fly from the marlin layout (saves memory, fits 27B); `easy` = stores a clean int4 copy at load time (faster dequantization, but adds ~0.5 byte/param of memory, may OOM on large models) |
+
+Notes:
+
+- Only large-M prefill is affected; decode and weight loading are bit-identical
+  to upstream.
+- Both symmetric int4 (W4A16/GPTQ, zp=8) and asymmetric int4 (AWQ, per-group
+  zero point) are supported; dequantization is unified as `w_deq = (q - zp) * s`.
+- The int8 GEMM introduces one extra weight int8 quantization folding step;
+  prefill output has a tiny numerical difference from int4 Marlin
+  (cos_sim > 0.9999 magnitude), no impact on readability.
+- Requires the in-image CUDA toolchain to support `sm_75` via
+  `torch.utils.cpp_extension` JIT; without a GPU or on compilation failure it
+  automatically falls back to PyTorch dequantization (correct but ~50ms/layer
+  slower), without affecting service startup.
+- End-to-end validated on 2 x Tesla T10 (SM75), TP2, Qwen3.8 27B W4A16/AWQ
+  (int4); W8A8-FP8 (fp8 weights) is also supported: large-M prefill dequantizes
+  fp8 -> int8 (validated on 0.6B-fp8, 1.24x e2e prefill, outputs match baseline),
+  decode and loading unchanged.
 
 ## Idle auto-sleep
 

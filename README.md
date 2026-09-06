@@ -110,6 +110,7 @@ docker run --detach --rm \
   --env VLLM_USE_FLASHINFER_SAMPLER=0 \
   --env VLLM_USE_NCCL_SYMM_MEM=0 \
   --env VLLM_ALLREDUCE_USE_SYMM_MEM=0 \
+  --env VLLM_FIREFLY=1 \
   --entrypoint vllm \
   vllm-sm75-v0.1.0 \
   serve Qwen/Qwen3.8-27B-FP8 \
@@ -152,6 +153,31 @@ curl http://127.0.0.1:8000/v1/chat/completions \
 
 以上参数对应本项目的 4 x Tesla T10、TP4、Qwen3.8 27B FP8 验证配置。更换
 GPU 数量、模型或可用显存后，再相应调整 TP、模型长度、并发和显存利用率。
+
+## firefly（int4/fp8 权重 → int8 prefill 加速）
+
+上面的启动命令已默认启用（`--env VLLM_FIREFLY=1`，`MIN_M`/`MODE` 用默认值）。
+相关环境变量：
+
+| 环境变量 | 默认 | 说明 |
+| --- | --- | --- |
+| `VLLM_FIREFLY` | `0`（关闭） | 设 `1` 启用 firefly prefill。对 int4 权重 + fp16/bf16 激活、W8A8-FP8（fp8 权重，大 M prefill）生效，其它组合无影响（加载与 decode 均不变） |
+| `VLLM_FIREFLY_MIN_M` | `1024` | batch M 超过该值才走 firefly prefill；小 M（decode）保持 int4 Marlin。反量化是 M 无关的固定成本，M 越小占比越高，可按实测调高 |
+| `VLLM_FIREFLY_MODE` | `hard` | `hard` = 不额外存干净 int4 副本，prefill 时从 marlin 布局现反回（省显存，27B 可装下）；`easy` = 加载时存一份干净 int4 副本（反量化更快，但多约 0.5 字节/参数显存，大模型可能 OOM） |
+
+注意事项：
+
+- 仅 prefill 大 M 受影响；decode 与权重加载与上游逐 bit 一致。
+- 对称 int4（W4A16/GPTQ，zp=8）与非对称 int4（AWQ，per-group zero point）都支持，
+  反量化统一 `w_deq = (q - zp) * s`。
+- int8 GEMM 引入一道额外的权重 int8 量化折叠，prefill 输出与 int4 Marlin 有
+  微小数值差异（cos_sim > 0.9999 量级），不影响通顺度。
+- 需要镜像内 CUDA 工具链支持 `sm_75` 的 `torch.utils.cpp_extension` JIT；
+  无 GPU 或编译失败时自动回退 PyTorch 反量化（正确但慢约 50ms/层），不影响
+  服务启动。
+- 已在 2 x Tesla T10（SM75）、TP2、Qwen3.8 27B W4A16/AWQ（int4）上完成端到端
+  验证；W8A8-FP8（fp8 权重）也支持：大 M prefill 现反量化 fp8 → int8
+  （0.6B-fp8 验证 e2e prefill 1.24×，输出与 baseline 一致），decode 与加载不变。
 
 ## 空闲自动睡眠（auto-sleep）
 

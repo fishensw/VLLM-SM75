@@ -57,12 +57,20 @@ COPY vllm/entrypoints/serve/utils/api_utils.py \
     /tmp/sm75-overlay/entrypoints/serve/utils/api_utils.py
 COPY vllm/distributed/kv_transfer/kv_connector/v1/base.py \
     /tmp/sm75-overlay/distributed/kv_transfer/kv_connector/v1/base.py
+COPY vllm/model_executor/kernels/linear/mixed_precision/marlin.py \
+    /tmp/sm75-overlay/model_executor/kernels/linear/mixed_precision/marlin.py
+COPY vllm/model_executor/kernels/linear/scaled_mm/marlin.py \
+    /tmp/sm75-overlay/model_executor/kernels/linear/scaled_mm/marlin.py
 COPY vllm/model_executor/layers/mamba/gdn/qwen_gdn_linear_attn.py \
     /tmp/sm75-overlay/model_executor/layers/mamba/gdn/qwen_gdn_linear_attn.py
 COPY vllm/model_executor/layers/quantization/kv_cache.py \
     /tmp/sm75-overlay/model_executor/layers/quantization/kv_cache.py
 COPY vllm/model_executor/layers/quantization/utils/marlin_utils_fp8.py \
     /tmp/sm75-overlay/model_executor/layers/quantization/utils/marlin_utils_fp8.py
+COPY vllm/model_executor/layers/quantization/utils/firefly.py \
+    /tmp/sm75-overlay/model_executor/layers/quantization/utils/firefly.py
+COPY vllm/model_executor/layers/quantization/utils/firefly.cu \
+    /tmp/sm75-overlay/model_executor/layers/quantization/utils/firefly.cu
 COPY vllm/v1/attention/backends/flashinfer.py \
     /tmp/sm75-overlay/v1/attention/backends/flashinfer.py
 COPY vllm/v1/attention/backends/gdn_attn.py \
