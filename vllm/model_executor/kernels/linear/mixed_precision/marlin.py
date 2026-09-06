@@ -34,7 +34,9 @@ from vllm.model_executor.layers.quantization.utils.marlin_utils import (
 )
 from vllm.model_executor.layers.quantization.utils.firefly import (
     dequant_clean_int4_to_int8,
+    dequant_clean_int4_to_int8_cached,
     dequant_marlin_to_int8,
+    dequant_marlin_to_int8_cached,
     int8_prefill_linear,
 )
 from vllm.model_executor.parameter import BasevLLMParameter, permute_param_layout_
@@ -284,6 +286,31 @@ class MarlinLinearKernel(MPLinearKernel):
                 marlin_pad_dim(layer.bias, size_n, padded_n)
             )
 
+        # firefly c_n 缓存: load 时算一次 per-channel c_n(纯权重导出, M/chunk 无关),
+        # 运行时单遍反量化复用(免两遍 amax, 实测省反量化 ~46%)。放在 repack
+        # (transform_w_q) 之后: 此时 w_q 已是 marlin 布局, 与 apply_weights 读取一致。
+        # 复用现有全量反量化取 c_n(w_int8 临时算出即弃); B1-easy/hard 都适用。
+        if self._firefly_enabled():
+            _wzp = layer._firefly_wzp
+            if getattr(layer, "_firefly_wp", None) is not None:
+                _, layer._firefly_c_n = dequant_clean_int4_to_int8(
+                    layer._firefly_wp,
+                    layer._firefly_ws,
+                    layer._firefly_gs,
+                    w_zp=_wzp,
+                )
+            else:
+                _, layer._firefly_c_n = dequant_marlin_to_int8(
+                    getattr(layer, self.w_q_name).data,
+                    layer._firefly_ws,
+                    layer._firefly_gs,
+                    layer._firefly_size_k,
+                    layer._firefly_size_n,
+                    layer._firefly_padded_k,
+                    layer._firefly_padded_n,
+                    w_zp=_wzp,
+                )
+
     def apply_weights(
         self,
         layer: torch.nn.Module,
@@ -298,18 +325,23 @@ class MarlinLinearKernel(MPLinearKernel):
         if getattr(layer, "_firefly_ws", None) is not None and self._firefly_m_large(
             x
         ):
+            # c_n load 时已算好(_firefly_c_n, 同 _firefly_ws 一起设); 运行时单遍量化
+            # (免两遍 amax)。w_int8 仍每次现算(B1-hard 不缓存 int8, 省显存)。
             hybrid_wzp = getattr(layer, "_firefly_wzp", None)
+            c_n = layer._firefly_c_n
             if getattr(layer, "_firefly_wp", None) is not None:
-                w_int8, c_n = dequant_clean_int4_to_int8(
+                w_int8 = dequant_clean_int4_to_int8_cached(
                     layer._firefly_wp,
                     layer._firefly_ws,
+                    c_n,
                     layer._firefly_gs,
                     w_zp=hybrid_wzp,
                 )
             else:
-                w_int8, c_n = dequant_marlin_to_int8(
+                w_int8 = dequant_marlin_to_int8_cached(
                     getattr(layer, self.w_q_name).data,
                     layer._firefly_ws,
+                    c_n,
                     layer._firefly_gs,
                     layer._firefly_size_k,
                     layer._firefly_size_n,

@@ -121,6 +121,37 @@ def dequant_clean_int4_to_int8(
     return w_int8, c_n
 
 
+def dequant_clean_int4_to_int8_cached(
+    weight_packed: torch.Tensor,
+    weight_scale: torch.Tensor,
+    c_n: torch.Tensor,  # [N] 预计算 per-channel scale(load 时算一次)
+    group_size: int = 128,
+    w_zp: torch.Tensor | None = None,
+) -> torch.Tensor:
+    """干净 int4 单遍反量化: c_n 已预计算, 只跑量化 pass(免两遍 amax)。
+
+    与 dequant_clean_int4_to_int8 的量化步逐 bit 一致(c_n 即其 amax/127)。
+    返回 w_int8 [N, K] int8。
+    """
+    N, Kd8 = weight_packed.shape
+    K = Kd8 * 8
+    wp = weight_packed.long()
+    nibbles = [(wp >> (i * 4)) & 0xF for i in range(8)]
+    q = torch.stack(nibbles, dim=2).reshape(N, K).float()
+    s = weight_scale.float().repeat_interleave(group_size, dim=1)
+    zp = (
+        8.0
+        if w_zp is None
+        else _unpack_awq_zp(w_zp, N, weight_scale.shape[1]).repeat_interleave(
+            group_size, dim=1
+        )
+    )
+    w_deq = (q - zp) * s
+    return torch.clamp(
+        torch.round(w_deq / c_n.unsqueeze(1)), -127, 127
+    ).to(torch.int8)
+
+
 def fp8_to_int8(
     w_fp8: torch.Tensor,  # [N, K] fp8 e4m3 clean
     s_inv: torch.Tensor,  # [N/128, K/128] 128x128 block scale
@@ -286,3 +317,52 @@ def dequant_marlin_to_int8(
         torch.round(w_deq / c_n.unsqueeze(1)), -127, 127
     ).to(torch.int8)
     return w_int8, c_n
+
+
+def dequant_marlin_to_int8_cached(
+    marlin_w: torch.Tensor,
+    weight_scale: torch.Tensor,  # 干净 scale [N, K/group_size] (N 在前)
+    c_n: torch.Tensor,  # [N] 预计算 per-channel scale(load 时算一次)
+    group_size: int,
+    size_k: int,
+    size_n: int,
+    padded_k: int | None = None,
+    padded_n: int | None = None,
+    w_zp: torch.Tensor | None = None,  # None=对称(zp=8); AWQ qzeros [N/8, K/gs]
+) -> torch.Tensor:
+    """B1-hard 单遍反量化: c_n 已预计算, 只跑量化 pass(免两遍 amax)。
+
+    与 dequant_marlin_to_int8 的 pass2 逐 bit 一致(c_n[n] 即其 pass1 写出的 c)。
+    优先 CUDA kernel(firefly_dequant_cached); 编译失败/无 GPU 回退 PyTorch 版。
+    返回 w_int8 [N, K] int8。
+    """
+    N, K = size_n, size_k
+    mod = _load_cuda_mod()
+    if mod is not None and marlin_w.is_cuda:
+        pk = padded_k if padded_k is not None else K
+        pn = padded_n if padded_n is not None else N
+        zp_t = (
+            torch.empty(0, dtype=torch.float32, device=marlin_w.device)
+            if w_zp is None
+            else _unpack_awq_zp(w_zp, N, weight_scale.shape[1])
+        )
+        out_int8 = torch.empty((N, K), dtype=torch.int8, device=marlin_w.device)
+        mod.firefly_dequant_cached(
+            marlin_w, weight_scale, zp_t, out_int8, c_n, N, K, pn, pk, group_size
+        )
+        return out_int8
+
+    # PyTorch 回退路径
+    q = marlin_to_int4_q(marlin_w, size_k, size_n, padded_k, padded_n)  # [N, K]
+    s = weight_scale.float().repeat_interleave(group_size, dim=1)  # [N, K]
+    zp = (
+        8.0
+        if w_zp is None
+        else _unpack_awq_zp(w_zp, N, weight_scale.shape[1]).repeat_interleave(
+            group_size, dim=1
+        )
+    )
+    w_deq = (q.float() - zp) * s  # [N, K]
+    return torch.clamp(
+        torch.round(w_deq / c_n.unsqueeze(1)), -127, 127
+    ).to(torch.int8)
