@@ -7,8 +7,8 @@ export MODEL_ROOT="$VLLM_SM75_CACHE_ROOT"
 export MODEL=/models/test-model DRAFT_MODEL=/models/test-draft
 docker() {
   local args=" $* "
-  [[ "$args" == *' vllm-sm75:v0.1.2 serve '* ]]
-  [[ "$args" != *'v0.1.2-mtp'* && "$args" != *'v0.1.2-dflash2'* ]]
+  [[ "$args" == *' vllm-sm75:v0.1.3 serve '* ]]
+  [[ "$args" != *'v0.1.3-mtp'* && "$args" != *'v0.1.3-dflash2'* ]]
   if [[ "$VARIANT" == base ]]; then
     [[ "$args" != *'--speculative-config'* ]]
   else
@@ -25,7 +25,7 @@ export -f docker
 for VARIANT in base mtp dflash2; do
   for FORMAT in fp8 awq; do
     export VARIANT FORMAT
-    bash "$ROOT/docker/run-v0.1.2.sh"
+    AUTO_SLEEP_IDLE_TIMEOUT=0 bash "$ROOT/docker/run.sh"
     printf 'PASS %s %s unified-image arguments\n' "$VARIANT" "$FORMAT"
   done
 done

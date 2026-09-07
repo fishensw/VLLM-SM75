@@ -23,9 +23,15 @@ if [[ -n "${MODEL_ROOT:-}" ]]; then
 fi
 seq=4; batch=8192; util=0.87; length=auto
 [[ "$FORMAT" != awq ]] || { seq=8; batch=16384; }
-image=vllm-sm75:v0.1.2
+image=vllm-sm75:v0.1.3
 graph='{"cudagraph_mode":"FULL_AND_PIECEWISE"}'
 extra=()
+AUTO_SLEEP_IDLE_TIMEOUT="${AUTO_SLEEP_IDLE_TIMEOUT:-30}"
+AUTO_SLEEP_OFFLOAD_TARGET="${AUTO_SLEEP_OFFLOAD_TARGET:-exit}"
+if [[ "$AUTO_SLEEP_IDLE_TIMEOUT" != 0 ]]; then
+  extra+=(--auto-sleep-idle-timeout "$AUTO_SLEEP_IDLE_TIMEOUT"
+    --auto-sleep-offload-target "$AUTO_SLEEP_OFFLOAD_TARGET")
+fi
 if [[ "$VARIANT" == mtp ]]; then
   extra+=(--speculative-config '{"method":"mtp","num_speculative_tokens":5}')
   graph='{"cudagraph_mode":"FULL_AND_PIECEWISE","cudagraph_capture_sizes":[6]}'

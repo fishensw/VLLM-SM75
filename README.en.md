@@ -4,9 +4,9 @@
 
 SM75 compatibility and kernel optimizations, kept in sync with upstream [vLLM](https://github.com/vllm-project/vllm).
 
-vLLM-SM75 v0.1.2 is based on vLLM 0.28.0 and integrates MTP and DFlash2 support.
+vLLM-SM75 v0.1.3 is based on vLLM 0.28.0 and integrates MTP, DFlash2 and auto-sleep support.
 
-## v0.1.2 Update Summary
+## v0.1.3 Update Summary
 
 - FlashQLA-SM75 GDN prefill, Triton decode, FlashInfer 0.6.18, Marlin FP8 and FP8 KV.
 - SM75 CUDA Graph adaptation and fused GDN metadata preparation.
@@ -14,6 +14,7 @@ vLLM-SM75 v0.1.2 is based on vLLM 0.28.0 and integrates MTP and DFlash2 support.
 - DFlash2 SM75 numerical compatibility, AWQ dtype and TP4 adaptations.
 - Reduced allocation pressure when loading a draft after an FP8 target.
 - ModelScope support and persistent model/compiler caches.
+- Idle auto-sleep with transparent wake-up; the launch script defaults to deep sleep after 30 minutes.
 - Adds idle auto-sleep: after an idle timeout the engine automatically
   offloads its weights to free GPU memory and wakes automatically on the next
   request — keeping weights in pinned CPU memory, discarding and reloading
@@ -75,10 +76,10 @@ cd VLLM-SM75
 Requires Linux x86_64, Docker with BuildKit, Git and Bash. Inference additionally requires an NVIDIA driver and NVIDIA Container Toolkit.
 
 ```bash
-bash docker/build-v0.1.2.sh
+bash docker/build.sh
 ```
 
-Uses the digest-pinned official `vllm/vllm-openai:v0.28.0-cu129` image, installs the adaptations and compiles the SM75 extension to produce `vllm-sm75:v0.1.2`.
+Uses the digest-pinned official `vllm/vllm-openai:v0.28.0-cu129` image, installs the adaptations and compiles the SM75 extension to produce `vllm-sm75:v0.1.3`.
 
 ### 3. Run
 
@@ -86,19 +87,19 @@ Uses the digest-pinned official `vllm/vllm-openai:v0.28.0-cu129` image, installs
 export VLLM_API_KEY='replace-with-your-api-key'
 # Replace with an actual absolute host path for persistent model/compiler caches.
 export VLLM_SM75_CACHE_ROOT=/path/to/vllm-sm75-cache
-VARIANT=base FORMAT=fp8 bash docker/run-v0.1.2.sh
+VARIANT=base FORMAT=fp8 bash docker/run.sh
 ```
 
 The default FP8 model is `Qwen/Qwen3.8-27B-FP8`, resolved through ModelScope. The script sets the API key, port, listening address and cache mounts. Stop the previous GPU service before selecting another mode; the script does not stop existing services.
 
-To enable the firefly prefill: set `VLLM_FIREFLY=1` (off by default; applies to int4 weights + fp16/bf16 activations and W8A8-FP8 large-M prefill). `docker/run-v0.1.2.sh` does not yet forward this variable, so run `docker run --env VLLM_FIREFLY=1 …` manually or append `--env VLLM_FIREFLY=1` to the script's `docker run` block.
+To enable the firefly prefill: set `VLLM_FIREFLY=1` (off by default; applies to int4 weights + fp16/bf16 activations and W8A8-FP8 large-M prefill). `docker/run.sh` does not yet forward this variable, so run `docker run --env VLLM_FIREFLY=1 …` manually or append `--env VLLM_FIREFLY=1` to the script's `docker run` block.
 
 ```bash
-VARIANT=mtp FORMAT=fp8 bash docker/run-v0.1.2.sh
+VARIANT=mtp FORMAT=fp8 bash docker/run.sh
 # Download the matching draft into your chosen host model directory first.
 export MODEL_ROOT=/path/to/downloaded-models
 DRAFT_MODEL=/models/Qwen3.8-27B-DFlash2 VARIANT=dflash2 FORMAT=fp8 \
-  bash docker/run-v0.1.2.sh
+  bash docker/run.sh
 ```
 
 MTP requires compatible MTP weights. Use `incoai/Qwen3.8-27B-DFlash2` as the matching draft.
@@ -110,7 +111,7 @@ curl --fail http://localhost:8000/v1/models \
   --header "Authorization: Bearer $VLLM_API_KEY"
 ```
 
-See [build and launch details](docker/BUILD-v0.1.2.md).
+See [build and launch details](docker/BUILD-v0.1.3.md).
 
 ## firefly (int4/fp8 weights -> int8 prefill acceleration)
 
@@ -155,7 +156,7 @@ processes all go to zero; the next request transparently cold-restarts it):
 ```bash
 vllm serve Qwen/Qwen3.8-27B-FP8 \
   ... \
-  --auto-sleep-idle-timeout 5 \
+  --auto-sleep-idle-timeout 30 \
   --auto-sleep-offload-target exit
 ```
 
