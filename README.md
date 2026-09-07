@@ -4,9 +4,9 @@
 
 持续同步官方 [vLLM](https://github.com/vllm-project/vllm)，完善 SM75 兼容支持与内核优化。
 
-vLLM-SM75 v0.1.2 基于 vLLM 0.28.0，集成 MTP 和 DFlash2 适配。
+vLLM-SM75 v0.1.3 基于 vLLM 0.28.0，集成 MTP、DFlash2 和自动休眠适配。
 
-## v0.1.2 更新简要
+## v0.1.3 更新简要
 
 - 保留 FlashQLA-SM75 GDN prefill、Triton decode、FlashInfer 0.6.18、Marlin FP8 和 FP8 KV 支持。
 - 适配 SM75 CUDA Graph，融合 GDN 状态准备，减少投机验证及调度开销。
@@ -14,6 +14,7 @@ vLLM-SM75 v0.1.2 基于 vLLM 0.28.0，集成 MTP 和 DFlash2 适配。
 - 完善 DFlash2 的 SM75 数值兼容、AWQ 数据类型及 TP4 处理。
 - 修复 FP8 加载 draft 时的显存分配压力。
 - 支持 ModelScope、模型与编译缓存持久化。
+- 新增空闲自动休眠与透明唤醒，启动脚本默认 30 分钟后进入深度休眠。
 - 新增空闲自动睡眠（auto-sleep）：空闲超时后自动卸载权重释放显存，
   新请求到达自动唤醒（权重可备份到 CPU 内存、丢弃后从 checkpoint 重载，
   或直接退出引擎进程进入深度睡眠、下一请求透明冷启动），调用方无需任何
@@ -48,7 +49,7 @@ TTFT 为首个文本输出等待时间，decode 不含 prefill。各配置的显
 
 ## 快速复现
 
-已通过[构建与运行验收](docs/validation/v0.1.2.md)：7 项配置、14 条请求。
+v0.1.2 的基础推理验收见[验证记录](docs/validation/v0.1.2.md)；v0.1.3 新增自动休眠测试。
 
 ### 编译缓存持久化
 
@@ -73,10 +74,10 @@ cd VLLM-SM75
 Linux x86_64，需安装 Docker、Git 和 Bash。启动模型另需 NVIDIA 驱动与 NVIDIA Container Toolkit。
 
 ```bash
-bash docker/build-v0.1.2.sh
+bash docker/build-v0.1.3.sh
 ```
 
-基于固定 digest 的官方 `vllm/vllm-openai:v0.28.0-cu129` 镜像，安装全部适配并编译 SM75 扩展，生成 `vllm-sm75:v0.1.2`。
+基于固定 digest 的官方 `vllm/vllm-openai:v0.28.0-cu129` 镜像，安装全部适配并编译 SM75 扩展，生成 `vllm-sm75:v0.1.3`。
 
 ### 3. 启动
 
@@ -85,23 +86,23 @@ export VLLM_API_KEY='replace-with-your-api-key'
 # 替换为实际绝对路径：持久化模型、vLLM 编译及 FlashInfer 缓存。
 export VLLM_SM75_CACHE_ROOT=/path/to/vllm-sm75-cache
 
-VARIANT=base FORMAT=fp8 bash docker/run-v0.1.2.sh
+VARIANT=base FORMAT=fp8 bash docker/run-v0.1.3.sh
 ```
 
 FP8 默认通过 ModelScope 加载 `Qwen/Qwen3.8-27B-FP8`。脚本配置监听地址、端口、API key 和持久化挂载。使用相同 GPU 的模式按需互斥启动，脚本不会停止现有服务。
 
 ```bash
 # MTP5：使用同一个镜像
-VARIANT=mtp FORMAT=fp8 bash docker/run-v0.1.2.sh
+VARIANT=mtp FORMAT=fp8 bash docker/run-v0.1.3.sh
 
 # DFlash2：先将匹配 draft 下载到自选目录
 export MODEL_ROOT=/path/to/downloaded-models
 DRAFT_MODEL=/models/Qwen3.8-27B-DFlash2 VARIANT=dflash2 FORMAT=fp8 \
-  bash docker/run-v0.1.2.sh
+  bash docker/run-v0.1.3.sh
 ```
 
 DFlash draft 使用 `incoai/Qwen3.8-27B-DFlash2`，完整模型文件放入上述挂载目录。
-AWQ 使用 `philbert440/Qwen3.8-27B-W4A16-AWQ`，下载后设置 `MODEL=/models/Qwen3.8-27B-W4A16-AWQ FORMAT=awq`。其余配置见[构建与启动说明](docker/BUILD-v0.1.2.md)。
+AWQ 使用 `philbert440/Qwen3.8-27B-W4A16-AWQ`，下载后设置 `MODEL=/models/Qwen3.8-27B-W4A16-AWQ FORMAT=awq`。其余配置见[构建与启动说明](docker/BUILD-v0.1.3.md)。
 
 ```bash
 curl --fail http://localhost:8000/health
@@ -115,13 +116,13 @@ curl --fail http://localhost:8000/v1/models \
 （或重建）并继续服务，调用方无需任何额外调用。默认关闭
 （`--auto-sleep-idle-timeout 0`），显式传入超时时开启。
 
-示例配置（空闲 5 分钟自动进入**深度睡眠**：整个引擎进程退出，显存、
+示例配置（空闲 30 分钟自动进入**深度睡眠**：整个引擎进程退出，显存、
 CUDA context、worker 进程全部归零；下一个请求透明地冷启动重拉）：
 
 ```bash
 vllm serve Qwen/Qwen3.8-27B-FP8 \
   ... \
-  --auto-sleep-idle-timeout 5 \
+  --auto-sleep-idle-timeout 30 \
   --auto-sleep-offload-target exit
 ```
 

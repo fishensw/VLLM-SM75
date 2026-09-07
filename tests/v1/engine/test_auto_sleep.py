@@ -377,6 +377,28 @@ def test_request_arrival_cancels_armed_timer():
     assert fake.sleep_calls == []
 
 
+def test_idle_timeout_starts_when_request_becomes_idle(monkeypatch):
+    fake = _FakeEngine()
+    controller = _make_controller(fake, auto_sleep, timeout_seconds=60.0)
+    delays = []
+
+    class _Timer:
+        def __init__(self, delay, callback):
+            delays.append(delay)
+
+        def start(self):
+            pass
+
+        def cancel(self):
+            pass
+
+    monkeypatch.setattr(auto_sleep.threading, "Timer", _Timer)
+    controller.on_request_arrival()
+    controller._last_activity -= 90.0
+    controller.on_idle(fake)
+    assert delays == [60.0]
+
+
 def test_wakeup_poke_ignores_pending_requests():
     fake = _FakeEngine()
     fake.scheduler.has_requests_flag = True

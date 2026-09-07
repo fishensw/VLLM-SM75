@@ -326,10 +326,11 @@ class AutoSleepController:
             return
         if self._engine.is_sleeping() or not self._engine_running():
             return
-        delay = max(
-            self._config.timeout_seconds - (time.monotonic() - self._last_activity),
-            0.0,
-        )
+        # The idle callback marks the request-to-idle transition.  Activity
+        # is recorded on request arrival as well, but a long request must not
+        # consume the following idle window before the timer is armed.
+        self._last_activity = time.monotonic()
+        delay = self._config.timeout_seconds
         self._timer = threading.Timer(delay, self._poke)
         self._timer.daemon = True
         self._timer.start()
