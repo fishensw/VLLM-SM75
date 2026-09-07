@@ -92,7 +92,7 @@ VARIANT=base FORMAT=fp8 bash docker/run.sh
 
 The default FP8 model is `Qwen/Qwen3.8-27B-FP8`, resolved through ModelScope. The script sets the API key, port, listening address and cache mounts. Stop the previous GPU service before selecting another mode; the script does not stop existing services.
 
-To enable the firefly prefill: set `VLLM_FIREFLY=1` (off by default; applies to int4 weights + fp16/bf16 activations and W8A8-FP8 large-M prefill). `docker/run.sh` does not yet forward this variable, so run `docker run --env VLLM_FIREFLY=1 …` manually or append `--env VLLM_FIREFLY=1` to the script's `docker run` block.
+The firefly prefill is on by default in the image (`VLLM_FIREFLY=1`; applies to int4 weights + fp16/bf16 activations and W8A8-FP8 large-M prefill); to run a pure W4A16 baseline set `-e VLLM_FIREFLY=0`. `docker/run.sh` does not yet forward this variable, so run `docker run -e VLLM_FIREFLY=0 …` manually or append `--env VLLM_FIREFLY=0` to the script's `docker run` block.
 
 ```bash
 VARIANT=mtp FORMAT=fp8 bash docker/run.sh

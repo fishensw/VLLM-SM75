@@ -91,7 +91,7 @@ VARIANT=base FORMAT=fp8 bash docker/run.sh
 
 FP8 默认通过 ModelScope 加载 `Qwen/Qwen3.8-27B-FP8`。脚本配置监听地址、端口、API key 和持久化挂载。使用相同 GPU 的模式按需互斥启动，脚本不会停止现有服务。
 
-启用 firefly prefill：设 `VLLM_FIREFLY=1`（默认关闭，对 int4 权重 + fp16/bf16 激活、W8A8-FP8 大 M prefill 生效）。`docker/run.sh` 暂未透传该变量，需手动 `docker run --env VLLM_FIREFLY=1 …` 或在脚本 `docker run` 段追加 `--env VLLM_FIREFLY=1`。
+firefly prefill 镜像默认开（`VLLM_FIREFLY=1`，对 int4 权重 + fp16/bf16 激活、W8A8-FP8 大 M prefill 生效），要纯 W4A16 基线运行时用 `-e VLLM_FIREFLY=0` 关。`docker/run.sh` 暂未透传该变量，需手动 `docker run -e VLLM_FIREFLY=0 …` 或在脚本 `docker run` 段追加 `--env VLLM_FIREFLY=0`。
 
 ```bash
 # MTP5：使用同一个镜像
