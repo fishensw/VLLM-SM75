@@ -1,4 +1,7 @@
 /.git
+/local-tests
+/.env
+/.env.*
 /.venv
 /build
 /artifacts/vllm-rocm-install/

@@ -2,156 +2,112 @@
 
 [简体中文](README.md) | [English](README.en.md)
 
-项目目标是持续跟进官方
-[vLLM](https://github.com/vllm-project/vllm)，完善其对 SM75 的兼容支持，
-并优化相关内核。
+持续同步官方 [vLLM](https://github.com/vllm-project/vllm)，完善 SM75 兼容支持与内核优化。
 
-当前 vLLM-SM75 v0.1.0 基于官方 vLLM `v0.28.0`，已在 4 x Tesla T10
-16 GiB、CUDA 12.9、TP4 环境中使用 Qwen3.8 27B FP8 完成验证。
+vLLM-SM75 v0.1.2 基于 vLLM 0.28.0，集成 MTP 和 DFlash2 适配。
 
-## 功能与改进
+## v0.1.2 更新简要
 
-- 新增 `flashqla_sm75` GDN prefill backend。
-- 集成 image-owned FlashQLA-SM75 CUDA 扩展，只编译 `sm_75`，默认禁止
-  runtime JIT，不依赖宿主机 `.so` 挂载。
-- FlashInfer 从官方基线的 0.6.16.post3 升级到 0.6.18，并恢复 SM75
-  full-attention 能力选择。
-- GDN prefill 与 decode 独立控制；最终配置使用 FlashQLA-SM75 prefill 和
-  Triton decode。
-- 不支持的 GPU、dtype 或 GDN head dimension 自动回退到 Triton/FLA。
-- 保留 Marlin FP8、FP8 E4M3 KV cache、prefix cache、async scheduling、
-  `FULL_AND_PIECEWISE` CUDA Graph 和 CPU KV offload。
-- FlashInfer sampler 在 SM75 上关闭，attention 仍使用 FlashInfer，sampling
-  回退到 vLLM 原生实现。
+- 保留 FlashQLA-SM75 GDN prefill、Triton decode、FlashInfer 0.6.18、Marlin FP8 和 FP8 KV 支持。
+- 适配 SM75 CUDA Graph，融合 GDN 状态准备，减少投机验证及调度开销。
+- 优化原生 MTP 验证路径，提供 MTP5 配置。
+- 完善 DFlash2 的 SM75 数值兼容、AWQ 数据类型及 TP4 处理。
+- 修复 FP8 加载 draft 时的显存分配压力。
+- 支持 ModelScope、模型与编译缓存持久化。
 - 新增空闲自动睡眠（auto-sleep）：空闲超时后自动卸载权重释放显存，
   新请求到达自动唤醒（权重可备份到 CPU 内存、丢弃后从 checkpoint 重载，
   或直接退出引擎进程进入深度睡眠、下一请求透明冷启动），调用方无需任何
   额外接口。详见下文「空闲自动睡眠」。
 
-FlashQLA 源码来自
-[1CatAI/1Cat-vLLM](https://github.com/1CatAI/1Cat-vLLM)，固定提交
-`187b932dbd11940f0bcf52fb3675dd47fd69f313`。来源和许可证保留在
-`vllm/third_party/flash_qla_sm75/`。
+## 性能参考
 
-## 验证环境
+测试环境：vLLM-SM75 v0.1.2，4 × Tesla T10 16 GiB、TP4、PCIe 3.0 ×8、CUDA 12.9、PyTorch 2.13.0、FlashInfer 0.6.18。
 
-| 组件 | 版本或配置 |
-| --- | --- |
-| vLLM-SM75 | v0.1.0 |
-| 上游 vLLM | `v0.28.0` / `2cf0a6915ce544dc493a0990f2ea38d81601128a` |
-| GPU | 4 x Tesla T10 16 GiB / SM75 |
-| CUDA | 12.9 |
-| PyTorch | 2.13.0 |
-| FlashInfer | 0.6.18，无 `flashinfer-jit-cache` |
-| 验证模型 | Qwen3.8 27B FP8 |
-| Tensor parallel | TP4 / PYNCCL |
-| GDN | FlashQLA-SM75 prefill + Triton decode |
+Qwen3.8-27B FP8 / W4A16-AWQ：重复说明文本并要求生成 Python 工具，单请求、1024 输出 tokens、temperature=0、关闭 thinking、无前缀缓存命中。输入长度包含聊天模板；以下为各配置、各长度的单次验收实测。
 
-## 实测结果
+| 配置        | 输入 tokens | TTFT（秒） | decode（tok/s） | 总耗时（秒） |
+| :---------- | ----------: | ---------: | --------------: | -----------: |
+| FP8 普通    |        1173 |      1.823 |           37.51 |       29.094 |
+| FP8 普通    |       36885 |     35.434 |           35.62 |       64.152 |
+| FP8 MTP5    |        1173 |      3.035 |           83.76 |       15.248 |
+| FP8 MTP5    |       36885 |     36.400 |           76.41 |       49.789 |
+| FP8 DFlash2 |        1173 |      1.154 |           98.12 |       11.581 |
+| FP8 DFlash2 |       36885 |     35.002 |          113.81 |       43.990 |
+| AWQ 普通    |        1173 |      1.903 |           52.16 |       21.515 |
+| AWQ 普通    |       36885 |     34.337 |           48.55 |       55.410 |
+| AWQ MTP5    |        1173 |      2.856 |           97.27 |       13.373 |
+| AWQ MTP5    |       36885 |     34.988 |           99.80 |       45.239 |
+| AWQ DFlash2 |        1173 |      1.156 |          122.51 |        9.507 |
+| AWQ DFlash2 |       36885 |     34.106 |          140.84 |       41.369 |
 
-测试保持模型、TP、attention、KV、sampling 和服务资源一致，仅比较 GDN
-prefill 路线。
+TTFT 为首个文本输出等待时间，decode 不含 prefill。各配置的显存预算与启动参数见[测试配置](docs/validation/v0.1.2.md#测试配置)。
 
-| 指标 | vLLM v0.28.0 生产基线 | vLLM-SM75 v0.1.0 | 变化 |
-| --- | ---: | ---: | ---: |
-| Cold TTFT | 1.9562 s | 1.7082 s | **提升 12.68%** |
-| Prefix-cached TTFT | 0.5064 s | 0.4378 s | **提升 13.55%** |
-| Decode | 39.6289 token/s | 39.6306 token/s | 基本持平 |
-| Cached tokens | 1,568 | 1,568 | 不变 |
+历史 FP8 DFlash7 重复文本压力测试：seq4、batch8192、1024 输出 tokens，32K decode 中位数 **147.70 tok/s**，单轮最高 **151.28 tok/s**，接受率接近 100%；详细条件见[更新说明](docs/releases/v0.1.2.zh-CN.md)。
 
-确定性输出、streaming、tool calling、reasoning parser、多模态、prefix cache、
-FP8 KV 和 8 GiB CPU KV offload 均通过验证。GDN 配置的 GPU KV 容量为 506,209
-tokens，并观测到 821,297,152 bytes GPU 到 CPU KV 迁移。
+实际场景复杂，性能随硬件、模型、请求内容和配置变化，未达到测试数据是正常现象。
 
 ## 快速复现
 
-### 1. 克隆仓库
+已通过[构建与运行验收](docs/validation/v0.1.2.md)：7 项配置、14 条请求。
+
+### 编译缓存持久化
+
+启动脚本已持久化 `/root/.cache/vllm` 和 `/root/.cache/flashinfer`，避免后续启动重复编译。
+
+| 编译阶段 | 耗时 |
+| :------- | ---: |
+| 未复用缓存（历史记录） | 约 4–5 分钟 |
+| 命中缓存（本次 FP8 MTP5） | **3.70 秒** |
+
+本次完整启动约 **202 秒**。以上为不同轮次记录；缓存加速适用于已有匹配编译缓存的启动。
+
+### 1. 克隆
 
 ```bash
 git clone https://github.com/fishensw/VLLM-SM75.git
 cd VLLM-SM75
 ```
 
-### 2. 构建镜像
+### 2. 构建
 
-准备兼容 vLLM 0.28.0、CUDA 12.9、PyTorch 2.13.0 和 SM75 的基础镜像：
+Linux x86_64，需安装 Docker、Git 和 Bash。启动模型另需 NVIDIA 驱动与 NVIDIA Container Toolkit。
 
 ```bash
-export BASE_IMAGE='your-registry.example/vllm-openai:v0.28.0-cu129-sm75'
-
-docker build \
-  --file docker/Dockerfile.vllm-sm75-v0.1.0 \
-  --build-arg BASE_IMAGE="$BASE_IMAGE" \
-  --build-arg BASE_IMAGE_ID="$(docker image inspect --format '{{.Id}}' "$BASE_IMAGE")" \
-  --build-arg BUILD_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-  --build-arg SOURCE_REVISION="$(git rev-parse HEAD)" \
-  --tag vllm-sm75-v0.1.0 \
-  .
+bash docker/build-v0.1.2.sh
 ```
 
-Dockerfile 会编译 SM75 扩展、检查 `cuobjdump` 架构、验证 `runtime` 版本，并在
-构建阶段运行必要的 backend selector tests。
+基于固定 digest 的官方 `vllm/vllm-openai:v0.28.0-cu129` 镜像，安装全部适配并编译 SM75 扩展，生成 `vllm-sm75:v0.1.2`。
 
-### 3. 启动服务
+### 3. 启动
 
 ```bash
 export VLLM_API_KEY='replace-with-your-api-key'
-docker volume create vllm-hf-cache
+# 替换为实际绝对路径：持久化模型、vLLM 编译及 FlashInfer 缓存。
+export VLLM_SM75_CACHE_ROOT=/path/to/vllm-sm75-cache
 
-docker run --detach --rm \
-  --name vllm-sm75 \
-  --gpus all \
-  --shm-size 16g \
-  --ulimit nofile=1048576:1048576 \
-  --publish 8000:8000 \
-  --volume vllm-hf-cache:/root/.cache/huggingface \
-  --env VLLM_GDN_DECODE_KERNEL=triton \
-  --env FLASH_QLA_SM75_ALLOW_JIT=0 \
-  --env VLLM_USE_FLASHINFER_SAMPLER=0 \
-  --env VLLM_USE_NCCL_SYMM_MEM=0 \
-  --env VLLM_ALLREDUCE_USE_SYMM_MEM=0 \
-  --entrypoint vllm \
-  vllm-sm75-v0.1.0 \
-  serve Qwen/Qwen3.8-27B-FP8 \
-  --served-model-name VLLM-Qwen3.8-27B \
-  --host 0.0.0.0 \
-  --port 8000 \
-  --api-key "$VLLM_API_KEY" \
-  --gpu-memory-utilization 0.87 \
-  --tensor-parallel-size 4 \
-  --max-model-len auto \
-  --max-num-seqs 8 \
-  --max-num-batched-tokens 16384 \
-  --attention-config '{"backend":"FLASHINFER"}' \
-  --gdn-prefill-backend flashqla_sm75 \
-  --kv-cache-dtype fp8_e4m3 \
-  --dtype float16 \
-  --hf-overrides '{"dtype":"float16"}' \
-  --generation-config vllm \
-  --enable-prefix-caching \
-  --async-scheduling \
-  --compilation-config '{"cudagraph_mode":"FULL_AND_PIECEWISE"}' \
-  --kv-transfer-config '{"kv_connector":"OffloadingConnector","kv_connector_extra_config":{"cpu_bytes_to_use":8589934592}}'
-
-docker logs --follow vllm-sm75
+VARIANT=base FORMAT=fp8 bash docker/run-v0.1.2.sh
 ```
 
-本次 31 GiB 系统内存验证机在启用 8 GiB CPU KV offload 时同时启用了
-16 GiB 主机 swap；内存更小且没有 swap 的主机可能在 offload 预分配阶段触发
-OOM。`--shm-size 16g` 不能与 `--ipc=host` 同时使用，否则容器会重新受宿主机
-`/dev/shm` 容量限制。
-
-日志显示服务就绪后按 `Ctrl+C` 退出日志跟踪，再验证 OpenAI 兼容接口：
+FP8 默认通过 ModelScope 加载 `Qwen/Qwen3.8-27B-FP8`。脚本配置监听地址、端口、API key 和持久化挂载。使用相同 GPU 的模式按需互斥启动，脚本不会停止现有服务。
 
 ```bash
-curl http://127.0.0.1:8000/v1/chat/completions \
-  --header "Authorization: Bearer $VLLM_API_KEY" \
-  --header 'Content-Type: application/json' \
-  --data '{"model":"VLLM-Qwen3.8-27B","messages":[{"role":"user","content":"你好"}],"max_tokens":32}'
+# MTP5：使用同一个镜像
+VARIANT=mtp FORMAT=fp8 bash docker/run-v0.1.2.sh
+
+# DFlash2：先将匹配 draft 下载到自选目录
+export MODEL_ROOT=/path/to/downloaded-models
+DRAFT_MODEL=/models/Qwen3.8-27B-DFlash2 VARIANT=dflash2 FORMAT=fp8 \
+  bash docker/run-v0.1.2.sh
 ```
 
-以上参数对应本项目的 4 x Tesla T10、TP4、Qwen3.8 27B FP8 验证配置。更换
-GPU 数量、模型或可用显存后，再相应调整 TP、模型长度、并发和显存利用率。
+DFlash draft 使用 `incoai/Qwen3.8-27B-DFlash2`，完整模型文件放入上述挂载目录。
+AWQ 使用 `philbert440/Qwen3.8-27B-W4A16-AWQ`，下载后设置 `MODEL=/models/Qwen3.8-27B-W4A16-AWQ FORMAT=awq`。其余配置见[构建与启动说明](docker/BUILD-v0.1.2.md)。
+
+```bash
+curl --fail http://localhost:8000/health
+curl --fail http://localhost:8000/v1/models \
+  --header "Authorization: Bearer $VLLM_API_KEY"
+```
 
 ## 空闲自动睡眠（auto-sleep）
 
@@ -200,5 +156,4 @@ vllm serve Qwen/Qwen3.8-27B-FP8 \
 
 ## License
 
-vLLM 修改继续遵循上游 Apache-2.0 License。FlashQLA-SM75 文件保留其原始
-MIT License 和来源说明。
+vLLM 修改遵循上游 Apache-2.0 License。FlashQLA-SM75 保留原始 MIT License 与[来源说明](vllm/third_party/flash_qla_sm75/SOURCE.md)。

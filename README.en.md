@@ -2,30 +2,18 @@
 
 [简体中文](README.md) | [English](README.en.md)
 
-This project tracks upstream
-[vLLM](https://github.com/vllm-project/vllm), improves its SM75 compatibility,
-and optimizes the relevant kernels.
+SM75 compatibility and kernel optimizations, kept in sync with upstream [vLLM](https://github.com/vllm-project/vllm).
 
-The current vLLM-SM75 v0.1.0 release is based on upstream vLLM `v0.28.0`.
-It has been validated with Qwen3.8 27B FP8 on 4 x Tesla T10 16 GiB GPUs,
-CUDA 12.9, and TP4.
+vLLM-SM75 v0.1.2 is based on vLLM 0.28.0 and integrates MTP and DFlash2 support.
 
-## Features and improvements
+## v0.1.2 Update Summary
 
-- Adds the `flashqla_sm75` GDN prefill backend.
-- Integrates a self-contained FlashQLA-SM75 CUDA extension that compiles only
-  for `sm_75`, disables runtime JIT by default, and requires no host-mounted
-  `.so` files.
-- Upgrades FlashInfer from the upstream baseline of 0.6.16.post3 to 0.6.18 and
-  restores SM75 full-attention capability selection.
-- Controls GDN prefill and decode independently. The final configuration uses
-  FlashQLA-SM75 for prefill and Triton for decode.
-- Automatically falls back to Triton/FLA for unsupported GPUs, dtypes, or GDN
-  head dimensions.
-- Retains Marlin FP8, FP8 E4M3 KV cache, prefix caching, async scheduling,
-  `FULL_AND_PIECEWISE` CUDA Graph, and CPU KV offload.
-- Disables the FlashInfer sampler on SM75 while retaining FlashInfer attention;
-  sampling falls back to the native vLLM implementation.
+- FlashQLA-SM75 GDN prefill, Triton decode, FlashInfer 0.6.18, Marlin FP8 and FP8 KV.
+- SM75 CUDA Graph adaptation and fused GDN metadata preparation.
+- Native MTP verification optimizations and an MTP5 preset.
+- DFlash2 SM75 numerical compatibility, AWQ dtype and TP4 adaptations.
+- Reduced allocation pressure when loading a draft after an FP8 target.
+- ModelScope support and persistent model/compiler caches.
 - Adds idle auto-sleep: after an idle timeout the engine automatically
   offloads its weights to free GPU memory and wakes automatically on the next
   request — keeping weights in pinned CPU memory, discarding and reloading
@@ -33,136 +21,94 @@ CUDA 12.9, and TP4.
   sleep, transparently cold-restarted on the next request). See "Idle
   auto-sleep" below.
 
-The FlashQLA source is derived from
-[1CatAI/1Cat-vLLM](https://github.com/1CatAI/1Cat-vLLM) at commit
-`187b932dbd11940f0bcf52fb3675dd47fd69f313`. Its provenance and license are
-preserved under `vllm/third_party/flash_qla_sm75/`.
+## Performance
 
-## Validated environment
+Environment: vLLM-SM75 v0.1.2, four Tesla T10 16 GiB GPUs, TP4, PCIe 3.0 x8, CUDA 12.9, PyTorch 2.13.0 and FlashInfer 0.6.18.
 
-| Component | Version or configuration |
-| --- | --- |
-| vLLM-SM75 | v0.1.0 |
-| Upstream vLLM | `v0.28.0` / `2cf0a6915ce544dc493a0990f2ea38d81601128a` |
-| GPU | 4 x Tesla T10 16 GiB / SM75 |
-| CUDA | 12.9 |
-| PyTorch | 2.13.0 |
-| FlashInfer | 0.6.18, without `flashinfer-jit-cache` |
-| Validated model | Qwen3.8 27B FP8 |
-| Tensor parallel | TP4 / PYNCCL |
-| GDN | FlashQLA-SM75 prefill + Triton decode |
+Qwen3.8-27B FP8 / W4A16-AWQ: repeated instruction text followed by a Python tool generation request; one request at a time, 1024 output tokens, temperature=0, thinking disabled, no prefix cache hits. Input counts include the chat template. Each row is one acceptance-test measurement.
 
-## Benchmark results
+| Configuration | Input tokens | TTFT (s) | Decode (tok/s) | Total time (s) |
+| :------------ | -----------: | -------: | -------------: | -------------: |
+| FP8 ordinary  |         1173 |    1.823 |          37.51 |         29.094 |
+| FP8 ordinary  |        36885 |   35.434 |          35.62 |         64.152 |
+| FP8 MTP5      |         1173 |    3.035 |          83.76 |         15.248 |
+| FP8 MTP5      |        36885 |   36.400 |          76.41 |         49.789 |
+| FP8 DFlash2   |         1173 |    1.154 |          98.12 |         11.581 |
+| FP8 DFlash2   |        36885 |   35.002 |         113.81 |         43.990 |
+| AWQ ordinary  |         1173 |    1.903 |          52.16 |         21.515 |
+| AWQ ordinary  |        36885 |   34.337 |          48.55 |         55.410 |
+| AWQ MTP5      |         1173 |    2.856 |          97.27 |         13.373 |
+| AWQ MTP5      |        36885 |   34.988 |          99.80 |         45.239 |
+| AWQ DFlash2   |         1173 |    1.156 |         122.51 |          9.507 |
+| AWQ DFlash2   |        36885 |   34.106 |         140.84 |         41.369 |
 
-The benchmark keeps the model, tensor parallelism, attention, KV cache,
-sampling, and service resources unchanged, and compares only the GDN prefill
-path.
+TTFT measures time to the first text output; decode excludes prefill. Memory budgets and launch parameters are listed in the [test configurations](docs/validation/v0.1.2.md#测试配置).
 
-| Metric | vLLM v0.28.0 production baseline | vLLM-SM75 v0.1.0 | Change |
-| --- | ---: | ---: | ---: |
-| Cold TTFT | 1.9562 s | 1.7082 s | **12.68% faster** |
-| Prefix-cached TTFT | 0.5064 s | 0.4378 s | **13.55% faster** |
-| Decode | 39.6289 token/s | 39.6306 token/s | Essentially unchanged |
-| Cached tokens | 1,568 | 1,568 | Unchanged |
+Historical FP8 DFlash7 repetitive-text stress test, seq4/batch8192, 1024 output tokens: 32K median **147.70 tok/s**, highest run **151.28 tok/s**, near-100% acceptance. See the [release notes](docs/releases/v0.1.2.zh-CN.md) for those test conditions.
 
-Deterministic output, streaming, tool calling, reasoning parser, multimodal
-input, prefix cache, FP8 KV cache, and 8 GiB CPU KV offload all passed
-validation. The GDN configuration provides a GPU KV capacity of 506,209
-tokens, with an observed 821,297,152-byte GPU-to-CPU KV transfer.
+Real-world performance varies with hardware, models, request content and configuration; results below these test figures are normal.
 
 ## Quick reproduction
 
-### 1. Clone the repository
+[Build and inference validation](docs/validation/v0.1.2.md) passed for 7 configurations and 14 requests.
+
+### Persistent compilation caches
+
+The launch script persists `/root/.cache/vllm` and `/root/.cache/flashinfer` to avoid repeated compilation on subsequent starts.
+
+| Compilation phase | Time |
+| :---------------- | ---: |
+| Without cache reuse (historical record) | About 4–5 minutes |
+| Cache hit (current FP8 MTP5 run) | **3.70 seconds** |
+
+This run took approximately **202 seconds** from the first startup log to API startup. These records come from separate runs; cache acceleration requires matching compiled artifacts.
+
+### 1. Clone
 
 ```bash
 git clone https://github.com/fishensw/VLLM-SM75.git
 cd VLLM-SM75
 ```
 
-### 2. Build the image
+### 2. Build
 
-Prepare a base image compatible with vLLM 0.28.0, CUDA 12.9, PyTorch 2.13.0,
-and SM75:
+Requires Linux x86_64, Docker with BuildKit, Git and Bash. Inference additionally requires an NVIDIA driver and NVIDIA Container Toolkit.
 
 ```bash
-export BASE_IMAGE='your-registry.example/vllm-openai:v0.28.0-cu129-sm75'
-
-docker build \
-  --file docker/Dockerfile.vllm-sm75-v0.1.0 \
-  --build-arg BASE_IMAGE="$BASE_IMAGE" \
-  --build-arg BASE_IMAGE_ID="$(docker image inspect --format '{{.Id}}' "$BASE_IMAGE")" \
-  --build-arg BUILD_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-  --build-arg SOURCE_REVISION="$(git rev-parse HEAD)" \
-  --tag vllm-sm75-v0.1.0 \
-  .
+bash docker/build-v0.1.2.sh
 ```
 
-The Dockerfile compiles the SM75 extension, validates the target architecture
-with `cuobjdump`, verifies runtime versions, and runs the required backend
-selector tests during the build.
+Uses the digest-pinned official `vllm/vllm-openai:v0.28.0-cu129` image, installs the adaptations and compiles the SM75 extension to produce `vllm-sm75:v0.1.2`.
 
-### 3. Start the service
+### 3. Run
 
 ```bash
 export VLLM_API_KEY='replace-with-your-api-key'
-docker volume create vllm-hf-cache
-
-docker run --detach --rm \
-  --name vllm-sm75 \
-  --gpus all \
-  --shm-size 16g \
-  --ulimit nofile=1048576:1048576 \
-  --publish 8000:8000 \
-  --volume vllm-hf-cache:/root/.cache/huggingface \
-  --env VLLM_GDN_DECODE_KERNEL=triton \
-  --env FLASH_QLA_SM75_ALLOW_JIT=0 \
-  --env VLLM_USE_FLASHINFER_SAMPLER=0 \
-  --env VLLM_USE_NCCL_SYMM_MEM=0 \
-  --env VLLM_ALLREDUCE_USE_SYMM_MEM=0 \
-  --entrypoint vllm \
-  vllm-sm75-v0.1.0 \
-  serve Qwen/Qwen3.8-27B-FP8 \
-  --served-model-name VLLM-Qwen3.8-27B \
-  --host 0.0.0.0 \
-  --port 8000 \
-  --api-key "$VLLM_API_KEY" \
-  --gpu-memory-utilization 0.87 \
-  --tensor-parallel-size 4 \
-  --max-model-len auto \
-  --max-num-seqs 8 \
-  --max-num-batched-tokens 16384 \
-  --attention-config '{"backend":"FLASHINFER"}' \
-  --gdn-prefill-backend flashqla_sm75 \
-  --kv-cache-dtype fp8_e4m3 \
-  --dtype float16 \
-  --hf-overrides '{"dtype":"float16"}' \
-  --generation-config vllm \
-  --enable-prefix-caching \
-  --async-scheduling \
-  --compilation-config '{"cudagraph_mode":"FULL_AND_PIECEWISE"}' \
-  --kv-transfer-config '{"kv_connector":"OffloadingConnector","kv_connector_extra_config":{"cpu_bytes_to_use":8589934592}}'
-
-docker logs --follow vllm-sm75
+# Replace with an actual absolute host path for persistent model/compiler caches.
+export VLLM_SM75_CACHE_ROOT=/path/to/vllm-sm75-cache
+VARIANT=base FORMAT=fp8 bash docker/run-v0.1.2.sh
 ```
 
-The 31 GiB RAM validation host also used 16 GiB of host swap with the 8 GiB
-CPU KV offload configuration. Smaller hosts without swap may be OOM-killed
-during offload preallocation. Do not combine `--shm-size 16g` with
-`--ipc=host`, because host IPC bypasses the container's private shm size.
-
-After the log reports that the service is ready, press `Ctrl+C` to stop
-following the log and verify the OpenAI-compatible endpoint:
+The default FP8 model is `Qwen/Qwen3.8-27B-FP8`, resolved through ModelScope. The script sets the API key, port, listening address and cache mounts. Stop the previous GPU service before selecting another mode; the script does not stop existing services.
 
 ```bash
-curl http://127.0.0.1:8000/v1/chat/completions \
-  --header "Authorization: Bearer $VLLM_API_KEY" \
-  --header 'Content-Type: application/json' \
-  --data '{"model":"VLLM-Qwen3.8-27B","messages":[{"role":"user","content":"Hello"}],"max_tokens":32}'
+VARIANT=mtp FORMAT=fp8 bash docker/run-v0.1.2.sh
+# Download the matching draft into your chosen host model directory first.
+export MODEL_ROOT=/path/to/downloaded-models
+DRAFT_MODEL=/models/Qwen3.8-27B-DFlash2 VARIANT=dflash2 FORMAT=fp8 \
+  bash docker/run-v0.1.2.sh
 ```
 
-These parameters reproduce the validated 4 x Tesla T10, TP4, Qwen3.8 27B FP8
-configuration. Adjust tensor parallelism, model length, concurrency, and GPU
-memory utilization when changing the GPU count, model, or available memory.
+MTP requires compatible MTP weights. Use `incoai/Qwen3.8-27B-DFlash2` as the matching draft.
+For `philbert440/Qwen3.8-27B-W4A16-AWQ`, download the model and set `MODEL=/models/Qwen3.8-27B-W4A16-AWQ FORMAT=awq`.
+
+```bash
+curl --fail http://localhost:8000/health
+curl --fail http://localhost:8000/v1/models \
+  --header "Authorization: Bearer $VLLM_API_KEY"
+```
+
+See [build and launch details](docker/BUILD-v0.1.2.md).
 
 ## Idle auto-sleep
 
@@ -216,5 +162,4 @@ Notes:
 
 ## License
 
-The vLLM modifications remain under the upstream Apache-2.0 License. The
-FlashQLA-SM75 files retain their original MIT License and provenance notices.
+vLLM changes retain Apache-2.0. FlashQLA-SM75 retains its MIT license and [source attribution](vllm/third_party/flash_qla_sm75/SOURCE.md).

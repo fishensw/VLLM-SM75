@@ -1,0 +1,149 @@
+# syntax=docker/dockerfile:1.7
+
+ARG BASE_IMAGE=vllm/vllm-openai:v0.28.0-cu129@sha256:50509e700235cea487715cedeb501d20a1cd15fa6a54ce93688284bd0d96995d
+
+FROM ${BASE_IMAGE} AS sm75-base
+RUN uv pip uninstall --system flashinfer-jit-cache && \
+    uv pip install --system --no-cache --no-deps flashinfer-python==0.6.18 flashinfer-cubin==0.6.18 \
+        --extra-index-url https://flashinfer.ai/whl/
+
+FROM sm75-base AS flashqla-builder
+
+ENV TORCH_CUDA_ARCH_LIST=7.5
+ARG MAX_JOBS=1
+ENV MAX_JOBS=${MAX_JOBS}
+WORKDIR /opt/flashqla-build
+COPY vllm/third_party/flash_qla_sm75 /opt/flashqla-build/source
+RUN python3 /opt/flashqla-build/source/build_extension.py \
+    --build-directory /opt/flashqla-build/work \
+    --output /opt/flashqla-build/flash_qla_sm75_gdn.so \
+    --verbose && \
+    cuobjdump --list-elf /opt/flashqla-build/flash_qla_sm75_gdn.so \
+        > /opt/flashqla-build/cuobjdump.txt && \
+    test "$(grep -Eo 'sm_[0-9]+' /opt/flashqla-build/cuobjdump.txt | \
+        sort -u)" = "sm_75"
+
+FROM sm75-base AS runtime
+
+# Match the reviewed startup fixes rather than resolving a moving latest release.
+RUN uv pip install --system transformers==5.15.1
+
+# Keep the production image's proven SM75 FlashInfer runtime.  In particular,
+# flashinfer-jit-cache 0.6.18 contains AOT cubins without an SM75 image and
+# makes BatchPrefillWithPagedKVCache fail during CUDA graph warmup.
+
+ARG BUILD_DATE
+ARG SOURCE_REVISION
+ARG BASE_IMAGE_ID
+ARG VLLM_SM75_RELEASE=vllm-sm75-v0.1.2
+ARG UPSTREAM_VLLM_COMMIT=2cf0a6915ce544dc493a0990f2ea38d81601128a
+ARG ONECAT_FLASHQLA_COMMIT=187b932dbd11940f0bcf52fb3675dd47fd69f313
+
+LABEL org.opencontainers.image.created="${BUILD_DATE}" \
+      org.opencontainers.image.revision="${SOURCE_REVISION}" \
+      org.opencontainers.image.base.name="${BASE_IMAGE_ID}" \
+      org.opencontainers.image.version="${VLLM_SM75_RELEASE}" \
+      org.opencontainers.image.title="VLLM-SM75 v0.1.2" \
+      org.opencontainers.image.description="VLLM-SM75 v0.1.2: FlashQLA-SM75 GDN prefill with Triton decode" \
+      ai.vllm.upstream.commit="${UPSTREAM_VLLM_COMMIT}" \
+      ai.vllm.upstream.version="v0.28.0" \
+      ai.vllm.flashqla.commit="${ONECAT_FLASHQLA_COMMIT}" \
+      ai.vllm.sm75.release="${VLLM_SM75_RELEASE}"
+
+COPY vllm/envs.py /tmp/sm75-overlay/envs.py
+COPY vllm/config/model.py /tmp/sm75-overlay/config/model.py
+COPY vllm/engine/arg_utils.py /tmp/sm75-overlay/engine/arg_utils.py
+COPY vllm/entrypoints/serve/utils/api_utils.py \
+    /tmp/sm75-overlay/entrypoints/serve/utils/api_utils.py
+COPY vllm/distributed/kv_transfer/kv_connector/v1/base.py \
+    /tmp/sm75-overlay/distributed/kv_transfer/kv_connector/v1/base.py
+COPY vllm/model_executor/layers/mamba/gdn/qwen_gdn_linear_attn.py \
+    /tmp/sm75-overlay/model_executor/layers/mamba/gdn/qwen_gdn_linear_attn.py
+COPY vllm/model_executor/layers/quantization/kv_cache.py \
+    /tmp/sm75-overlay/model_executor/layers/quantization/kv_cache.py
+COPY vllm/model_executor/layers/quantization/utils/marlin_utils_fp8.py \
+    /tmp/sm75-overlay/model_executor/layers/quantization/utils/marlin_utils_fp8.py
+COPY vllm/v1/attention/backends/flashinfer.py \
+    /tmp/sm75-overlay/v1/attention/backends/flashinfer.py
+COPY vllm/v1/attention/backends/gdn_attn.py \
+    /tmp/sm75-overlay/v1/attention/backends/gdn_attn.py
+COPY vllm/v1/engine/auto_sleep.py \
+    /tmp/sm75-overlay/v1/engine/auto_sleep.py
+COPY vllm/v1/engine/core.py \
+    /tmp/sm75-overlay/v1/engine/core.py
+COPY vllm/v1/engine/async_llm.py \
+    /tmp/sm75-overlay/v1/engine/async_llm.py
+COPY vllm/v1/engine/core_client.py \
+    /tmp/sm75-overlay/v1/engine/core_client.py
+COPY vllm/third_party/flash_qla_sm75 \
+    /tmp/sm75-overlay/third_party/flash_qla_sm75
+COPY docker/install_sm75_overlay.py /tmp/install_sm75_overlay.py
+COPY docker/patch_transformers_startup.py /tmp/patch_transformers_startup.py
+COPY docker/verify_sm75_image.py /tmp/verify_sm75_image.py
+RUN mkdir -p /opt/vllm-sm75/source /opt/vllm-sm75/extensions && \
+    python3 /tmp/patch_transformers_startup.py && \
+    python3 /tmp/install_sm75_overlay.py /tmp/sm75-overlay \
+        --source-copy /opt/vllm-sm75/source/v0.1.2/vllm && \
+    cp -a /tmp/sm75-overlay/third_party/flash_qla_sm75 \
+        /opt/vllm-sm75/source/ && \
+    rm -rf /tmp/sm75-overlay /tmp/install_sm75_overlay.py \
+        /tmp/patch_transformers_startup.py
+
+COPY requirements/cuda.txt /opt/vllm-sm75/source/v0.1.2/
+COPY tests/model_executor/test_sm75_gdn_selection.py \
+    /opt/vllm-sm75/source/v0.1.2/tests/model_executor/test_sm75_gdn_selection.py
+COPY tests/kernels/attention/test_attention_selector.py \
+    /opt/vllm-sm75/source/v0.1.2/tests/kernels/attention/test_attention_selector.py
+COPY tests/entrypoints/serve/utils/test_api_utils.py \
+    /opt/vllm-sm75/source/v0.1.2/tests/entrypoints/serve/utils/test_api_utils.py
+COPY tests/config/test_model_dtype_override.py \
+    /opt/vllm-sm75/source/v0.1.2/tests/config/test_model_dtype_override.py
+COPY tests/v1/engine/test_auto_sleep.py \
+    /opt/vllm-sm75/source/v0.1.2/tests/v1/engine/test_auto_sleep.py
+
+COPY --from=flashqla-builder /opt/flashqla-build/flash_qla_sm75_gdn.so \
+    /opt/vllm-sm75/extensions/flash_qla_sm75_gdn.so
+COPY --from=flashqla-builder /opt/flashqla-build/cuobjdump.txt \
+    /opt/vllm-sm75/evidence/cuobjdump.txt
+
+ENV FLASH_QLA_SM75_PREBUILT_EXTENSION_PATH=/opt/vllm-sm75/extensions/flash_qla_sm75_gdn.so \
+    FLASH_QLA_SM75_ALLOW_JIT=0 \
+    PYTHONWARNINGS=ignore::FutureWarning \
+    TRANSFORMERS_VERBOSITY=error \
+    VLLM_USE_MODELSCOPE=true \
+    MODELSCOPE_CACHE=/root/.cache/modelscope/hub
+
+RUN python3 /tmp/verify_sm75_image.py && \
+    test -s /opt/vllm-sm75/extensions/flash_qla_sm75_gdn.so && \
+    test -s /opt/vllm-sm75/source/flash_qla_sm75/LICENSE && \
+    test -s /opt/vllm-sm75/source/flash_qla_sm75/SOURCE.md && \
+    rm -f /tmp/verify_sm75_image.py
+
+FROM runtime AS selector-tests
+
+RUN uv pip install --system pytest==9.1.0 && \
+    python3 -m pytest \
+        /opt/vllm-sm75/source/v0.1.2/tests/kernels/attention/test_attention_selector.py::test_flashinfer_compute_capability_includes_sm75 \
+        /opt/vllm-sm75/source/v0.1.2/tests/model_executor/test_sm75_gdn_selection.py \
+        /opt/vllm-sm75/source/v0.1.2/tests/entrypoints/serve/utils/test_api_utils.py::test_sensitive_args_are_redacted_without_mutating_input \
+        /opt/vllm-sm75/source/v0.1.2/tests/config/test_model_dtype_override.py \
+        /opt/vllm-sm75/source/v0.1.2/tests/v1/engine/test_auto_sleep.py \
+        -v > /tmp/selector-pytest.log 2>&1
+
+FROM runtime AS verified-runtime
+
+COPY --from=selector-tests /tmp/selector-pytest.log \
+    /opt/vllm-sm75/evidence/selector-pytest.log
+
+
+# All modes use the same image; runtime configuration selects speculation.
+FROM verified-runtime AS final
+ENTRYPOINT ["vllm"]
+CMD ["--help"]
+
+COPY docker/speculative /opt/vllm-sm75/speculative
+COPY docker/install_speculative.py /tmp/install_speculative.py
+RUN python3 /tmp/install_speculative.py && rm /tmp/install_speculative.py
+ENV SM75_FA2_SMALLQ_GRAPH=1 SM75_GDN_B1_METADATA=1
+
+LABEL ai.vllm.sm75.modes="base,mtp,dflash2"
