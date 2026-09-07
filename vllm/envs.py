@@ -2135,6 +2135,27 @@ environment_variables: dict[str, Callable[[], Any]] = {
     # Each entry is VAR_NAME or VAR_NAME:<suffix> (suffix appended to
     # RDMA device name). Must be set together with VLLM_GPU_NIC_PCIE_MAPPING.
     "VLLM_NIC_SELECTION_VARS": lambda: os.getenv("VLLM_NIC_SELECTION_VARS", ""),
+    # vllm-sm75 overlay: idle auto-sleep. Populated by EngineArgs from the
+    # --auto-sleep-* CLI flags; consumed inside the engine-core process by
+    # vllm.v1.engine.auto_sleep.
+    # Idle minutes (float) before the engine auto-sleeps; 0 disables.
+    "VLLM_AUTO_SLEEP_IDLE_TIMEOUT": lambda: float(
+        os.getenv("VLLM_AUTO_SLEEP_IDLE_TIMEOUT", "0")
+    ),
+    # 'cpu' (sleep level 1, pinned CPU backup) or 'reload' (sleep level 2,
+    # weights discarded and reloaded from the checkpoint on wake).
+    "VLLM_AUTO_SLEEP_OFFLOAD_TARGET": lambda: os.getenv(
+        "VLLM_AUTO_SLEEP_OFFLOAD_TARGET", "cpu"
+    ),
+    # Checkpoint path used to reload weights on wake for the 'reload' target.
+    "VLLM_AUTO_SLEEP_RELOAD_PATH": lambda: os.getenv("VLLM_AUTO_SLEEP_RELOAD_PATH", ""),
+    # Seconds between page-cache re-warm ticks while sleeping (reload mode);
+    # keeps the checkpoint in the OS page cache so the wake-time reload read
+    # is fast. 0 disables the background keeper (one-shot warm on sleep/wake
+    # still happens).
+    "VLLM_AUTO_SLEEP_PAGE_CACHE_KEEP_INTERVAL": lambda: float(
+        os.getenv("VLLM_AUTO_SLEEP_PAGE_CACHE_KEEP_INTERVAL", "600")
+    ),
 }
 
 

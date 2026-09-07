@@ -3,8 +3,10 @@
 
 from __future__ import annotations
 
+import ast
 import importlib.metadata
 import json
+import tempfile
 from pathlib import Path
 
 import torch
@@ -50,6 +52,80 @@ def main() -> None:
         raise RuntimeError(f"Sensitive argument redaction failed: {redacted}")
     if _normalize_config_dtype("float16") is not torch.float16:
         raise RuntimeError("String HF dtype override was not normalized")
+
+    from vllm.v1.engine.auto_sleep import AutoSleepConfig, AutoSleepController
+
+    if AutoSleepConfig(timeout_seconds=60.0).sleep_level != 1:
+        raise RuntimeError("auto-sleep 'cpu' target must map to sleep level 1")
+    if (
+        AutoSleepConfig(
+            timeout_seconds=60.0, offload_target="reload", reload_path="/ckpt"
+        ).sleep_level
+        != 2
+    ):
+        raise RuntimeError("auto-sleep 'reload' target must map to sleep level 2")
+    if AutoSleepController(object(), object()).enabled:
+        raise RuntimeError(
+            "auto-sleep must be disabled without VLLM_AUTO_SLEEP_* envs"
+        )
+    from vllm.v1.engine.auto_sleep import warm_safetensors_page_cache
+
+    if (
+        AutoSleepConfig(timeout_seconds=60.0).page_cache_keep_interval_seconds
+        != 600.0
+    ):
+        raise RuntimeError("auto-sleep page-cache keeper default must be 600s")
+    if not AutoSleepConfig(timeout_seconds=60.0, offload_target="exit").is_exit:
+        raise RuntimeError("auto-sleep must recognize the 'exit' offload target")
+    with tempfile.TemporaryDirectory() as tmp:
+        if warm_safetensors_page_cache(tmp) != 0:
+            raise RuntimeError(
+                "page-cache warm on an empty dir must advise 0 files"
+            )
+
+    # Deep-sleep exit/respawn plumbing (engine-core proc + client side).
+    # Checked statically with ast against the installed source copy instead
+    # of importing vllm.v1.engine.{core,core_client,async_llm}: those
+    # imports pull in the whole engine stack (executor, model executor,
+    # attention backends) and add several GiB of peak memory to the build,
+    # on top of the parallel nvcc stage.
+    engine_source = Path("/opt/vllm-sm75/source/v0.1.0/vllm/v1/engine")
+
+    def _class_members(path: Path) -> dict[str, set[str]]:
+        tree = ast.parse(path.read_text(), filename=str(path))
+        classes: dict[str, set[str]] = {}
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.ClassDef):
+                continue
+            members: set[str] = set()
+            for item in node.body:
+                if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    members.add(item.name)
+                elif isinstance(item, ast.Assign):
+                    members.update(
+                        target.id
+                        for target in item.targets
+                        if isinstance(target, ast.Name)
+                    )
+            classes[node.name] = members
+        return classes
+
+    core_classes = _class_members(engine_source / "core.py")
+    core_members = core_classes.get("EngineCoreProc", set())
+    if "DEEP_SLEEP_EXITING" not in core_members:
+        raise RuntimeError("EngineCoreProc must define DEEP_SLEEP_EXITING")
+    if "request_deep_sleep_exit" not in core_members:
+        raise RuntimeError("EngineCoreProc must define request_deep_sleep_exit")
+
+    client_classes = _class_members(engine_source / "core_client.py")
+    if "_respawn_launch" not in client_classes.get("MPClient", set()):
+        raise RuntimeError("MPClient must define _respawn_launch")
+    if "respawn_engine" not in client_classes.get("AsyncMPClient", set()):
+        raise RuntimeError("AsyncMPClient must define respawn_engine")
+
+    async_llm_classes = _class_members(engine_source / "async_llm.py")
+    if "_await_deep_sleep_respawn" not in async_llm_classes.get("AsyncLLM", set()):
+        raise RuntimeError("AsyncLLM must define _await_deep_sleep_respawn")
 
     result = {
         "packages": installed,

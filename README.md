@@ -14,6 +14,10 @@ vLLM-SM75 v0.1.2 基于 vLLM 0.28.0，集成 MTP 和 DFlash2 适配。
 - 完善 DFlash2 的 SM75 数值兼容、AWQ 数据类型及 TP4 处理。
 - 修复 FP8 加载 draft 时的显存分配压力。
 - 支持 ModelScope、模型与编译缓存持久化。
+- 新增空闲自动睡眠（auto-sleep）：空闲超时后自动卸载权重释放显存，
+  新请求到达自动唤醒（权重可备份到 CPU 内存、丢弃后从 checkpoint 重载，
+  或直接退出引擎进程进入深度睡眠、下一请求透明冷启动），调用方无需任何
+  额外接口。详见下文「空闲自动睡眠」。
 
 ## 性能参考
 
@@ -104,6 +108,51 @@ curl --fail http://localhost:8000/health
 curl --fail http://localhost:8000/v1/models \
   --header "Authorization: Bearer $VLLM_API_KEY"
 ```
+
+## 空闲自动睡眠（auto-sleep）
+
+引擎空闲超过设定时间后自动卸载权重、释放 GPU 显存；新请求到达时自动唤醒
+（或重建）并继续服务，调用方无需任何额外调用。默认关闭
+（`--auto-sleep-idle-timeout 0`），显式传入超时时开启。
+
+示例配置（空闲 5 分钟自动进入**深度睡眠**：整个引擎进程退出，显存、
+CUDA context、worker 进程全部归零；下一个请求透明地冷启动重拉）：
+
+```bash
+vllm serve Qwen/Qwen3.8-27B-FP8 \
+  ... \
+  --auto-sleep-idle-timeout 5 \
+  --auto-sleep-offload-target exit
+```
+
+| 参数 | 默认 | 说明 |
+| --- | --- | --- |
+| `--auto-sleep-idle-timeout` | `0`（关闭） | 空闲超过该分钟数触发自动睡眠；float，如 `0.2` = 12 秒（短窗口测试用） |
+| `--auto-sleep-offload-target` | `cpu` | `cpu` = 权重备份到 CPU 内存（sleep level 1，唤醒约 1-2s，占约 30 GiB 主机内存，需 `--enable-sleep-mode`）；`reload` = 权重直接丢弃、唤醒时从 checkpoint 重载（sleep level 2，不占 CPU 内存，唤醒约 20-60s，需 `--enable-sleep-mode`）；`exit` = 退出整个引擎进程（深度睡眠，显存/CUDA context/worker 全归零，GPU 进 P8 待机，下一请求透明冷启动约 1-3 min，**无需** `--enable-sleep-mode`） |
+| `--auto-sleep-reload-path` | 启动时的模型路径 | `reload` 模式唤醒使用的 checkpoint 路径 |
+| `--auto-sleep-page-cache-keep-interval` | `600` | `reload` 模式下，睡眠期间每隔该秒数把 checkpoint 重新预热进 OS page cache，保证唤醒时的读盘走缓存而非冷读 NVMe；`0` = 关闭后台预热（睡眠/唤醒瞬间仍会各预热一次）。`exit` 模式在退出前预热一次，让冷启动读盘走缓存 |
+
+注意事项：
+
+- 唤醒耗时计入空闲后第一个请求的 TTFT：`reload` 模式需要从磁盘读
+  checkpoint 并重跑量化 repack（约 20-60 秒）；`cpu` 模式约 1-2 秒；
+  `exit` 模式是完整冷启动（重建进程 + 模型加载 + 量化 repack，约 1-3 分钟），
+  换取睡眠期间 GPU 完全空闲。
+- `exit` 模式（深度睡眠）退出整个引擎进程，睡眠期间显存、CUDA context、
+  worker 进程全部归零，省电最彻底；代价是唤醒最慢。适合长时间空闲
+  （如夜间）的场景。目前仅支持单 API server、DP=1 的部署拓扑。
+- `reload` 模式要求模型 checkpoint 在磁盘上持续可读（即
+  `vllm-hf-cache` 卷保持挂载）。
+- `reload` 模式默认在睡眠期间把 checkpoint 预热进 OS page cache（每 600 秒
+  一次，`--auto-sleep-page-cache-keep-interval` 可调、设 `0` 关闭）。这能让
+  唤醒时的 `reload_weights` 读盘命中缓存而非冷读，NVMe 场景下可缩短唤醒
+  耗时约 10-25 秒；对已在缓存中的页是零开销的空操作。
+- CPU 内存有限的主机（如 31 GiB 验证机）推荐 `reload` 或 `exit`；`cpu` 模式
+  需要额外约 30 GiB 主机内存存放 pinned 备份。
+- 启用投机解码 drafter 时推荐 `cpu` 模式（drafter 权重不随主模型
+  自动重载）。
+- 手动 `POST /sleep` / `POST /wake_up` / `GET /is_sleeping` 位于 dev
+  路由；auto 模式下手动调用的行为未定义。
 
 ## License
 
