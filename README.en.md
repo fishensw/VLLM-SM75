@@ -10,7 +10,6 @@ vLLM-SM75 v0.1.3 is based on vLLM 0.28.0 and integrates MTP, DFlash2 and auto-sl
 
 - Adds idle auto-sleep with transparent wake-up; the launch script defaults to deep sleep after 30 minutes.
 - Starts the idle timer when a request completes and the engine becomes idle.
-- Simplifies the build and run entrypoints to `docker/build.sh` and `docker/run.sh`.
 
 ## Features
 
