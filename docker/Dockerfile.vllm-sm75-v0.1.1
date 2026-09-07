@@ -35,7 +35,7 @@ COPY --from=flashqla-builder /opt/flashqla-build/cuobjdump.txt \
 ARG BUILD_DATE
 ARG SOURCE_REVISION
 ARG BASE_IMAGE_ID
-ARG VLLM_SM75_RELEASE=vllm-sm75-v0.1.0
+ARG VLLM_SM75_RELEASE=vllm-sm75-v0.1.1
 ARG UPSTREAM_VLLM_COMMIT=2cf0a6915ce544dc493a0990f2ea38d81601128a
 ARG ONECAT_FLASHQLA_COMMIT=187b932dbd11940f0bcf52fb3675dd47fd69f313
 
@@ -43,8 +43,8 @@ LABEL org.opencontainers.image.created="${BUILD_DATE}" \
       org.opencontainers.image.revision="${SOURCE_REVISION}" \
       org.opencontainers.image.base.name="${BASE_IMAGE_ID}" \
       org.opencontainers.image.version="${VLLM_SM75_RELEASE}" \
-      org.opencontainers.image.title="VLLM-SM75 v0.1.0" \
-      org.opencontainers.image.description="VLLM-SM75 v0.1.0: FlashQLA-SM75 GDN prefill with Triton decode" \
+      org.opencontainers.image.title="VLLM-SM75 v0.1.1" \
+      org.opencontainers.image.description="VLLM-SM75 v0.1.1: FlashQLA-SM75 GDN prefill with Triton decode" \
       ai.vllm.upstream.commit="${UPSTREAM_VLLM_COMMIT}" \
       ai.vllm.upstream.version="v0.28.0" \
       ai.vllm.flashqla.commit="${ONECAT_FLASHQLA_COMMIT}" \
@@ -91,28 +91,35 @@ COPY docker/verify_sm75_image.py /tmp/verify_sm75_image.py
 RUN mkdir -p /opt/vllm-sm75/source /opt/vllm-sm75/extensions && \
     python3 /tmp/patch_transformers_startup.py && \
     python3 /tmp/install_sm75_overlay.py /tmp/sm75-overlay \
-        --source-copy /opt/vllm-sm75/source/v0.1.0/vllm && \
+        --source-copy /opt/vllm-sm75/source/v0.1.1/vllm && \
     cp -a /tmp/sm75-overlay/third_party/flash_qla_sm75 \
         /opt/vllm-sm75/source/ && \
     rm -rf /tmp/sm75-overlay /tmp/install_sm75_overlay.py \
         /tmp/patch_transformers_startup.py
 
-COPY requirements/cuda.txt /opt/vllm-sm75/source/v0.1.0/
+COPY requirements/cuda.txt /opt/vllm-sm75/source/v0.1.1/
 COPY tests/model_executor/test_sm75_gdn_selection.py \
-    /opt/vllm-sm75/source/v0.1.0/tests/model_executor/test_sm75_gdn_selection.py
+    /opt/vllm-sm75/source/v0.1.1/tests/model_executor/test_sm75_gdn_selection.py
 COPY tests/kernels/attention/test_attention_selector.py \
-    /opt/vllm-sm75/source/v0.1.0/tests/kernels/attention/test_attention_selector.py
+    /opt/vllm-sm75/source/v0.1.1/tests/kernels/attention/test_attention_selector.py
 COPY tests/entrypoints/serve/utils/test_api_utils.py \
-    /opt/vllm-sm75/source/v0.1.0/tests/entrypoints/serve/utils/test_api_utils.py
+    /opt/vllm-sm75/source/v0.1.1/tests/entrypoints/serve/utils/test_api_utils.py
 COPY tests/config/test_model_dtype_override.py \
-    /opt/vllm-sm75/source/v0.1.0/tests/config/test_model_dtype_override.py
+    /opt/vllm-sm75/source/v0.1.1/tests/config/test_model_dtype_override.py
 COPY tests/v1/engine/test_auto_sleep.py \
-    /opt/vllm-sm75/source/v0.1.0/tests/v1/engine/test_auto_sleep.py
+    /opt/vllm-sm75/source/v0.1.1/tests/v1/engine/test_auto_sleep.py
+
+COPY --from=flashqla-builder /opt/flashqla-build/flash_qla_sm75_gdn.so \
+    /opt/vllm-sm75/extensions/flash_qla_sm75_gdn.so
+COPY --from=flashqla-builder /opt/flashqla-build/cuobjdump.txt \
+    /opt/vllm-sm75/evidence/cuobjdump.txt
 
 ENV FLASH_QLA_SM75_PREBUILT_EXTENSION_PATH=/opt/vllm-sm75/extensions/flash_qla_sm75_gdn.so \
     FLASH_QLA_SM75_ALLOW_JIT=0 \
     PYTHONWARNINGS=ignore::FutureWarning \
-    TRANSFORMERS_VERBOSITY=error
+    TRANSFORMERS_VERBOSITY=error \
+    VLLM_USE_MODELSCOPE=true \
+    MODELSCOPE_CACHE=/root/.cache/modelscope/hub
 
 RUN python3 /tmp/verify_sm75_image.py && \
     test -s /opt/vllm-sm75/extensions/flash_qla_sm75_gdn.so && \
@@ -128,11 +135,11 @@ FROM runtime AS selector-tests
 # dropping it keeps this Dockerfile buildable under both builders.
 RUN uv pip install --system pytest==9.1.0 && \
     python3 -m pytest \
-        /opt/vllm-sm75/source/v0.1.0/tests/kernels/attention/test_attention_selector.py::test_flashinfer_compute_capability_includes_sm75 \
-        /opt/vllm-sm75/source/v0.1.0/tests/model_executor/test_sm75_gdn_selection.py \
-        /opt/vllm-sm75/source/v0.1.0/tests/entrypoints/serve/utils/test_api_utils.py::test_sensitive_args_are_redacted_without_mutating_input \
-        /opt/vllm-sm75/source/v0.1.0/tests/config/test_model_dtype_override.py \
-        /opt/vllm-sm75/source/v0.1.0/tests/v1/engine/test_auto_sleep.py \
+        /opt/vllm-sm75/source/v0.1.1/tests/kernels/attention/test_attention_selector.py::test_flashinfer_compute_capability_includes_sm75 \
+        /opt/vllm-sm75/source/v0.1.1/tests/model_executor/test_sm75_gdn_selection.py \
+        /opt/vllm-sm75/source/v0.1.1/tests/entrypoints/serve/utils/test_api_utils.py::test_sensitive_args_are_redacted_without_mutating_input \
+        /opt/vllm-sm75/source/v0.1.1/tests/config/test_model_dtype_override.py \
+        /opt/vllm-sm75/source/v0.1.1/tests/v1/engine/test_auto_sleep.py \
         -v > /tmp/selector-pytest.log 2>&1
 
 FROM runtime AS final

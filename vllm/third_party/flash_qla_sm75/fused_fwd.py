@@ -18,7 +18,7 @@ _PREBUILT_EXTENSION_PATH_ENV = "FLASH_QLA_SM75_PREBUILT_EXTENSION_PATH"
 _ALLOW_JIT_ENV = "FLASH_QLA_SM75_ALLOW_JIT"
 
 # Avoid CUDA-device auto-detection while distributed workers are initializing.
-# VLLM-SM75 v0.1.0 intentionally emits SM75 code only.
+# VLLM-SM75 v0.1.1 intentionally emits SM75 code only.
 _SM75_GENCODE_FLAGS = ["-gencode=arch=compute_75,code=sm_75"]
 
 
