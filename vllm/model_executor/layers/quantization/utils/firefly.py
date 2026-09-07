@@ -127,10 +127,12 @@ def dequant_clean_int4_to_int8_cached(
     c_n: torch.Tensor,  # [N] 预计算 per-channel scale(load 时算一次)
     group_size: int = 128,
     w_zp: torch.Tensor | None = None,
+    use_recip: bool = False,
 ) -> torch.Tensor:
     """干净 int4 单遍反量化: c_n 已预计算, 只跑量化 pass(免两遍 amax)。
 
-    与 dequant_clean_int4_to_int8 的量化步逐 bit 一致(c_n 即其 amax/127)。
+    use_recip=False: 除法, 与 dequant_clean_int4_to_int8 逐 bit 一致(c_n 即其 amax/127)。
+    use_recip=True : 乘倒数(fast), 更快但 off-by-one ≤0.06%。
     返回 w_int8 [N, K] int8。
     """
     N, Kd8 = weight_packed.shape
@@ -147,6 +149,9 @@ def dequant_clean_int4_to_int8_cached(
         )
     )
     w_deq = (q - zp) * s
+    if use_recip:
+        r = torch.where(c_n > 0, 1.0 / c_n, 0.0)
+        return torch.clamp(torch.round(w_deq * r.unsqueeze(1)), -127, 127).to(torch.int8)
     return torch.clamp(
         torch.round(w_deq / c_n.unsqueeze(1)), -127, 127
     ).to(torch.int8)
@@ -319,6 +324,39 @@ def dequant_marlin_to_int8(
     return w_int8, c_n
 
 
+# ---- torch.compile(fullgraph) 兼容 ----
+# 裸 pybind 反量化 kernel dynamo 追不了: VLLM_COMPILE(fullgraph=True, 即去掉
+# --enforce-eager 后) 追到 prefill 分支会抛 "Unsupported: Attempted to call
+# function marked as skipped"(gb0007)。注册成 torch.library op 后 dynamo 当
+# 不透明 op 处理, 兼容 fullgraph 编译 + CUDA graph capture。CUDA mod 仍懒加载:
+# op body 首次执行才 _load_cuda_mod()(JIT 编译), 不拖 vllm import。
+@torch.library.custom_op("firefly::dequant_marlin_cached", mutates_args=())
+def _ff_dequant_marlin_cached_op(
+    marlin_w: torch.Tensor,
+    weight_scale: torch.Tensor,
+    zp_t: torch.Tensor,
+    c_n: torch.Tensor,
+    n: int,
+    k: int,
+    pn: int,
+    pk: int,
+    gs: int,
+    use_recip: bool,
+) -> torch.Tensor:
+    mod = _load_cuda_mod()
+    out_int8 = torch.empty((n, k), dtype=torch.int8, device=marlin_w.device)
+    kernel = (
+        mod.firefly_dequant_cached_recip if use_recip else mod.firefly_dequant_cached
+    )
+    kernel(marlin_w, weight_scale, zp_t, out_int8, c_n, n, k, pn, pk, gs)
+    return out_int8
+
+
+@_ff_dequant_marlin_cached_op.register_fake
+def _(_marlin_w, _weight_scale, _zp_t, _c_n, n, k, _pn, _pk, _gs, _use_recip):
+    return torch.empty((n, k), dtype=torch.int8, device=_marlin_w.device)
+
+
 def dequant_marlin_to_int8_cached(
     marlin_w: torch.Tensor,
     weight_scale: torch.Tensor,  # 干净 scale [N, K/group_size] (N 在前)
@@ -329,16 +367,17 @@ def dequant_marlin_to_int8_cached(
     padded_k: int | None = None,
     padded_n: int | None = None,
     w_zp: torch.Tensor | None = None,  # None=对称(zp=8); AWQ qzeros [N/8, K/gs]
+    use_recip: bool = False,
 ) -> torch.Tensor:
     """B1-hard 单遍反量化: c_n 已预计算, 只跑量化 pass(免两遍 amax)。
 
-    与 dequant_marlin_to_int8 的 pass2 逐 bit 一致(c_n[n] 即其 pass1 写出的 c)。
-    优先 CUDA kernel(firefly_dequant_cached); 编译失败/无 GPU 回退 PyTorch 版。
+    use_recip=False: 除法, 与 dequant_marlin_to_int8 的 pass2 逐 bit 一致。
+    use_recip=True : 乘倒数(fast), 更快但 off-by-one ≤0.06%。
+    优先 CUDA kernel(firefly_dequant_cached[_recip]); 编译失败/无 GPU 回退 PyTorch 版。
     返回 w_int8 [N, K] int8。
     """
     N, K = size_n, size_k
-    mod = _load_cuda_mod()
-    if mod is not None and marlin_w.is_cuda:
+    if _load_cuda_mod() is not None and marlin_w.is_cuda:
         pk = padded_k if padded_k is not None else K
         pn = padded_n if padded_n is not None else N
         zp_t = (
@@ -346,11 +385,10 @@ def dequant_marlin_to_int8_cached(
             if w_zp is None
             else _unpack_awq_zp(w_zp, N, weight_scale.shape[1])
         )
-        out_int8 = torch.empty((N, K), dtype=torch.int8, device=marlin_w.device)
-        mod.firefly_dequant_cached(
-            marlin_w, weight_scale, zp_t, out_int8, c_n, N, K, pn, pk, group_size
+        # 走 torch.library op(见上定义), 兼容 VLLM_COMPILE fullgraph。
+        return _ff_dequant_marlin_cached_op(
+            marlin_w, weight_scale, zp_t, c_n, N, K, pn, pk, group_size, use_recip
         )
-        return out_int8
 
     # PyTorch 回退路径
     q = marlin_to_int4_q(marlin_w, size_k, size_n, padded_k, padded_n)  # [N, K]
@@ -363,6 +401,9 @@ def dequant_marlin_to_int8_cached(
         )
     )
     w_deq = (q.float() - zp) * s  # [N, K]
+    if use_recip:
+        r = torch.where(c_n > 0, 1.0 / c_n, 0.0)
+        return torch.clamp(torch.round(w_deq * r.unsqueeze(1)), -127, 127).to(torch.int8)
     return torch.clamp(
         torch.round(w_deq / c_n.unsqueeze(1)), -127, 127
     ).to(torch.int8)

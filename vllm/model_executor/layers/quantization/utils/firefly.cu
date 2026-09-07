@@ -133,6 +133,34 @@ __global__ void firefly_dequant_cached_kernel(
   }
 }
 
+// 单遍反量化(fast): c_n 预计算, per-row 只算一次倒数 r=1/c_n, 量化用乘(非除)。
+// 比除法版再省 ~30%(除法是每元素一次 FP32 div, T10 上吞吐低、抢 ALU); 代价 off-by-one
+// ≤0.06%(int8 可忽略, 见 tmp/PLAN §8 bench)。VLLM_FIREFLY_DEQUANT_MODEL=fast 时启用。
+template <typename ScalarT>
+__global__ void firefly_dequant_cached_recip_kernel(
+    const int32_t* __restrict__ marlin,
+    const ScalarT* __restrict__ scale,
+    const float* __restrict__ zp,  // null → 对称(zp=8); 非对称 → [N, K/gs]
+    int8_t* __restrict__ out,
+    const float* __restrict__ c_n,  // [N] 预计算 per-channel scale
+    int N, int K, int n_tiles_global, int group_size) {
+  const int n = blockIdx.x;
+  if (n >= N) return;
+  const int tid = threadIdx.x;
+  const int scale_cols = K / group_size;
+  const float r = (c_n[n] > 0.f) ? 1.0f / c_n[n] : 0.f;
+  for (int k = tid; k < K; k += blockDim.x) {
+    const int q = fetch_q(marlin, n, k, n_tiles_global);
+    const float s = scalar_to_float(scale[n * scale_cols + k / group_size]);
+    const float z = zp ? zp[n * scale_cols + k / group_size] : 8.0f;
+    const float w_deq = static_cast<float>(q - z) * s;
+    int v = __float2int_rn(w_deq * r);
+    if (v > 127) v = 127;
+    if (v < -127) v = -127;
+    out[n * K + k] = static_cast<int8_t>(v);
+  }
+}
+
 }  // namespace
 
 void firefly_dequant(
@@ -204,6 +232,39 @@ void firefly_dequant_cached(
 #undef LAUNCH
 }
 
+// 单遍 fast launcher: 同签名, 用 firefly_dequant_cached_recip_kernel(乘倒数)。
+void firefly_dequant_cached_recip(
+    at::Tensor marlin_w, at::Tensor scale, at::Tensor zp, at::Tensor out_int8,
+    at::Tensor c_n, int64_t N, int64_t K, int64_t padded_n, int64_t padded_k,
+    int64_t group_size) {
+  const int n_tiles_global = static_cast<int>(padded_n) / 64;
+  const dim3 grid(static_cast<unsigned>(N));
+  constexpr int threads = 256;
+  const cudaStream_t stream = c10::cuda::getCurrentCUDAStream().stream();
+  const int32_t* marlin = marlin_w.data_ptr<int32_t>();
+  int8_t* out = out_int8.data_ptr<int8_t>();
+  const float* cn = c_n.data_ptr<float>();
+  const float* zp_ptr =
+      (zp.defined() && zp.numel() > 0) ? zp.data_ptr<float>() : nullptr;
+#define LAUNCH(ScalarT)                                             \
+  firefly_dequant_cached_recip_kernel<ScalarT><<<grid, threads, 0, \
+                                           stream>>>(marlin,        \
+                                                     static_cast<const ScalarT*>(scale.data_ptr()), \
+                                                     zp_ptr, \
+                                                     out, cn,      \
+                                                     static_cast<int>(N),      \
+                                                     static_cast<int>(K), n_tiles_global, \
+                                                     static_cast<int>(group_size))
+  if (scale.scalar_type() == at::kHalf) {
+    LAUNCH(__half);
+  } else if (scale.scalar_type() == at::kBFloat16) {
+    LAUNCH(__nv_bfloat16);
+  } else {
+    TORCH_CHECK(false, "unsupported scale dtype: ", scale.scalar_type());
+  }
+#undef LAUNCH
+}
+
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {  // NOLINT
   m.def("firefly_dequant", &firefly_dequant,
         "firefly: reverse gptq_marlin_repack + dequant to int8 "
@@ -211,4 +272,7 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {  // NOLINT
   m.def("firefly_dequant_cached", &firefly_dequant_cached,
         "firefly: single-pass dequant to int8 with load-time-cached c_n "
         "(bit-exact with firefly_dequant pass2)");
+  m.def("firefly_dequant_cached_recip", &firefly_dequant_cached_recip,
+        "firefly: single-pass FAST dequant to int8 (reciprocal multiply, "
+        "off-by-one <=0.06%)");
 }

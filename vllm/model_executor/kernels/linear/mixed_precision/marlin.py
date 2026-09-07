@@ -47,6 +47,104 @@ from vllm.scalar_type import scalar_types
 from .MPLinearKernel import MPLinearKernel, MPLinearLayerConfig
 
 
+# ---- firefly 混合 op(dynamo/inductor 兼容) ----
+# firefly 分支判据(`m > min_m`, m 是动态 shape) 若直接留在编译图里, inductor 会把
+# firefly 路径(含 custom op)一起编进 decode(M=1) 的图, 实测 decode 从 27 tok/s 掉到
+# 4.8 tok/s(baseline 无 firefly 时该分支被静态消除)。
+# 图断点方案走不通: torch._dynamo.disable + fullgraph=False 与 VllmBackend
+# ("can only be called once", 只收单图)和 AOT compile("不支持图断点")冲突。
+# 故把"门控 + firefly/Marlin 选择 + 执行"整体包成一个 torch.library custom op:
+# 图里只剩一个不透明 leaf, inductor 看不到分支, decode 图干净(=baseline 性能)。
+# op 内部按真实 M 求值: prefill(m>min_m)现反量化 int8 走 IMMA, decode 走上游 Marlin。
+@torch.library.custom_op("firefly::hybrid_linear", mutates_args=())
+def _ff_hybrid_linear(
+    x: torch.Tensor,
+    w_q: torch.Tensor,
+    w_s_marlin: torch.Tensor,
+    w_zp_marlin: torch.Tensor,
+    w_gidx: torch.Tensor,
+    g_idx_sort_indices: torch.Tensor,
+    workspace: torch.Tensor,
+    input_global_scale: torch.Tensor,
+    bias: torch.Tensor,
+    w_s_clean: torch.Tensor,
+    w_zp_clean: torch.Tensor,
+    c_n: torch.Tensor,
+    size_k: int,
+    size_n: int,
+    padded_k: int,
+    padded_n: int,
+    gs: int,
+    min_m: int,
+    has_zp: bool,
+    is_k_full: bool,
+    use_recip: bool,
+) -> torch.Tensor:
+    m = x.numel() // x.shape[-1]
+    if m > min_m:
+        # prefill: 现反量化 int4→int8 + cutlass_scaled_mm(SM75 即 IMMA)
+        w_int8 = dequant_marlin_to_int8_cached(
+            w_q,
+            w_s_clean,
+            c_n,
+            gs,
+            size_k,
+            size_n,
+            padded_k,
+            padded_n,
+            w_zp=(w_zp_clean if w_zp_clean.numel() > 0 else None),
+            use_recip=use_recip,
+        )
+        return int8_prefill_linear(x, w_int8, c_n)
+    # decode: 上游 int4 Marlin
+    wtype = scalar_types.uint4 if has_zp else scalar_types.uint4b8
+    return apply_gptq_marlin_linear(
+        input=x,
+        weight=w_q,
+        weight_scale=w_s_marlin,
+        weight_zp=w_zp_marlin,
+        g_idx=w_gidx,
+        g_idx_sort_indices=g_idx_sort_indices,
+        workspace=workspace,
+        wtype=wtype,
+        input_size_per_partition=size_k,
+        output_size_per_partition=size_n,
+        is_k_full=is_k_full,
+        input_global_scale=(
+            input_global_scale if input_global_scale.numel() > 0 else None
+        ),
+        bias=bias if bias.numel() > 0 else None,
+        input_dtype=x.dtype,
+    )
+
+
+@_ff_hybrid_linear.register_fake
+def _(
+    x,
+    _w_q,
+    _w_s_marlin,
+    _w_zp_marlin,
+    _w_gidx,
+    _g_idx_sort_indices,
+    _workspace,
+    _input_global_scale,
+    _bias,
+    _w_s_clean,
+    _w_zp_clean,
+    _c_n,
+    _size_k,
+    size_n,
+    _padded_k,
+    _padded_n,
+    _gs,
+    _min_m,
+    _has_zp,
+    _is_k_full,
+    _use_recip,
+):
+    return torch.empty(x.shape[:-1] + (size_n,), dtype=x.dtype, device=x.device)
+
+
 class MarlinLinearKernel(MPLinearKernel):
     @classmethod
     def get_min_capability(cls) -> int:
@@ -317,39 +415,44 @@ class MarlinLinearKernel(MPLinearKernel):
         x: torch.Tensor,
         bias: torch.Tensor | None = None,
     ) -> torch.Tensor:
-        # hybrid: 大 M(prefill)把 int4 现反量化成 int8 走 cutlass(IMMA)。
-        # 不缓存 int8, 每次 prefill 步重算。小 M(decode)走上游 int4 Marlin, 不吃反量化开销。
-        # B1-easy(有 _firefly_wp): 从干净 int4 副本反量化。
-        # B1-hard(无副本): 从 marlin 布局现反回干净 int4(只存 0.53 字节/参数)。
-        # w_zp: 对称 None(zp=8); 非对称(AWQ) 干净 qzeros, dequant 内 (q-zp)*s。
-        if getattr(layer, "_firefly_ws", None) is not None and self._firefly_m_large(
-            x
-        ):
-            # c_n load 时已算好(_firefly_c_n, 同 _firefly_ws 一起设); 运行时单遍量化
-            # (免两遍 amax)。w_int8 仍每次现算(B1-hard 不缓存 int8, 省显存)。
-            hybrid_wzp = getattr(layer, "_firefly_wzp", None)
-            c_n = layer._firefly_c_n
-            if getattr(layer, "_firefly_wp", None) is not None:
-                w_int8 = dequant_clean_int4_to_int8_cached(
-                    layer._firefly_wp,
-                    layer._firefly_ws,
-                    c_n,
-                    layer._firefly_gs,
-                    w_zp=hybrid_wzp,
-                )
-            else:
-                w_int8 = dequant_marlin_to_int8_cached(
-                    getattr(layer, self.w_q_name).data,
-                    layer._firefly_ws,
-                    c_n,
-                    layer._firefly_gs,
-                    layer._firefly_size_k,
-                    layer._firefly_size_n,
-                    layer._firefly_padded_k,
-                    layer._firefly_padded_n,
-                    w_zp=hybrid_wzp,
-                )
-            return int8_prefill_linear(x, w_int8, c_n)
+        # hybrid: 大 M(prefill)把 int4 现反量化成 int8 走 cutlass(IMMA), 小 M(decode)
+        # 走上游 int4 Marlin。整个"门控+选择+执行"包在 _ff_hybrid_linear(op) 里,
+        # 对 inductor 不透明(图里一个 leaf), 避免 m>min_m 数据依赖分支拖慢 decode。
+        # 27B 为 B1-hard(无 _firefly_wp 干净副本), op 内走 marlin 布局反量化;
+        # B1-easy 模型同样正确(走 marlin 反量化, 略慢但不反 clean 副本)。
+        # input_global_scale/bias/w_zp_clean 用空张量表示 None(custom op 不收 None)。
+        if self._firefly_enabled():
+            c = self.config
+            w_q, w_s, w_zp, w_gidx = self._get_weight_params(layer)
+            empty = torch.empty(0, device=x.device)
+            igs = getattr(layer, "input_global_scale", None)
+            igs_t = igs.data if igs is not None else empty
+            bias_t = bias.data if bias is not None else empty
+            wzp_c = getattr(layer, "_firefly_wzp", None)
+            wzp_c_t = wzp_c if wzp_c is not None else empty
+            return _ff_hybrid_linear(
+                x,
+                w_q,
+                w_s,
+                w_zp,
+                w_gidx,
+                layer.g_idx_sort_indices,
+                self.workspace,
+                igs_t,
+                bias_t,
+                layer._firefly_ws,
+                wzp_c_t,
+                layer._firefly_c_n,
+                c.partition_weight_shape[0],
+                c.partition_weight_shape[1],
+                layer._firefly_padded_k,
+                layer._firefly_padded_n,
+                layer._firefly_gs,
+                envs.VLLM_FIREFLY_MIN_M,
+                c.zero_points,
+                self.is_k_full,
+                envs.VLLM_FIREFLY_DEQUANT_MODEL == "fast",
+            )
 
         c = self.config
         w_q, w_s, w_zp, w_gidx = self._get_weight_params(layer)

@@ -67,6 +67,22 @@ COPY vllm/v1/attention/backends/flashinfer.py \
     /tmp/sm75-overlay/v1/attention/backends/flashinfer.py
 COPY vllm/v1/attention/backends/gdn_attn.py \
     /tmp/sm75-overlay/v1/attention/backends/gdn_attn.py
+COPY vllm/model_executor/kernels/linear/mixed_precision/marlin.py \
+    /tmp/sm75-overlay/model_executor/kernels/linear/mixed_precision/marlin.py
+COPY vllm/model_executor/kernels/linear/scaled_mm/marlin.py \
+    /tmp/sm75-overlay/model_executor/kernels/linear/scaled_mm/marlin.py
+COPY vllm/model_executor/layers/quantization/utils/firefly.py \
+    /tmp/sm75-overlay/model_executor/layers/quantization/utils/firefly.py
+COPY vllm/model_executor/layers/quantization/utils/firefly.cu \
+    /tmp/sm75-overlay/model_executor/layers/quantization/utils/firefly.cu
+COPY vllm/v1/engine/auto_sleep.py \
+    /tmp/sm75-overlay/v1/engine/auto_sleep.py
+COPY vllm/v1/engine/core.py \
+    /tmp/sm75-overlay/v1/engine/core.py
+COPY vllm/v1/engine/async_llm.py \
+    /tmp/sm75-overlay/v1/engine/async_llm.py
+COPY vllm/v1/engine/core_client.py \
+    /tmp/sm75-overlay/v1/engine/core_client.py
 COPY vllm/third_party/flash_qla_sm75 \
     /tmp/sm75-overlay/third_party/flash_qla_sm75
 COPY docker/install_sm75_overlay.py /tmp/install_sm75_overlay.py
@@ -90,6 +106,8 @@ COPY tests/entrypoints/serve/utils/test_api_utils.py \
     /opt/vllm-sm75/source/v0.1.2/tests/entrypoints/serve/utils/test_api_utils.py
 COPY tests/config/test_model_dtype_override.py \
     /opt/vllm-sm75/source/v0.1.2/tests/config/test_model_dtype_override.py
+COPY tests/v1/engine/test_auto_sleep.py \
+    /opt/vllm-sm75/source/v0.1.2/tests/v1/engine/test_auto_sleep.py
 
 COPY --from=flashqla-builder /opt/flashqla-build/flash_qla_sm75_gdn.so \
     /opt/vllm-sm75/extensions/flash_qla_sm75_gdn.so
@@ -117,6 +135,7 @@ RUN uv pip install --system pytest==9.1.0 && \
         /opt/vllm-sm75/source/v0.1.2/tests/model_executor/test_sm75_gdn_selection.py \
         /opt/vllm-sm75/source/v0.1.2/tests/entrypoints/serve/utils/test_api_utils.py::test_sensitive_args_are_redacted_without_mutating_input \
         /opt/vllm-sm75/source/v0.1.2/tests/config/test_model_dtype_override.py \
+        /opt/vllm-sm75/source/v0.1.2/tests/v1/engine/test_auto_sleep.py \
         -v > /tmp/selector-pytest.log 2>&1
 
 FROM runtime AS verified-runtime

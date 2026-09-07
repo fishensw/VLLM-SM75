@@ -187,6 +187,7 @@ if TYPE_CHECKING:
     VLLM_FIREFLY: bool = False
     VLLM_FIREFLY_MIN_M: int = 1024
     VLLM_FIREFLY_MODE: str = "hard"
+    VLLM_FIREFLY_DEQUANT_MODEL: str = "def"
     VLLM_HUMMING_ONLINE_QUANT_CONFIG: dict[str, Any] | None = None
     VLLM_HUMMING_INPUT_QUANT_CONFIG: dict[str, Any] | None = None
     VLLM_HUMMING_USE_F16_ACCUM: bool = False
@@ -1533,6 +1534,11 @@ environment_variables: dict[str, Callable[[], Any]] = {
     "VLLM_FIREFLY_MODE": lambda: (
         os.environ.get("VLLM_FIREFLY_MODE", "hard")
     ),
+    # int8 prefill 反量化量化步: "def"(默认) 除法(与两遍 pass2 逐 bit 一致);
+    # "fast" 乘倒数(per-row r=1/c_n, 再省 ~30% 反量化, off-by-one ≤0.06%)。
+    "VLLM_FIREFLY_DEQUANT_MODEL": lambda: (
+        os.environ.get("VLLM_FIREFLY_DEQUANT_MODEL", "def")
+    ),
     # The online quantization dtype for humming kernel
     "VLLM_HUMMING_ONLINE_QUANT_CONFIG": lambda: maybe_convert_json_str_or_file(
         os.environ.get("VLLM_HUMMING_ONLINE_QUANT_CONFIG", None)
@@ -1882,6 +1888,13 @@ environment_variables: dict[str, Callable[[], Any]] = {
     # Whether to use FlashInfer allreduce
     "VLLM_ALLREDUCE_USE_FLASHINFER": lambda: bool(
         int(os.getenv("VLLM_ALLREDUCE_USE_FLASHINFER", "0"))
+    ),
+    # A3(sm75 参考): custom allreduce 在 cuda graph capture 时的图输入策略。
+    # auto=full decode 走 registered 快路径, piecewise/prefill 回退 staging
+    # buffer(sm75 图私有大 buffer 无法经 CUDA IPC 导出); registered/staging
+    # 可强制覆盖。
+    "VLLM_CUSTOM_ALLREDUCE_GRAPH_INPUT_MODE": lambda: os.getenv(
+        "VLLM_CUSTOM_ALLREDUCE_GRAPH_INPUT_MODE", "auto"
     ),
     # Experimental: use this to enable MCP tool calling for non harmony models
     "VLLM_USE_EXPERIMENTAL_PARSER_CONTEXT": lambda: bool(
