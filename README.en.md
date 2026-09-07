@@ -8,19 +8,18 @@ vLLM-SM75 v0.1.3 is based on vLLM 0.28.0 and integrates MTP, DFlash2 and auto-sl
 
 ## v0.1.3 Update Summary
 
+- Adds idle auto-sleep with transparent wake-up; the launch script defaults to deep sleep after 30 minutes.
+- Starts the idle timer when a request completes and the engine becomes idle.
+- Simplifies the build and run entrypoints to `docker/build.sh` and `docker/run.sh`.
+
+## Features
+
 - FlashQLA-SM75 GDN prefill, Triton decode, FlashInfer 0.6.18, Marlin FP8 and FP8 KV.
-- SM75 CUDA Graph adaptation and fused GDN metadata preparation.
-- Native MTP verification optimizations and an MTP5 preset.
-- DFlash2 SM75 numerical compatibility, AWQ dtype and TP4 adaptations.
-- Reduced allocation pressure when loading a draft after an FP8 target.
-- ModelScope support and persistent model/compiler caches.
-- Idle auto-sleep with transparent wake-up; the launch script defaults to deep sleep after 30 minutes.
-- Adds idle auto-sleep: after an idle timeout the engine automatically
-  offloads its weights to free GPU memory and wakes automatically on the next
-  request — keeping weights in pinned CPU memory, discarding and reloading
-  them from the checkpoint, or exiting the engine process entirely (deep
-  sleep, transparently cold-restarted on the next request). See "Idle
-  auto-sleep" below.
+- SM75 CUDA Graph, fused GDN metadata preparation, and the native MTP5 verification path.
+- DFlash2 SM75 numerical compatibility, AWQ dtype and TP4 handling.
+- ModelScope support and persistent model, vLLM and FlashInfer compilation caches.
+- One image supports ordinary inference, MTP5 and DFlash2, selected by launch parameters.
+- Idle auto-sleep supports CPU, reload and exit; exit releases the engine process, CUDA context, workers and GPU memory, then transparently cold-starts on the next request.
 
 ## Performance
 

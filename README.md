@@ -8,17 +8,18 @@ vLLM-SM75 v0.1.3 基于 vLLM 0.28.0，集成 MTP、DFlash2 和自动休眠适配
 
 ## v0.1.3 更新简要
 
-- 保留 FlashQLA-SM75 GDN prefill、Triton decode、FlashInfer 0.6.18、Marlin FP8 和 FP8 KV 支持。
-- 适配 SM75 CUDA Graph，融合 GDN 状态准备，减少投机验证及调度开销。
-- 优化原生 MTP 验证路径，提供 MTP5 配置。
-- 完善 DFlash2 的 SM75 数值兼容、AWQ 数据类型及 TP4 处理。
-- 修复 FP8 加载 draft 时的显存分配压力。
-- 支持 ModelScope、模型与编译缓存持久化。
-- 新增空闲自动休眠与透明唤醒，启动脚本默认 30 分钟后进入深度休眠。
-- 新增空闲自动睡眠（auto-sleep）：空闲超时后自动卸载权重释放显存，
-  新请求到达自动唤醒（权重可备份到 CPU 内存、丢弃后从 checkpoint 重载，
-  或直接退出引擎进程进入深度睡眠、下一请求透明冷启动），调用方无需任何
-  额外接口。详见下文「空闲自动睡眠」。
+- 新增空闲自动休眠与透明唤醒，启动脚本默认空闲 30 分钟后进入深度休眠。
+- 修正空闲计时起点，从请求完成并进入 idle 状态后开始计时。
+- 统一构建与启动入口为 `docker/build.sh` 和 `docker/run.sh`。
+
+## 功能要点
+
+- FlashQLA-SM75 GDN prefill、Triton decode、FlashInfer 0.6.18、Marlin FP8 和 FP8 KV。
+- SM75 CUDA Graph、GDN 状态准备融合及原生 MTP5 验证路径。
+- DFlash2 的 SM75 数值兼容、AWQ 数据类型和 TP4 处理。
+- ModelScope、模型缓存与 vLLM/FlashInfer 编译缓存持久化。
+- 统一镜像支持普通推理、MTP5 和 DFlash2，通过启动参数选择模式。
+- 空闲自动睡眠支持 CPU、reload 和 exit；exit 模式释放引擎进程、CUDA context、worker 和显存，下一请求透明冷启动。
 
 ## 性能参考
 
