@@ -16,7 +16,7 @@ cd VLLM-SM75
 ## 2. 构建统一镜像
 
 ```bash
-bash docker/build-v0.1.3.sh
+bash docker/build.sh
 ```
 
 基础环境直接使用官方 `vllm/vllm-openai:v0.28.0-cu129`，固定 amd64 digest `sha256:50509e700235cea487715cedeb501d20a1cd15fa6a54ce93688284bd0d96995d`。Dockerfile 安装 FlashInfer 0.6.18、移除不适用的 JIT cache 包，再安装本仓库适配、编译 FlashQLA 并运行构建检查。
@@ -29,7 +29,7 @@ bash docker/build-v0.1.3.sh
 export VLLM_API_KEY='replace-with-your-api-key'
 # 替换成宿主机实际绝对路径；保存模型下载、vLLM 编译和 FlashInfer 缓存。
 export VLLM_SM75_CACHE_ROOT=/path/to/vllm-sm75-cache
-VARIANT=base FORMAT=fp8 bash docker/run-v0.1.3.sh
+VARIANT=base FORMAT=fp8 bash docker/run.sh
 ```
 
 MTP5 使用 `VARIANT=mtp`，要求模型具有匹配 MTP 权重。普通和 MTP 使用自动 KV；FP8 使用 seq4/batch8192，AWQ 使用 seq8/batch16384，utilization 均为0.87、max-model-len=auto。
@@ -48,9 +48,9 @@ docker run --rm --volume "$MODEL_ROOT:/models" --entrypoint hf \
   --local-dir /models/Qwen3.8-27B-W4A16-AWQ
 
 # 普通 AWQ：目录中放置已完整下载的 philbert440/Qwen3.8-27B-W4A16-AWQ。
-MODEL=/models/Qwen3.8-27B-W4A16-AWQ VARIANT=base FORMAT=awq bash docker/run-v0.1.3.sh
+MODEL=/models/Qwen3.8-27B-W4A16-AWQ VARIANT=base FORMAT=awq bash docker/run.sh
 # FP8 DFlash：目录中放置已完整下载的 incoai/Qwen3.8-27B-DFlash2。
-DRAFT_MODEL=/models/Qwen3.8-27B-DFlash2 VARIANT=dflash2 FORMAT=fp8 bash docker/run-v0.1.3.sh
+DRAFT_MODEL=/models/Qwen3.8-27B-DFlash2 VARIANT=dflash2 FORMAT=fp8 bash docker/run.sh
 ```
 
 以上是互斥启动示例；先停止已运行的同 GPU 服务，再选择另一种。脚本不会停止或删除现有容器。首次运行前需将所有 `/path/to/...` 改为实际路径，模型目录应包含配置、tokenizer 和完整权重。

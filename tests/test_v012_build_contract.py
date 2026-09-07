@@ -13,7 +13,7 @@ class BuildContract(unittest.TestCase):
     def test_official_prebuilt_base(self):
         text = (ROOT / 'docker/Dockerfile.vllm-sm75-v0.1.3').read_text(encoding='utf-8')
         self.assertIn('vllm/vllm-openai:v0.28.0-cu129@sha256:', text)
-        script = (ROOT / 'docker/build-v0.1.3.sh').read_text(encoding='utf-8')
+        script = (ROOT / 'docker/build.sh').read_text(encoding='utf-8')
         self.assertNotIn('git clone', script)
         self.assertNotIn('git init', script)
         self.assertNotIn('prepare_upstream', script)
@@ -40,7 +40,7 @@ class BuildContract(unittest.TestCase):
         text = (ROOT / 'docker/Dockerfile.vllm-sm75-v0.1.3').read_text(encoding='utf-8')
         self.assertEqual(re.findall(r'^FROM .* AS (.*)$', text, re.M)[-1], 'final')
         self.assertIn('python3 /tmp/install_speculative.py', text)
-        launch = (ROOT / 'docker/run-v0.1.3.sh').read_text(encoding='utf-8')
+        launch = (ROOT / 'docker/run.sh').read_text(encoding='utf-8')
         self.assertIn('image=vllm-sm75:v0.1.3', launch)
         self.assertNotIn('image+=', launch)
 

@@ -25,7 +25,7 @@ export -f docker
 for VARIANT in base mtp dflash2; do
   for FORMAT in fp8 awq; do
     export VARIANT FORMAT
-    AUTO_SLEEP_IDLE_TIMEOUT=0 bash "$ROOT/docker/run-v0.1.3.sh"
+    AUTO_SLEEP_IDLE_TIMEOUT=0 bash "$ROOT/docker/run.sh"
     printf 'PASS %s %s unified-image arguments\n' "$VARIANT" "$FORMAT"
   done
 done

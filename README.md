@@ -74,7 +74,7 @@ cd VLLM-SM75
 Linux x86_64，需安装 Docker、Git 和 Bash。启动模型另需 NVIDIA 驱动与 NVIDIA Container Toolkit。
 
 ```bash
-bash docker/build-v0.1.3.sh
+bash docker/build.sh
 ```
 
 基于固定 digest 的官方 `vllm/vllm-openai:v0.28.0-cu129` 镜像，安装全部适配并编译 SM75 扩展，生成 `vllm-sm75:v0.1.3`。
@@ -86,19 +86,19 @@ export VLLM_API_KEY='replace-with-your-api-key'
 # 替换为实际绝对路径：持久化模型、vLLM 编译及 FlashInfer 缓存。
 export VLLM_SM75_CACHE_ROOT=/path/to/vllm-sm75-cache
 
-VARIANT=base FORMAT=fp8 bash docker/run-v0.1.3.sh
+VARIANT=base FORMAT=fp8 bash docker/run.sh
 ```
 
 FP8 默认通过 ModelScope 加载 `Qwen/Qwen3.8-27B-FP8`。脚本配置监听地址、端口、API key 和持久化挂载。使用相同 GPU 的模式按需互斥启动，脚本不会停止现有服务。
 
 ```bash
 # MTP5：使用同一个镜像
-VARIANT=mtp FORMAT=fp8 bash docker/run-v0.1.3.sh
+VARIANT=mtp FORMAT=fp8 bash docker/run.sh
 
 # DFlash2：先将匹配 draft 下载到自选目录
 export MODEL_ROOT=/path/to/downloaded-models
 DRAFT_MODEL=/models/Qwen3.8-27B-DFlash2 VARIANT=dflash2 FORMAT=fp8 \
-  bash docker/run-v0.1.3.sh
+  bash docker/run.sh
 ```
 
 DFlash draft 使用 `incoai/Qwen3.8-27B-DFlash2`，完整模型文件放入上述挂载目录。
