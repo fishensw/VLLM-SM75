@@ -191,10 +191,13 @@ def warm_safetensors_page_cache(model_path: str) -> int:
         return 0
 
     advised: list[str] = []
+    posix_fadvise = getattr(os, "posix_fadvise", None)
+    fadvise_willneed = getattr(os, "POSIX_FADV_WILLNEED", None)
     for path in files:
         try:
             with open(path, "rb") as handle:
-                os.posix_fadvise(handle.fileno(), 0, 0, os.POSIX_FADV_WILLNEED)
+                if posix_fadvise is not None and fadvise_willneed is not None:
+                    posix_fadvise(handle.fileno(), 0, 0, fadvise_willneed)
         except OSError:
             logger.warning("page-cache warm: could not advise %s", path)
             continue
