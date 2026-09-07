@@ -72,7 +72,7 @@ Linux x86_64，需安装 Docker、Git 和 Bash。启动模型另需 NVIDIA 驱�
 bash docker/build-v0.1.2.sh
 ```
 
-基于固定 digest 的官方 `vllm/vllm-openai:v0.28.0-cu129` 镜像，安装全部适配并编译 SM75 扩展，生成 `vllm-sm75:v0.1.2`。无需准备私有基础镜像，也无需全量编译 vLLM；默认 `MAX_JOBS=1`。
+基于固定 digest 的官方 `vllm/vllm-openai:v0.28.0-cu129` 镜像，安装全部适配并编译 SM75 扩展，生成 `vllm-sm75:v0.1.2`。
 
 ### 3. 启动
 

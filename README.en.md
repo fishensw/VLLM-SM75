@@ -72,7 +72,7 @@ Requires Linux x86_64, Docker with BuildKit, Git and Bash. Inference additionall
 bash docker/build-v0.1.2.sh
 ```
 
-Uses the digest-pinned official `vllm/vllm-openai:v0.28.0-cu129` image, installs the adaptations and compiles the SM75 extension to produce `vllm-sm75:v0.1.2`. No private base image or full vLLM compilation is required. Default `MAX_JOBS=1`.
+Uses the digest-pinned official `vllm/vllm-openai:v0.28.0-cu129` image, installs the adaptations and compiles the SM75 extension to produce `vllm-sm75:v0.1.2`.
 
 ### 3. Run
 
