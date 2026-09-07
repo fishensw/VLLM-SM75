@@ -89,7 +89,7 @@ def main() -> None:
     # imports pull in the whole engine stack (executor, model executor,
     # attention backends) and add several GiB of peak memory to the build,
     # on top of the parallel nvcc stage.
-    engine_source = Path("/opt/vllm-sm75/source/v0.1.0/vllm/v1/engine")
+    engine_source = Path("/opt/vllm-sm75/source/v0.1.3/vllm/v1/engine")
 
     def _class_members(path: Path) -> dict[str, set[str]]:
         tree = ast.parse(path.read_text(), filename=str(path))
