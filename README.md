@@ -111,31 +111,16 @@ curl --fail http://localhost:8000/v1/models \
   --header "Authorization: Bearer $VLLM_API_KEY"
 ```
 
-## firefly（int4/fp8 权重 → int8 prefill 加速）
+## firefly（大 M prefill 加速）
 
-启用方式见上文启动节（设 `VLLM_FIREFLY=1`，默认关闭）；`MIN_M`/`MODE` 用默认值即可。
-相关环境变量：
+v0.1.2 镜像默认开（`VLLM_FIREFLY=1`），要纯 W4A16 基线运行时用 `-e VLLM_FIREFLY=0` 关；非镜像直接用 env 时 envs.py 默认关（设 `VLLM_FIREFLY=1` 开）。仅加速大 M prefill，decode 和权重加载不变。
 
-| 环境变量 | 默认 | 说明 |
-| --- | --- | --- |
-| `VLLM_FIREFLY` | `0`（关闭） | 设 `1` 启用 firefly prefill。对 int4 权重 + fp16/bf16 激活、W8A8-FP8（fp8 权重，大 M prefill）生效，其它组合无影响（加载与 decode 均不变） |
-| `VLLM_FIREFLY_MIN_M` | `1024` | batch M 超过该值才走 firefly prefill；小 M（decode）保持 int4 Marlin。反量化是 M 无关的固定成本，M 越小占比越高，可按实测调高 |
-| `VLLM_FIREFLY_MODE` | `hard` | `hard` = 不额外存干净 int4 副本，prefill 时从 marlin 布局现反回（省显存，27B 可装下）；`easy` = 加载时存一份干净 int4 副本（反量化更快，但多约 0.5 字节/参数显存，大模型可能 OOM） |
-| `VLLM_FIREFLY_DEQUANT_MODEL` | `def` | int8 prefill 反量化（c_n 已 load 缓存）的量化步：`def` 除法（与两遍 bit-exact，零精度风险）；`fast` 乘倒数（per-row `r=1/c_n`，再省 ~30% 反量化，off-by-one ≤0.06%） |
+适用：int4 权重（W4A16/AWQ）及 W8A8-FP8 权重。
 
-注意事项：
-
-- 仅 prefill 大 M 受影响；decode 与权重加载与上游逐 bit 一致。
-- 对称 int4（W4A16/GPTQ，zp=8）与非对称 int4（AWQ，per-group zero point）都支持，
-  反量化统一 `w_deq = (q - zp) * s`。
-- int8 GEMM 引入一道额外的权重 int8 量化折叠，prefill 输出与 int4 Marlin 有
-  微小数值差异（cos_sim > 0.9999 量级），不影响通顺度。
-- 需要镜像内 CUDA 工具链支持 `sm_75` 的 `torch.utils.cpp_extension` JIT；
-  无 GPU 或编译失败时自动回退 PyTorch 反量化（正确但慢约 50ms/层），不影响
-  服务启动。
-- 已在 2 x Tesla T10（SM75）、TP2、Qwen3.8 27B W4A16/AWQ（int4）上完成端到端
-  验证；W8A8-FP8（fp8 权重）也支持：大 M prefill 现反量化 fp8 → int8
-  （0.6B-fp8 验证 e2e prefill 1.24×，输出与 baseline 一致），decode 与加载不变。
+| 验证配置 | prefill 加速 |
+| --- | --- |
+| 2× T10, TP2, 27B W4A16/AWQ | 端到端验证通过 |
+| 0.6B FP8 | 1.24× |
 
 ## 空闲自动睡眠（auto-sleep）
 

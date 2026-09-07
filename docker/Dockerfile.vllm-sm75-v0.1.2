@@ -114,10 +114,13 @@ COPY --from=flashqla-builder /opt/flashqla-build/flash_qla_sm75_gdn.so \
 COPY --from=flashqla-builder /opt/flashqla-build/cuobjdump.txt \
     /opt/vllm-sm75/evidence/cuobjdump.txt
 
+# VLLM_FIREFLY=1: firefly prefill 默认开(decode 仍走 W4A16 Marlin, 不受影响);
+# 要纯 W4A16 基线运行时 -e VLLM_FIREFLY=0 关。MIN_M/MODE/DEQUANT 用 envs.py 默认(1024/hard/def)。
 ENV FLASH_QLA_SM75_PREBUILT_EXTENSION_PATH=/opt/vllm-sm75/extensions/flash_qla_sm75_gdn.so \
     FLASH_QLA_SM75_ALLOW_JIT=0 \
     PYTHONWARNINGS=ignore::FutureWarning \
     TRANSFORMERS_VERBOSITY=error \
+    VLLM_FIREFLY=1 \
     VLLM_USE_MODELSCOPE=true \
     MODELSCOPE_CACHE=/root/.cache/modelscope/hub
 
