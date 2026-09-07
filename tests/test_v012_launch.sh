@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+export VLLM_API_KEY=configuration-test-placeholder
+export VLLM_SM75_CACHE_ROOT="$(mktemp -d -t sm75-launch-test-XXXXXXXX)"
+export MODEL_ROOT="$VLLM_SM75_CACHE_ROOT"
+export MODEL=/models/test-model DRAFT_MODEL=/models/test-draft
+docker() {
+  local args=" $* "
+  [[ "$args" == *' vllm-sm75:v0.1.2 serve '* ]]
+  [[ "$args" != *'v0.1.2-mtp'* && "$args" != *'v0.1.2-dflash2'* ]]
+  if [[ "$VARIANT" == base ]]; then
+    [[ "$args" != *'--speculative-config'* ]]
+  else
+    [[ "$args" == *'--speculative-config'* ]]
+  fi
+  if [[ "$VARIANT" == dflash2 ]]; then
+    [[ "$args" == *'--kv-cache-memory-bytes'* ]]
+  else
+    [[ "$args" != *'--kv-cache-memory-bytes'* ]]
+    [[ "$args" == *'--max-model-len auto'* ]]
+  fi
+}
+export -f docker
+for VARIANT in base mtp dflash2; do
+  for FORMAT in fp8 awq; do
+    export VARIANT FORMAT
+    bash "$ROOT/docker/run-v0.1.2.sh"
+    printf 'PASS %s %s unified-image arguments\n' "$VARIANT" "$FORMAT"
+  done
+done
