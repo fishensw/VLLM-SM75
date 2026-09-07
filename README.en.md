@@ -114,8 +114,8 @@ See [build and launch details](docker/BUILD-v0.1.2.md).
 
 ## firefly (int4/fp8 weights -> int8 prefill acceleration)
 
-The launch command above enables this by default (`--env VLLM_FIREFLY=1`,
-`MIN_M`/`MODE` use defaults). Related environment variables:
+To enable this, set `VLLM_FIREFLY=1` (off by default) per the launch section above;
+`MIN_M`/`MODE` use defaults. Related environment variables:
 
 | Variable | Default | Description |
 | --- | --- | --- |
