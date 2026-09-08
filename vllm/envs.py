@@ -2248,6 +2248,12 @@ def compile_factors() -> dict[str, object]:
         "VLLM_DEBUG_DUMP_PATH",
         "VLLM_PORT",
         "VLLM_CACHE_ROOT",
+        # Idle scheduling and checkpoint bookkeeping do not change graphs.
+        # Keep a matching cache when switching test/production sleep timers.
+        "VLLM_AUTO_SLEEP_IDLE_TIMEOUT",
+        "VLLM_AUTO_SLEEP_OFFLOAD_TARGET",
+        "VLLM_AUTO_SLEEP_RELOAD_PATH",
+        "VLLM_AUTO_SLEEP_PAGE_CACHE_KEEP_INTERVAL",
         # Runtime memory-plan persistence; does not affect compiled graphs.
         "VLLM_ENABLE_STARTUP_PLAN",
         # Location-only derived paths: where a cache/config directory lives
