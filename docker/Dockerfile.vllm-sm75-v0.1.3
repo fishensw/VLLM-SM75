@@ -101,6 +101,12 @@ COPY vllm/model_executor/layers/quantization/utils/firefly.cu \
     /tmp/sm75-overlay/model_executor/layers/quantization/utils/firefly.cu
 COPY vllm/model_executor/layers/quantization/utils/firefly_fused.cu \
     /tmp/sm75-overlay/model_executor/layers/quantization/utils/firefly_fused.cu
+COPY vllm/distributed/device_communicators/firefly_allreduce.py \
+    /tmp/sm75-overlay/distributed/device_communicators/firefly_allreduce.py
+COPY vllm/distributed/device_communicators/firefly_allreduce.cu \
+    /tmp/sm75-overlay/distributed/device_communicators/firefly_allreduce.cu
+COPY vllm/distributed/device_communicators/cuda_communicator.py \
+    /tmp/sm75-overlay/distributed/device_communicators/cuda_communicator.py
 COPY vllm/model_executor/layers/quantization/utils/_cutlass_ext/cutlass_extensions/epilogue/broadcast_load_epilogue_c2x.hpp \
     /tmp/sm75-overlay/model_executor/layers/quantization/utils/_cutlass_ext/cutlass_extensions/epilogue/broadcast_load_epilogue_c2x.hpp
 COPY vllm/v1/engine/auto_sleep.py \

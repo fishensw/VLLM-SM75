@@ -188,6 +188,8 @@ if TYPE_CHECKING:
     VLLM_FIREFLY_MIN_M: int = 1024
     VLLM_FIREFLY_DEQUANT_MODEL: str = "def"
     VLLM_FIREFLY_FUSED: str = "auto"
+    VLLM_FIREFLY_AR: str = "auto"
+    VLLM_FIREFLY_AR_MAX_SIZE: int = 33554432
     VLLM_HUMMING_ONLINE_QUANT_CONFIG: dict[str, Any] | None = None
     VLLM_HUMMING_INPUT_QUANT_CONFIG: dict[str, Any] | None = None
     VLLM_HUMMING_USE_F16_ACCUM: bool = False
@@ -449,6 +451,23 @@ def _firefly_fused_mode() -> str:
         return "1"
     if v in ("0", "off", "false", "no"):
         return "0"
+    return "auto"
+
+
+def _firefly_ar_mode() -> str:
+    """VLLM_FIREFLY_AR 归一化: 'auto'(默认, 跟随 VLLM_FIREFLY) / '0'=强制关 /
+    'fp8'=强制开。
+
+    auto = firefly 模式开 (VLLM_FIREFLY=1) 时 fp8 allreduce 自动启用 (fp8 近乎
+    无损, PLAN-fp8-allreduce §3.5); firefly 关 → AR 关。'fp8' 单独开 (firefly
+    不用也开 AR); '0' 单独关 (firefly 开但 AR 不用)。FireflyAllReduce 只做 fp8
+    (SHM backend, 无 P2P 如 T10; P2P backend 后加)。
+    """
+    v = os.getenv("VLLM_FIREFLY_AR", "").strip().lower()
+    if v in ("0", "off", "false", "no"):
+        return "0"
+    if v in ("fp8", "1", "on", "true", "yes"):
+        return "fp8"
     return "auto"
 
 
@@ -1571,6 +1590,16 @@ environment_variables: dict[str, Callable[[], Any]] = {
     # 仅 fp8 firefly 启用时有意义(int4 只有非 fused, 不受此控; fp8 需 VLLM_FIREFLY 开
     # 且此处非 auto)。见 firefly_fused.cu / PLAN-fp8-allreduce。
     "VLLM_FIREFLY_FUSED": _firefly_fused_mode,
+    # fp8 allreduce (FireflyAllReduce, SHM backend, 无 P2P 如 T10)。auto(默认)
+    # 跟随 VLLM_FIREFLY (firefly 开→AR 自动开); fp8 单独开; 0 单独关。TP2 每层 2 次
+    # AllReduce 量减半 (fp16->fp8), 省 ~480-530ms/27B prefill。见
+    # distributed/device_communicators/firefly_allreduce.py / PLAN-fp8-allreduce。
+    "VLLM_FIREFLY_AR": _firefly_ar_mode,
+    # 只对小/中消息走 FireflyAllReduce, 大消息回退 NCCL (host bounce 拖累)。
+    # 默认 32MB = 4096x4096 fp16 (M*H*2), 即 27B prefill 最大 allreduce。
+    "VLLM_FIREFLY_AR_MAX_SIZE": lambda: int(
+        os.environ.get("VLLM_FIREFLY_AR_MAX_SIZE", "33554432")
+    ),
     # The online quantization dtype for humming kernel
     "VLLM_HUMMING_ONLINE_QUANT_CONFIG": lambda: maybe_convert_json_str_or_file(
         os.environ.get("VLLM_HUMMING_ONLINE_QUANT_CONFIG", None)
