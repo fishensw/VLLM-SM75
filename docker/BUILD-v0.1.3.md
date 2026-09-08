@@ -27,8 +27,9 @@ bash docker/build.sh
 
 ```bash
 export VLLM_API_KEY='replace-with-your-api-key'
-# 替换成宿主机实际绝对路径；保存模型下载、vLLM 编译和 FlashInfer 缓存。
-export VLLM_SM75_CACHE_ROOT=/path/to/vllm-sm75-cache
+# 替换成宿主机实际绝对路径；编译缓存与模型下载分开。
+export VLLM_SM75_CACHE_ROOT=/path/to/vllm-sm75/cache
+export VLLM_SM75_MODEL_CACHE_ROOT=/path/to/model-cache
 VARIANT=base FORMAT=fp8 bash docker/run.sh
 ```
 
@@ -62,3 +63,7 @@ curl --fail http://localhost:8000/v1/models \
 ```
 
 测试必须包含新缓存启动、模型实际请求、SM75 扩展和投机路径日志核对。构建成功与模型推理通过分别记录。
+
+## 自动休眠与缓存目录
+
+启动脚本默认 30 分钟 exit，60 秒测试用 `AUTO_SLEEP_IDLE_TIMEOUT=1`。模式要求、CPU RAM/磁盘预算、统一持久化挂载和旧目录迁移见[使用说明](../docs/sleep-and-cache.md)。旧布局不会自动迁移；先保留旧缓存并更新挂载，再运行新脚本。镜像名称仍是 `vllm-sm75:v0.1.3`，重建镜像后必须重建容器才能生效。

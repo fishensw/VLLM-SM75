@@ -13,10 +13,13 @@ fi
 SERVE_NAME="${SERVED_MODEL_NAME:-VLLM-Qwen3.8-27B}"
 CACHE_ROOT="${VLLM_SM75_CACHE_ROOT:?Set VLLM_SM75_CACHE_ROOT to an absolute host cache directory}"
 [[ "$CACHE_ROOT" == /* ]] || { echo 'Cache path must be absolute' >&2; exit 2; }
-mkdir -p "$CACHE_ROOT/modelscope" "$CACHE_ROOT/vllm/$VARIANT-$FORMAT" "$CACHE_ROOT/flashinfer"
-mounts=(--volume "$CACHE_ROOT/modelscope:/root/.cache/modelscope"
-  --volume "$CACHE_ROOT/vllm/$VARIANT-$FORMAT:/root/.cache/vllm"
-  --volume "$CACHE_ROOT/flashinfer:/root/.cache/flashinfer")
+MODEL_CACHE_ROOT="${VLLM_SM75_MODEL_CACHE_ROOT:-$CACHE_ROOT/models}"
+[[ "$MODEL_CACHE_ROOT" == /* ]] || { echo 'Model cache path must be absolute' >&2; exit 2; }
+mkdir -p "$MODEL_CACHE_ROOT" "$CACHE_ROOT/$FORMAT/vllm" "$CACHE_ROOT/shared/flashinfer"
+mounts=(--volume "$MODEL_CACHE_ROOT:/root/.cache/modelscope"
+  --volume "$MODEL_CACHE_ROOT:/root/.cache/huggingface"
+  --volume "$CACHE_ROOT/$FORMAT/vllm:/root/.cache/vllm"
+  --volume "$CACHE_ROOT/shared/flashinfer:/root/.cache/flashinfer")
 if [[ -n "${MODEL_ROOT:-}" ]]; then
   [[ "$MODEL_ROOT" == /* && -d "$MODEL_ROOT" ]] || { echo 'MODEL_ROOT must be an existing absolute directory' >&2; exit 2; }
   mounts+=(--volume "$MODEL_ROOT:/models:ro")
@@ -31,6 +34,15 @@ AUTO_SLEEP_OFFLOAD_TARGET="${AUTO_SLEEP_OFFLOAD_TARGET:-exit}"
 if [[ "$AUTO_SLEEP_IDLE_TIMEOUT" != 0 ]]; then
   extra+=(--auto-sleep-idle-timeout "$AUTO_SLEEP_IDLE_TIMEOUT"
     --auto-sleep-offload-target "$AUTO_SLEEP_OFFLOAD_TARGET")
+  case "$AUTO_SLEEP_OFFLOAD_TARGET" in
+    exit) ;;
+    cpu|reload) extra+=(--enable-sleep-mode) ;;
+    *) echo 'AUTO_SLEEP_OFFLOAD_TARGET must be cpu, reload, or exit' >&2; exit 2 ;;
+  esac
+  if [[ -n "${AUTO_SLEEP_RELOAD_PATH:-}" ]]; then
+    extra+=(--auto-sleep-reload-path "$AUTO_SLEEP_RELOAD_PATH")
+  fi
+  extra+=(--auto-sleep-page-cache-keep-interval "${AUTO_SLEEP_PAGE_CACHE_KEEP_INTERVAL:-600}")
 fi
 if [[ "$VARIANT" == mtp ]]; then
   extra+=(--speculative-config '{"method":"mtp","num_speculative_tokens":5}')
