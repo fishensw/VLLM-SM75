@@ -184,10 +184,10 @@ if TYPE_CHECKING:
     VLLM_RAY_EXTRA_ENV_VARS_TO_COPY: str = ""
     VLLM_MARLIN_USE_ATOMIC_ADD: bool = False
     VLLM_MARLIN_INPUT_DTYPE: Literal["int8", "fp8"] | None = None
-    VLLM_FIREFLY: bool = False
+    VLLM_FIREFLY: str = "0"
     VLLM_FIREFLY_MIN_M: int = 1024
     VLLM_FIREFLY_DEQUANT_MODEL: str = "def"
-    VLLM_FIREFLY_FUSED: bool = True
+    VLLM_FIREFLY_FUSED: str = "auto"
     VLLM_HUMMING_ONLINE_QUANT_CONFIG: dict[str, Any] | None = None
     VLLM_HUMMING_INPUT_QUANT_CONFIG: dict[str, Any] | None = None
     VLLM_HUMMING_USE_F16_ACCUM: bool = False
@@ -423,6 +423,33 @@ def env_with_choices(
         return value
 
     return _get_validated_env
+
+
+def _firefly_mode() -> str:
+    """VLLM_FIREFLY 归一化: '1'=开(=auto) / '0'=关。
+
+    未设默认 '0'(不激活); '1' 与 'auto' 等价(都算开); 其余值一律 '0'。
+    开 = int4(AWQ/GPTQ) 走 int8 加速, fp8 走上游 marlin(fp8 加速走
+    VLLM_FIREFLY_AR fp8 allreduce, 另见 PLAN-fp8-allreduce)。
+    """
+    v = os.getenv("VLLM_FIREFLY", "").strip().lower()
+    return "1" if v in ("1", "auto", "on", "true", "yes") else "0"
+
+
+def _firefly_fused_mode() -> str:
+    """VLLM_FIREFLY_FUSED 归一化: 'auto'(默认, 选最快) / '1'=强制 fused /
+    '0'=强制非 fused。
+
+    auto = 给每种类型内置最快的子模式(当前 int4/fp8 都关闭: int4 fused 未实现,
+    fp8 firefly 不赚走 marlin); 1 = 强制 fused; 0 = 强制非 fused。仅 fp8 firefly
+    启用时有意义(int4 只有非 fused, 不受此控)。见 PLAN-fp8-allreduce。
+    """
+    v = os.getenv("VLLM_FIREFLY_FUSED", "").strip().lower()
+    if v in ("1", "on", "true", "yes"):
+        return "1"
+    if v in ("0", "off", "false", "no"):
+        return "0"
+    return "auto"
 
 
 def env_list_with_choices(
@@ -1518,12 +1545,14 @@ environment_variables: dict[str, Callable[[], Any]] = {
     "VLLM_MARLIN_INPUT_DTYPE": env_with_choices(
         "VLLM_MARLIN_INPUT_DTYPE", None, ["int8", "fp8"]
     ),
-    # firefly(SM75): int4 权重混合 prefill 加速。大 M 把 int4 现反量化成 int8 走
-    # CUTLASS(IMMA), 小 M/decode 保持 int4 Marlin(fp16 激活)。见
+    # firefly(SM75) prefill 加速总开关, 默认关(_firefly_mode 归一化):
+    #   未设 / 0 = 关(全走上游 marlin, 默认不激活)。
+    #   1 / auto = 开(两者等价): int4(AWQ/GPTQ, W4A16) 走 int8 加速; fp8 走上游
+    #     marlin(sm75 实测 firefly-fp8 不比 marlin 快, fused 慢 2x; fp8 加速改走
+    #     VLLM_FIREFLY_AR fp8 allreduce, 见 PLAN-fp8-allreduce)。
+    # 大 M 现反量化成 int8 走 CUTLASS(IMMA), 小 M/decode 保持 marlin。见
     # model_executor/layers/quantization/utils/firefly.py。
-    "VLLM_FIREFLY": lambda: (
-        os.environ.get("VLLM_FIREFLY", "0") == "1"
-    ),
+    "VLLM_FIREFLY": _firefly_mode,
     # 默认 1024: T10 上 p3_perf_sweep(6144x5120 层)测得 int8 反量化 ~1ms/层
     # (M 无关地板), crossover M≈854; M>1024 int8 才稳定快于 marlin(1.13-1.33x)。
     "VLLM_FIREFLY_MIN_M": lambda: int(
@@ -1534,15 +1563,14 @@ environment_variables: dict[str, Callable[[], Any]] = {
     "VLLM_FIREFLY_DEQUANT_MODEL": lambda: (
         os.environ.get("VLLM_FIREFLY_DEQUANT_MODEL", "def")
     ),
-    # fp8 firefly 选 fused / 非 fused hard(均单权重, 不常驻 int8 副本), 是性能/显存权衡:
-    # 1(默认)= fused GEMM(B-load 内即时反量化, 不物化 int8 权重最省显存; T10 上 B-load
-    #   ALU 瓶颈慢 5-10x, 需 firefly_fused.cu 构建期/JIT 可用);
-    # 0 = 非 fused hard(transient 反量化 fp8_dequant_only + int8 GEMM, T10 快 5-10x 但
-    #   物化 transient int8 权重多占显存, .so 挂回退 PyTorch)。
-    # 两模式数值逐 bit 一致(同反量化数学 + 同 int8 IMMA GEMM)。默认 fused(省显存)。见 firefly_fused.cu。
-    "VLLM_FIREFLY_FUSED": lambda: (
-        os.environ.get("VLLM_FIREFLY_FUSED", "1") == "1"
-    ),
+    # fp8 firefly 子模式选择(_firefly_fused_mode 归一化), auto=给每种类型内置最快:
+    #   auto(默认)= 选最快 → 当前 int4/fp8 都关闭(int4 fused 未实现; fp8 firefly 不赚
+    #     走 marlin, fp8 加速走 VLLM_FIREFLY_AR); 1 = 强制 fused GEMM(B-load 内反量化,
+    #     最省显存但 T10 慢 5-10x); 0 = 强制非 fused hard(transient 反量化+int8 GEMM,
+    #     T10 快 5-10x 但物化 transient int8 多占显存)。两模式逐 bit 一致。
+    # 仅 fp8 firefly 启用时有意义(int4 只有非 fused, 不受此控; fp8 需 VLLM_FIREFLY 开
+    # 且此处非 auto)。见 firefly_fused.cu / PLAN-fp8-allreduce。
+    "VLLM_FIREFLY_FUSED": _firefly_fused_mode,
     # The online quantization dtype for humming kernel
     "VLLM_HUMMING_ONLINE_QUANT_CONFIG": lambda: maybe_convert_json_str_or_file(
         os.environ.get("VLLM_HUMMING_ONLINE_QUANT_CONFIG", None)

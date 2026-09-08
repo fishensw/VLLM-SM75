@@ -37,6 +37,7 @@ from vllm.model_executor.layers.quantization.utils.marlin_utils import (
 from vllm.model_executor.layers.quantization.utils.firefly import (
     dequant_marlin_to_int8,
     dequant_marlin_to_int8_cached,
+    firefly_active_int4,
     int8_prefill_linear,
 )
 from vllm.model_executor.parameter import BasevLLMParameter, permute_param_layout_
@@ -224,7 +225,7 @@ class MarlinLinearKernel(MPLinearKernel):
         # 只有 hard 模式: 不常驻副本, prefill 现从 marlin 布局反。B1-hard 反推
         # 仅针对 has_perm=false, act-order(g_idx 排序)不支持 → 禁用(回退上游)。
         return (
-            envs.VLLM_FIREFLY
+            firefly_active_int4()
             and self.config.weight_type in (scalar_types.uint4b8, scalar_types.uint4)
             and self.config.act_type in (torch.float16, torch.bfloat16)
             and not self.config.has_g_idx
@@ -265,7 +266,7 @@ class MarlinLinearKernel(MPLinearKernel):
 
         # firefly 回退: act-order int4 模型 B1-hard 不支持, firefly 禁用 → 上游 Marlin。
         if (
-            envs.VLLM_FIREFLY
+            firefly_active_int4()
             and c.weight_type in (scalar_types.uint4b8, scalar_types.uint4)
             and c.act_type in (torch.float16, torch.bfloat16)
             and c.has_g_idx

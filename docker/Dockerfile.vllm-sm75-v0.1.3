@@ -146,18 +146,19 @@ COPY --from=firefly-fused-builder /opt/firefly-fused-build/firefly_fused.so \
 COPY --from=firefly-fused-builder /opt/firefly-fused-build/cuobjdump.txt \
     /opt/vllm-sm75/evidence/firefly_fused_cuobjdump.txt
 
-# VLLM_FIREFLY=1: firefly prefill 默认开(decode 仍走 W4A16 Marlin, 不受影响);
-# 要纯 W4A16 基线运行时 -e VLLM_FIREFLY=0 关。MIN_M/DEQUANT 用 envs.py 默认(1024/def)。
-# VLLM_FIREFLY_FUSED=1: fp8 fused(B-load 反量化, 省 int8 缓存)启动默认开;
-# -e VLLM_FIREFLY_FUSED=0 走非 fused hard(transient 反量化+int8 GEMM, 两模式数值一致仅性能不同)。
-# 预编译 .so 免运行时 JIT(firefly-fused-builder 编好)。
+# VLLM_FIREFLY=auto(=1, 等价): firefly 默认开, int4(AWQ/GPTQ) 走 int8 prefill
+# 加速, fp8 走上游 marlin(sm75 实测 firefly-fp8 不赚, fp8 加速走 VLLM_FIREFLY_AR)。
+# 纯 marlin 基线 -e VLLM_FIREFLY=0 关。MIN_M 用 envs.py 默认(1024)。
+# VLLM_FIREFLY_FUSED=auto: fp8 firefly 子模式, auto=选最快(当前关闭, fp8 走 marlin);
+# 要 fp8 fused 用 -e VLLM_FIREFLY_FUSED=1(最省显存但 T10 慢), 非 fused 用 =0(快但多占显存)。
+# 预编译 .so 免运行时 JIT(firefly-fused-builder 编好, 提供 fp8_dequant_only)。
 ENV FLASH_QLA_SM75_PREBUILT_EXTENSION_PATH=/opt/vllm-sm75/extensions/flash_qla_sm75_gdn.so \
     FLASH_QLA_SM75_ALLOW_JIT=0 \
     VLLM_FIREFLY_FUSED_PREBUILT_PATH=/opt/vllm-sm75/extensions/firefly_fused.so \
     PYTHONWARNINGS=ignore::FutureWarning \
     TRANSFORMERS_VERBOSITY=error \
-    VLLM_FIREFLY=1 \
-    VLLM_FIREFLY_FUSED=1 \
+    VLLM_FIREFLY=auto \
+    VLLM_FIREFLY_FUSED=auto \
     VLLM_USE_MODELSCOPE=true \
     MODELSCOPE_CACHE=/root/.cache/modelscope/hub
 

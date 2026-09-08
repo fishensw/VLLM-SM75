@@ -92,7 +92,7 @@ VARIANT=base FORMAT=fp8 bash docker/run.sh
 
 The default FP8 model is `Qwen/Qwen3.8-27B-FP8`, resolved through ModelScope. The script sets the API key, port, listening address and cache mounts. Stop the previous GPU service before selecting another mode; the script does not stop existing services.
 
-The firefly prefill is on by default in the image (`VLLM_FIREFLY=1`; applies to int4 weights + fp16/bf16 activations and W8A8-FP8 large-M prefill); to run a pure W4A16 baseline set `-e VLLM_FIREFLY=0`. `docker/run.sh` does not yet forward this variable, so run `docker run -e VLLM_FIREFLY=0 …` manually or append `--env VLLM_FIREFLY=0` to the script's `docker run` block.
+Firefly prefill defaults to `VLLM_FIREFLY=auto` in the image: int8 acceleration for int4 weights (AWQ/GPTQ, W4A16) only; fp8 stays on upstream Marlin (on SM75 firefly-fp8 is not faster than Marlin — fp8 acceleration goes through the separate `VLLM_FIREFLY_AR` allreduce). Set `-e VLLM_FIREFLY=0` for a pure Marlin baseline. `docker/run.sh` does not yet forward this variable, so run `docker run -e VLLM_FIREFLY=0 …` manually or append `--env VLLM_FIREFLY=0` to the script's `docker run` block.
 
 ```bash
 VARIANT=mtp FORMAT=fp8 bash docker/run.sh
@@ -115,14 +115,15 @@ See [build and launch details](docker/BUILD-v0.1.3.md).
 
 ## firefly (int4/fp8 weights -> int8 prefill acceleration)
 
-To enable this, set `VLLM_FIREFLY=1` (off by default) per the launch section above;
-`MIN_M` uses default. Related environment variables:
+In the image this defaults to `VLLM_FIREFLY=auto` (int4 accelerated, fp8 on Marlin);
+`1` and `auto` are equivalent, `0` disables. `MIN_M` uses default. Related
+environment variables:
 
 | Variable | Default | Description |
 | --- | --- | --- |
-| `VLLM_FIREFLY` | `0` (off) | Set to `1` to enable firefly prefill. Applies to int4 weights + fp16/bf16 activations and W8A8-FP8 (fp8 weights, large-M prefill); other combinations are unaffected (loading and decode remain unchanged) |
+| `VLLM_FIREFLY` | `0` (off) | Master switch: `0`/unset = off (all upstream Marlin, default not active); `1`/`auto` = on (equivalent) — int8 acceleration for int4 weights (AWQ/GPTQ, W4A16) only, fp8 stays on upstream Marlin (on SM75 firefly-fp8 is not faster than Marlin, fused is 2x slower) |
 | `VLLM_FIREFLY_MIN_M` | `1024` | Firefly prefill kicks in only when batch M exceeds this value; small M (decode) keeps int4 Marlin. Dequantization is a fixed cost independent of M, so smaller M means a higher overhead ratio — tune up based on measurements |
-| `VLLM_FIREFLY_FUSED` | `1` (on) | fp8-only, selects the hard sub-mode (both keep a single weight, no resident int8 copy): `1` = fused GEMM (dequant fp8→int8 inside the B-load); `0` = non-fused hard (transient dequant + int8 GEMM at prefill, PyTorch dequant if the fused .so is unavailable). Both are bit-identical in value, differing only in speed. To disable fp8 firefly entirely use `VLLM_FIREFLY=0` (upstream W8A8 Marlin) |
+| `VLLM_FIREFLY_FUSED` | `auto` | fp8 firefly sub-mode, `auto` = pick the fastest per weight type (currently off for both int4 and fp8: int4 has no fused variant, fp8 firefly isn't faster than Marlin — fp8 acceleration goes through `VLLM_FIREFLY_AR`). `1` = force fused GEMM (dequant inside the B-load, most memory-efficient but 5-10x slower on SM75); `0` = force non-fused hard (separate transient dequant + int8 GEMM, 5-10x faster but materializes a transient int8 weight). Only matters when fp8 firefly is on (`VLLM_FIREFLY` on and this set to `1`/`0`, not `auto`). |
 
 Notes:
 

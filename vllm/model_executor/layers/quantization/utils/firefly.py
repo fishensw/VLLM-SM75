@@ -22,8 +22,25 @@ import os
 import torch
 
 from vllm import _custom_ops as ops
+import vllm.envs as envs
 
 logger = logging.getLogger(__name__)
+
+
+def firefly_active_int4() -> bool:
+    """int4(W4A16) 是否走 firefly prefill: VLLM_FIREFLY 开(1/auto 等价)。"""
+    return envs.VLLM_FIREFLY == "1"
+
+
+def firefly_active_fp8() -> bool:
+    """fp8(W8A8) prefill 是否走 firefly: VLLM_FIREFLY 开 且 VLLM_FIREFLY_FUSED 显式
+    选了 fused(1)或非 fused(0)(非 auto)。
+
+    auto(默认)= 选最快 = 当前关闭(sm75 实测 firefly-fp8 不比 marlin 快, 走 marlin;
+    fp8 加速走 VLLM_FIREFLY_AR, 见 PLAN-fp8-allreduce)。1 = 强制 fused; 0 = 强制
+    非 fused。int4 不受 VLLM_FIREFLY_FUSED 影响(只有非 fused)。
+    """
+    return envs.VLLM_FIREFLY == "1" and envs.VLLM_FIREFLY_FUSED in ("1", "0")
 
 # B1-hard 的 reverse-repack+反量化 CUDA kernel(独立 torch extension, 首次用时编译)。
 # 编译失败(无 nvcc/CUDA)或无 GPU 时回退 PyTorch 版(正确但慢 ~50ms/层)。

@@ -28,6 +28,7 @@ from vllm.model_executor.layers.quantization.utils.fp8_utils import (
 from vllm.model_executor.layers.quantization.utils.firefly import (
     _load_fused_mod,
     compute_c_n_fp8,
+    firefly_active_fp8,
     fp8_fused_prefill_linear,
     fp8_to_int8,
     int8_prefill_linear,
@@ -138,7 +139,7 @@ class MarlinFP8ScaledMMLinearKernel(FP8ScaledMMLinearKernel):
         # 仅对 128x128 block quant(有 per-block scale, weight_scale_inv)启用;
         # 非 block 的 fp8(tensor-wise/channel-wise, 无 weight_scale_inv)走上游,
         # 不反量化(fp8→int8 数学依赖 per-block scale 折叠)。
-        return envs.VLLM_FIREFLY and self.block_quant
+        return firefly_active_fp8() and self.block_quant
 
     def _firefly_m_large(self, x: torch.Tensor) -> bool:
         m = x.numel() // x.shape[-1]
@@ -160,7 +161,7 @@ class MarlinFP8ScaledMMLinearKernel(FP8ScaledMMLinearKernel):
             layer._firefly_w_fp8 = w_fp8
             layer._firefly_s_inv = s_inv
             layer._firefly_c_n = c_n
-            if envs.VLLM_FIREFLY_FUSED:
+            if envs.VLLM_FIREFLY_FUSED == "1":
                 if _load_fused_mod() is not None:
                     # fused: B-load 内即时反量化(不物化 w_int8, 省 1B/参数 int8 缓存)
                     layer._firefly_fused = True
