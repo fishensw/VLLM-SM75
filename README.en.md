@@ -116,13 +116,13 @@ See [build and launch details](docker/BUILD-v0.1.3.md).
 ## firefly (int4/fp8 weights -> int8 prefill acceleration)
 
 To enable this, set `VLLM_FIREFLY=1` (off by default) per the launch section above;
-`MIN_M`/`MODE` use defaults. Related environment variables:
+`MIN_M` uses default. Related environment variables:
 
 | Variable | Default | Description |
 | --- | --- | --- |
 | `VLLM_FIREFLY` | `0` (off) | Set to `1` to enable firefly prefill. Applies to int4 weights + fp16/bf16 activations and W8A8-FP8 (fp8 weights, large-M prefill); other combinations are unaffected (loading and decode remain unchanged) |
 | `VLLM_FIREFLY_MIN_M` | `1024` | Firefly prefill kicks in only when batch M exceeds this value; small M (decode) keeps int4 Marlin. Dequantization is a fixed cost independent of M, so smaller M means a higher overhead ratio — tune up based on measurements |
-| `VLLM_FIREFLY_MODE` | `hard` | `hard` = no clean int4 copy stored; prefill dequantizes on the fly from the marlin layout (saves memory, fits 27B); `easy` = stores a clean int4 copy at load time (faster dequantization, but adds ~0.5 byte/param of memory, may OOM on large models) |
+| `VLLM_FIREFLY_FUSED` | `1` (on) | fp8-only, selects the hard sub-mode (both keep a single weight, no resident int8 copy): `1` = fused GEMM (dequant fp8→int8 inside the B-load); `0` = non-fused hard (transient dequant + int8 GEMM at prefill, PyTorch dequant if the fused .so is unavailable). Both are bit-identical in value, differing only in speed. To disable fp8 firefly entirely use `VLLM_FIREFLY=0` (upstream W8A8 Marlin) |
 
 Notes:
 

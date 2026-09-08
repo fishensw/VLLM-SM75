@@ -9,6 +9,8 @@
 见 vllm/model_executor/layers/quantization/utils/firefly.py。
 """
 
+import logging
+
 import torch
 
 from vllm import _custom_ops as ops
@@ -33,8 +35,6 @@ from vllm.model_executor.layers.quantization.utils.marlin_utils import (
     unpack_cols,
 )
 from vllm.model_executor.layers.quantization.utils.firefly import (
-    dequant_clean_int4_to_int8,
-    dequant_clean_int4_to_int8_cached,
     dequant_marlin_to_int8,
     dequant_marlin_to_int8_cached,
     int8_prefill_linear,
@@ -45,6 +45,23 @@ from vllm.platforms import current_platform
 from vllm.scalar_type import scalar_types
 
 from .MPLinearKernel import MPLinearKernel, MPLinearLayerConfig
+
+logger = logging.getLogger(__name__)
+
+_firefly_int4_fallback_logged = False
+
+
+def _ff_int4_fallback_log() -> None:
+    # act-order int4 模型 firefly 回退上游 Marlin 时打一次明显日志(不刷屏):
+    # B1-hard repack 反推仅针对 has_perm=false, act-order(g_idx 排序)不支持。
+    global _firefly_int4_fallback_logged
+    if _firefly_int4_fallback_logged:
+        return
+    _firefly_int4_fallback_logged = True
+    logger.warning(
+        "[firefly-int4] 回退上游 Marlin: 模型为 act-order(g_idx 排序), "
+        "B1-hard 反推仅支持非 act-order, firefly prefill 对该模型禁用"
+    )
 
 
 # ---- firefly 混合 op(dynamo/inductor 兼容) ----
@@ -204,10 +221,13 @@ class MarlinLinearKernel(MPLinearKernel):
         #   uint4b8 = 对称 int4(zp=8, compressed-tensors/GPTQ-sym)
         #   uint4   = 非对称 int4(per-group qzeros, AWQ)
         # 反量化统一 w_deq=(q-zp)*s, 对称 zp=8 是其特例(不回归)。
+        # 只有 hard 模式: 不常驻副本, prefill 现从 marlin 布局反。B1-hard 反推
+        # 仅针对 has_perm=false, act-order(g_idx 排序)不支持 → 禁用(回退上游)。
         return (
             envs.VLLM_FIREFLY
             and self.config.weight_type in (scalar_types.uint4b8, scalar_types.uint4)
             and self.config.act_type in (torch.float16, torch.bfloat16)
+            and not self.config.has_g_idx
         )
 
     def _firefly_m_large(self, x: torch.Tensor) -> bool:
@@ -243,12 +263,21 @@ class MarlinLinearKernel(MPLinearKernel):
         else:
             padded_n, padded_k = marlin_padded_nk(size_n, size_k, c.group_size)
 
+        # firefly 回退: act-order int4 模型 B1-hard 不支持, firefly 禁用 → 上游 Marlin。
+        if (
+            envs.VLLM_FIREFLY
+            and c.weight_type in (scalar_types.uint4b8, scalar_types.uint4)
+            and c.act_type in (torch.float16, torch.bfloat16)
+            and c.has_g_idx
+        ):
+            _ff_int4_fallback_log()
+
         # hybrid: repack 前快照(此时 weight/scale 仍为干净布局, 未 permute/repack)。
-        # clone 防后续 in-place 修改。scale/wp 统一转置成 N 在前 [N, K/gs]/[N, K/8]
-        # (compressed-tensors 已是 N 在前; AWQ 是 K 在前 [K/gs, N]/[K/8, N] 需转置)。
-        # 两模式都存干净 scale(小, ~0 字节/参数) + 维度; 非对称(AWQ)另存干净
-        # qzeros(packed, 小, dequant 时解包); B1-easy 另存干净 int4 副本
-        # (0.5 字节/参数, 大模型 OOM), B1-hard 不存, prefill 步现从 marlin 布局反回。
+        # clone 防后续 in-place 修改。scale 统一转置成 N 在前 [N, K/gs]
+        # (compressed-tensors 已是 N 在前; AWQ 是 K 在前 [K/gs, N] 需转置)。
+        # 只有 hard 模式: 存干净 scale(小, ~0 字节/参数) + 维度; 非对称(AWQ)另存
+        # 干净 qzeros(packed, 小, dequant 时解包); 不存 int4 副本, prefill 步现从
+        # marlin 布局反回(单权重, 不爆显存)。
         if self._firefly_enabled():
             ws = getattr(layer, self.w_s_name).data.clone()
             if ws.shape[0] != size_n:  # AWQ K 在前 → N 在前
@@ -265,16 +294,7 @@ class MarlinLinearKernel(MPLinearKernel):
             layer._firefly_wzp = (
                 getattr(layer, self.w_zp_name).data.clone() if c.zero_points else None
             )
-            # B1-hard 仅支持非 act-order(repack 反转推导针对 has_perm=false);
-            # act-order 回退 B1-easy(存干净 int4 副本)。
-            use_easy = (
-                envs.VLLM_FIREFLY_MODE == "easy" or c.has_g_idx
-            )
-            if use_easy:
-                wp = getattr(layer, self.w_q_name).data.clone()
-                if wp.shape[0] != size_n:  # AWQ K 在前 → N 在前
-                    wp = wp.t().contiguous()
-                layer._firefly_wp = wp  # [N, K/8]
+            # 只有 hard: 不存干净 int4 副本, prefill 步现从 marlin 布局反回。
 
         # Allocate marlin workspace, reusing existing storage on reload.
         self.workspace = marlin_make_workspace_new(
@@ -387,27 +407,19 @@ class MarlinLinearKernel(MPLinearKernel):
         # firefly c_n 缓存: load 时算一次 per-channel c_n(纯权重导出, M/chunk 无关),
         # 运行时单遍反量化复用(免两遍 amax, 实测省反量化 ~46%)。放在 repack
         # (transform_w_q) 之后: 此时 w_q 已是 marlin 布局, 与 apply_weights 读取一致。
-        # 复用现有全量反量化取 c_n(w_int8 临时算出即弃); B1-easy/hard 都适用。
+        # 复用现有全量反量化取 c_n(w_int8 临时算出即弃)。
         if self._firefly_enabled():
-            _wzp = layer._firefly_wzp
-            if getattr(layer, "_firefly_wp", None) is not None:
-                _, layer._firefly_c_n = dequant_clean_int4_to_int8(
-                    layer._firefly_wp,
-                    layer._firefly_ws,
-                    layer._firefly_gs,
-                    w_zp=_wzp,
-                )
-            else:
-                _, layer._firefly_c_n = dequant_marlin_to_int8(
-                    getattr(layer, self.w_q_name).data,
-                    layer._firefly_ws,
-                    layer._firefly_gs,
-                    layer._firefly_size_k,
-                    layer._firefly_size_n,
-                    layer._firefly_padded_k,
-                    layer._firefly_padded_n,
-                    w_zp=_wzp,
-                )
+            # 只有 hard: c_n 从 marlin 布局现算(无干净 int4 副本)
+            _, layer._firefly_c_n = dequant_marlin_to_int8(
+                getattr(layer, self.w_q_name).data,
+                layer._firefly_ws,
+                layer._firefly_gs,
+                layer._firefly_size_k,
+                layer._firefly_size_n,
+                layer._firefly_padded_k,
+                layer._firefly_padded_n,
+                w_zp=layer._firefly_wzp,
+            )
 
     def apply_weights(
         self,
@@ -418,8 +430,7 @@ class MarlinLinearKernel(MPLinearKernel):
         # hybrid: 大 M(prefill)把 int4 现反量化成 int8 走 cutlass(IMMA), 小 M(decode)
         # 走上游 int4 Marlin。整个"门控+选择+执行"包在 _ff_hybrid_linear(op) 里,
         # 对 inductor 不透明(图里一个 leaf), 避免 m>min_m 数据依赖分支拖慢 decode。
-        # 27B 为 B1-hard(无 _firefly_wp 干净副本), op 内走 marlin 布局反量化;
-        # B1-easy 模型同样正确(走 marlin 反量化, 略慢但不反 clean 副本)。
+        # 只有 hard: 无干净 int4 副本, op 内走 marlin 布局反量化(单权重)。
         # input_global_scale/bias/w_zp_clean 用空张量表示 None(custom op 不收 None)。
         if self._firefly_enabled():
             c = self.config

@@ -186,9 +186,8 @@ if TYPE_CHECKING:
     VLLM_MARLIN_INPUT_DTYPE: Literal["int8", "fp8"] | None = None
     VLLM_FIREFLY: bool = False
     VLLM_FIREFLY_MIN_M: int = 1024
-    VLLM_FIREFLY_MODE: str = "hard"
     VLLM_FIREFLY_DEQUANT_MODEL: str = "def"
-    VLLM_FIREFLY_FUSED: bool = False
+    VLLM_FIREFLY_FUSED: bool = True
     VLLM_HUMMING_ONLINE_QUANT_CONFIG: dict[str, Any] | None = None
     VLLM_HUMMING_INPUT_QUANT_CONFIG: dict[str, Any] | None = None
     VLLM_HUMMING_USE_F16_ACCUM: bool = False
@@ -1530,21 +1529,19 @@ environment_variables: dict[str, Callable[[], Any]] = {
     "VLLM_FIREFLY_MIN_M": lambda: int(
         os.environ.get("VLLM_FIREFLY_MIN_M", "1024")
     ),
-    # "hard"(默认): 不存干净 int4 副本, prefill 步现从 marlin 布局反回(0.53 字节/
-    # 参数, 27B 能装下); "easy": 另存干净 int4 副本(1.0 字节/参数, 大模型 OOM)。
-    "VLLM_FIREFLY_MODE": lambda: (
-        os.environ.get("VLLM_FIREFLY_MODE", "hard")
-    ),
     # int8 prefill 反量化量化步: "def"(默认) 除法(与两遍 pass2 逐 bit 一致);
     # "fast" 乘倒数(per-row r=1/c_n, 再省 ~30% 反量化, off-by-one ≤0.06%)。
     "VLLM_FIREFLY_DEQUANT_MODEL": lambda: (
         os.environ.get("VLLM_FIREFLY_DEQUANT_MODEL", "def")
     ),
-    # fp8 firefly 用 fused GEMM(B-load 内即时反量化 fp8->int8, 省 int8 缓存 1B/参数):
-    # 需 firefly_fused.cu 构建期/JIT 可用(镜像内 flashinfer cutlass + 打包的
-    # _cutlass_ext 头)。默认 0=现有 int8 路径; =1 走 fused。见 firefly_fused.cu。
+    # fp8 firefly 选 fused / 非 fused hard(均单权重, 不常驻 int8 副本), 是性能/显存权衡:
+    # 1(默认)= fused GEMM(B-load 内即时反量化, 不物化 int8 权重最省显存; T10 上 B-load
+    #   ALU 瓶颈慢 5-10x, 需 firefly_fused.cu 构建期/JIT 可用);
+    # 0 = 非 fused hard(transient 反量化 fp8_dequant_only + int8 GEMM, T10 快 5-10x 但
+    #   物化 transient int8 权重多占显存, .so 挂回退 PyTorch)。
+    # 两模式数值逐 bit 一致(同反量化数学 + 同 int8 IMMA GEMM)。默认 fused(省显存)。见 firefly_fused.cu。
     "VLLM_FIREFLY_FUSED": lambda: (
-        os.environ.get("VLLM_FIREFLY_FUSED", "0") == "1"
+        os.environ.get("VLLM_FIREFLY_FUSED", "1") == "1"
     ),
     # The online quantization dtype for humming kernel
     "VLLM_HUMMING_ONLINE_QUANT_CONFIG": lambda: maybe_convert_json_str_or_file(

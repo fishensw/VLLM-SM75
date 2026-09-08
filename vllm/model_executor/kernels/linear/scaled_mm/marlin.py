@@ -4,11 +4,15 @@
 
 全文件拷贝自上游 v0.28.0, 仅新增 firefly 分支(env 门控, off=上游行为):
   - process_weights_after_loading: repack 前快照干净 fp8 权重 [N,K] + block scale
-    [N/128,K/128], 现反量化成 per-channel int8 缓存(B1-easy, 小模型够用)。
-  - apply_weights: 大 M(prefill)走 int8 cutlass(IMMA), 小 M(decode)走上游
-    weight-only fp8 Marlin(带宽最优, fp8=int8=1B/参数 换 int8 无带宽收益)。
+    [N/128,K/128] + c_n; 不常驻 int8 副本(只有 hard, 单权重不爆显存)。
+  - apply_weights: 大 M(prefill)走 int8 IMMA, 两种 hard 子模式:
+      fused(VLLM_FIREFLY_FUSED=1): GEMM B-load 内即时反量化 fp8->int8;
+      非 fused(VLLM_FIREFLY_FUSED=0): prefill 步 transient 反量化
+      (fp8_dequant_only CUDA kernel; .so 不可用时回退 PyTorch fp8_to_int8) + int8 GEMM。
+    小 M(decode) 或 firefly 禁用(fused .so 挂且 FUSED=1)走上游 weight-only fp8 Marlin。
+  两种子模式数值逐 bit 一致(同反量化数学 + 同 int8 IMMA GEMM), 仅性能不同。
 
-fp8 对称无 zp, 反量化比 AWQ 非对称 int4 简单; int8 GEMM 复用 int8_prefill_linear。
+fp8 对称无 zp, 反量化比 AWQ 非对称 int4 简单。
 见 vllm/model_executor/layers/quantization/utils/firefly.py。
 """
 
@@ -22,6 +26,7 @@ from vllm.model_executor.layers.quantization.utils.fp8_utils import (
     process_fp8_weight_block_strategy,
 )
 from vllm.model_executor.layers.quantization.utils.firefly import (
+    _load_fused_mod,
     compute_c_n_fp8,
     fp8_fused_prefill_linear,
     fp8_to_int8,
@@ -44,19 +49,9 @@ from .ScaledMMLinearKernel import (
 )
 
 logger = logging.getLogger(__name__)
-_firefly_int8_logged = False
 _firefly_fused_logged = False
-
-
-def _ff_dbg_log(x: torch.Tensor, take_int8: bool) -> None:
-    # 首次 int8 prefill 触发时打一次点(确认机制生效, 不刷屏)。
-    global _firefly_int8_logged
-    if take_int8 and not _firefly_int8_logged:
-        _firefly_int8_logged = True
-        logger.info(
-            "[firefly-fp8] int8 IMMA prefill active (first M=%d)",
-            x.numel() // x.shape[-1],
-        )
+_firefly_unfused_logged = False
+_firefly_fp8_fallback_logged = False
 
 
 def _ff_fused_dbg_log(x: torch.Tensor) -> None:
@@ -67,6 +62,31 @@ def _ff_fused_dbg_log(x: torch.Tensor) -> None:
         logger.info(
             "[firefly-fp8] FUSED GEMM prefill active (first M=%d)",
             x.numel() // x.shape[-1],
+        )
+
+
+def _ff_fp8_fallback_log(reason: str) -> None:
+    # firefly prefill 回退上游 Marlin 时打一次明显日志(不刷屏):
+    # fused .so 加载失败(无预编译且 JIT 挂)且 VLLM_FIREFLY_FUSED=1。
+    global _firefly_fp8_fallback_logged
+    if _firefly_fp8_fallback_logged:
+        return
+    _firefly_fp8_fallback_logged = True
+    logger.warning(
+        "[firefly-fp8] 回退上游 Marlin, firefly prefill 未启用 (%s)", reason
+    )
+
+
+def _ff_unfused_dbg_log(x: torch.Tensor, cuda_dequant: bool) -> None:
+    # 首次非 fused hard prefill 触发时打一次点(确认走了 transient 反量化 + int8 GEMM,
+    # 非静默回退)。标注反量化 kernel(CUDA fp8_dequant_only / PyTorch fp8_to_int8)。
+    global _firefly_unfused_logged
+    if not _firefly_unfused_logged:
+        _firefly_unfused_logged = True
+        logger.info(
+            "[firefly-fp8] UNFUSED hard prefill active (first M=%d, %s dequant)",
+            x.numel() // x.shape[-1],
+            "CUDA" if cuda_dequant else "PyTorch",
         )
 
 
@@ -125,25 +145,38 @@ class MarlinFP8ScaledMMLinearKernel(FP8ScaledMMLinearKernel):
         return m > envs.VLLM_FIREFLY_MIN_M
 
     def process_weights_after_loading(self, layer: torch.nn.Module) -> None:
-        # firefly-fp8: repack 前快照干净 fp8 权重 [N,K] + block scale [N/128,K/128],
-        # 现反量化成 per-channel int8 并缓存(B1-easy, 小模型 load 一次开销可接受)。
-        # CUDA 上 process_fp8_weight_block_strategy 只 pad 权重、scale 原样返回,
-        # 故此处快照即干净 canonical 布局。
+        # firefly-fp8: 只有 hard 模式——不常驻 int8 副本, prefill 步现反量化
+        # fp8->int8(单权重, 不爆显存)。两种子模式:
+        #   fused(VLLM_FIREFLY_FUSED=1): GEMM B-load 内即时反量化;
+        #   非 fused(VLLM_FIREFLY_FUSED=0): prefill 步 transient 反量化 + int8 GEMM。
+        # repack 前快照干净 fp8 权重 [N,K] + block scale [N/128,K/128](CUDA 上
+        # process_fp8_weight_block_strategy 只 pad 权重、scale 原样返回, 快照即
+        # 干净 canonical 布局) + c_n(两路共用)。
+        # fused .so 挂 + FUSED=1 → 该层 firefly 禁用, 回退上游 Marlin。
         if self._firefly_enabled():
             w_fp8 = layer.weight.contiguous()  # [N, K] fp8 e4m3
             s_inv = layer.weight_scale_inv.contiguous()  # [N/128, K/128]
+            c_n = compute_c_n_fp8(w_fp8, s_inv)  # [N] 两路共用
+            layer._firefly_w_fp8 = w_fp8
+            layer._firefly_s_inv = s_inv
+            layer._firefly_c_n = c_n
             if envs.VLLM_FIREFLY_FUSED:
-                # fused: 只算 c_n, 不物化 w_int8(省 int8 缓存, 1B/参数);
-                # prefill 时 GEMM B-load 内即时反量化 fp8->int8。
-                layer._firefly_w_fp8 = w_fp8
-                layer._firefly_s_inv = s_inv
-                layer._firefly_c_n = compute_c_n_fp8(w_fp8, s_inv)
-                layer._firefly_fused = True
+                if _load_fused_mod() is not None:
+                    # fused: B-load 内即时反量化(不物化 w_int8, 省 1B/参数 int8 缓存)
+                    layer._firefly_fused = True
+                    layer._firefly_unfused = False
+                else:
+                    # fused .so 加载失败(无预编译 + JIT 挂) → 回退上游 Marlin
+                    layer._firefly_fused = False
+                    layer._firefly_unfused = False
+                    _ff_fp8_fallback_log("fused .so 加载失败(无预编译且 JIT 回退也挂)")
             else:
-                w_int8, c_n = fp8_to_int8(w_fp8, s_inv)
-                layer._firefly_w_int8 = w_int8  # [N, K] int8 行主序
-                layer._firefly_c_n = c_n  # [N] fp32
+                # 非 fused hard: prefill 步 transient 反量化 + int8 GEMM
                 layer._firefly_fused = False
+                layer._firefly_unfused = True
+                # 反量化 kernel: 优先 CUDA(fp8_dequant_only, 在 fused .so 里),
+                # .so 不可用时回退 PyTorch fp8_to_int8(正确但慢)。
+                layer._firefly_unfused_cuda_dequant = _load_fused_mod() is not None
 
         if self.block_quant:
             weight, weight_scale_inv = process_fp8_weight_block_strategy(
@@ -166,23 +199,37 @@ class MarlinFP8ScaledMMLinearKernel(FP8ScaledMMLinearKernel):
         x: torch.Tensor,
         bias: torch.Tensor | None = None,
     ) -> torch.Tensor:
-        # firefly-fp8: 大 M(prefill) 走 int8 IMMA; 小 M(decode) 走上游 fp8 Marlin。
-        # VLLM_FIREFLY_FUSED=1: fused GEMM(B-load 内 fp8->int8, 用 w_fp8/s_inv/c_n);
-        # =0: 现有 int8 路径(用 load 时物化的 w_int8)。两条逐 bit 一致(同 mma + def)。
+        # firefly-fp8: 大 M(prefill) 走 int8 IMMA, 两种 hard 子模式:
+        #   fused: GEMM B-load 内反量化(fp8_fused_prefill_linear);
+        #   非 fused: transient 反量化(fp8_dequant_only/fp8_to_int8) + int8 GEMM
+        #   (int8_prefill_linear)。小 M(decode) 或 firefly 禁用(fused .so 挂且
+        #   FUSED=1) 走上游 fp8 Marlin。两子模式数值逐 bit 一致。
         if self._firefly_enabled() and self._firefly_m_large(x):
-            fused = getattr(layer, "_firefly_fused", False)
-            _ff_dbg_log(x, True)
-            if fused:
+            if getattr(layer, "_firefly_fused", False):
                 _ff_fused_dbg_log(x)
                 y = fp8_fused_prefill_linear(
                     x, layer._firefly_w_fp8, layer._firefly_s_inv, layer._firefly_c_n
                 )
-            else:
-                y = int8_prefill_linear(x, layer._firefly_w_int8, layer._firefly_c_n)
-            if bias is not None:
-                y = y + bias
-            return y
+                if bias is not None:
+                    y = y + bias
+                return y
+            if getattr(layer, "_firefly_unfused", False):
+                cuda_dequant = getattr(layer, "_firefly_unfused_cuda_dequant", False)
+                _ff_unfused_dbg_log(x, cuda_dequant)
+                if cuda_dequant:
+                    # CUDA 反量化(fast, 与 B-load 逐 bit 一致)
+                    w_int8 = _load_fused_mod().fp8_dequant_only(
+                        layer._firefly_w_fp8, layer._firefly_s_inv, layer._firefly_c_n
+                    )
+                else:
+                    # PyTorch 反量化(回退, 正确但慢)
+                    w_int8, _ = fp8_to_int8(layer._firefly_w_fp8, layer._firefly_s_inv)
+                y = int8_prefill_linear(x, w_int8, layer._firefly_c_n)
+                if bias is not None:
+                    y = y + bias
+                return y
 
+        # 小 M(decode) 或 firefly 禁用 → 上游 fp8 Marlin
         if self.block_quant:
             weight_scale = layer.weight_scale_inv
         else:
