@@ -23,6 +23,30 @@ RUN python3 /opt/flashqla-build/source/build_extension.py \
     test "$(grep -Eo 'sm_[0-9]+' /opt/flashqla-build/cuobjdump.txt | \
         sort -u)" = "sm_75"
 
+# firefly fused fp8 GEMM(firefly-fp8 省 int8 缓存的 B-load 反量化): 构建期编译成
+# .so, runtime 直接加载免 JIT。include 用 sm75-base 里已装的 flashinfer cutlass +
+# overlay 打包的 _cutlass_ext 头。仅当 VLLM_FIREFLY_FUSED=1 时用(默认 off)。
+FROM sm75-base AS firefly-fused-builder
+
+ENV TORCH_CUDA_ARCH_LIST=7.5
+ARG MAX_JOBS=1
+ENV MAX_JOBS=${MAX_JOBS}
+WORKDIR /opt/firefly-fused-build
+COPY vllm/model_executor/layers/quantization/utils/firefly_fused.cu \
+    /opt/firefly-fused-build/firefly_fused.cu
+COPY vllm/model_executor/layers/quantization/utils/build_fused_extension.py \
+    /opt/firefly-fused-build/build_fused_extension.py
+COPY vllm/model_executor/layers/quantization/utils/_cutlass_ext \
+    /opt/firefly-fused-build/_cutlass_ext
+RUN python3 /opt/firefly-fused-build/build_fused_extension.py \
+    --build-directory /opt/firefly-fused-build/work \
+    --output /opt/firefly-fused-build/firefly_fused.so \
+    --verbose && \
+    cuobjdump --list-elf /opt/firefly-fused-build/firefly_fused.so \
+        > /opt/firefly-fused-build/cuobjdump.txt && \
+    test "$(grep -Eo 'sm_[0-9]+' /opt/firefly-fused-build/cuobjdump.txt | \
+        sort -u)" = "sm_75"
+
 FROM sm75-base AS runtime
 
 # Match the reviewed startup fixes rather than resolving a moving latest release.
@@ -75,6 +99,10 @@ COPY vllm/model_executor/layers/quantization/utils/firefly.py \
     /tmp/sm75-overlay/model_executor/layers/quantization/utils/firefly.py
 COPY vllm/model_executor/layers/quantization/utils/firefly.cu \
     /tmp/sm75-overlay/model_executor/layers/quantization/utils/firefly.cu
+COPY vllm/model_executor/layers/quantization/utils/firefly_fused.cu \
+    /tmp/sm75-overlay/model_executor/layers/quantization/utils/firefly_fused.cu
+COPY vllm/model_executor/layers/quantization/utils/_cutlass_ext/cutlass_extensions/epilogue/broadcast_load_epilogue_c2x.hpp \
+    /tmp/sm75-overlay/model_executor/layers/quantization/utils/_cutlass_ext/cutlass_extensions/epilogue/broadcast_load_epilogue_c2x.hpp
 COPY vllm/v1/engine/auto_sleep.py \
     /tmp/sm75-overlay/v1/engine/auto_sleep.py
 COPY vllm/v1/engine/core.py \
@@ -113,11 +141,18 @@ COPY --from=flashqla-builder /opt/flashqla-build/flash_qla_sm75_gdn.so \
     /opt/vllm-sm75/extensions/flash_qla_sm75_gdn.so
 COPY --from=flashqla-builder /opt/flashqla-build/cuobjdump.txt \
     /opt/vllm-sm75/evidence/cuobjdump.txt
+COPY --from=firefly-fused-builder /opt/firefly-fused-build/firefly_fused.so \
+    /opt/vllm-sm75/extensions/firefly_fused.so
+COPY --from=firefly-fused-builder /opt/firefly-fused-build/cuobjdump.txt \
+    /opt/vllm-sm75/evidence/firefly_fused_cuobjdump.txt
 
 # VLLM_FIREFLY=1: firefly prefill 默认开(decode 仍走 W4A16 Marlin, 不受影响);
 # 要纯 W4A16 基线运行时 -e VLLM_FIREFLY=0 关。MIN_M/MODE/DEQUANT 用 envs.py 默认(1024/hard/def)。
+# VLLM_FIREFLY_FUSED=1 走 fp8 fused(B-load 反量化, 省 int8 缓存), 默认 0=int8 路径;
+# 预编译 .so 免运行时 JIT(构建期 firefly-fused-builder stage 编好)。
 ENV FLASH_QLA_SM75_PREBUILT_EXTENSION_PATH=/opt/vllm-sm75/extensions/flash_qla_sm75_gdn.so \
     FLASH_QLA_SM75_ALLOW_JIT=0 \
+    VLLM_FIREFLY_FUSED_PREBUILT_PATH=/opt/vllm-sm75/extensions/firefly_fused.so \
     PYTHONWARNINGS=ignore::FutureWarning \
     TRANSFORMERS_VERBOSITY=error \
     VLLM_FIREFLY=1 \

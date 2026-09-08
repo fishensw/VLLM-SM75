@@ -203,6 +203,134 @@ def int8_prefill_linear(
     return y.reshape(*orig[:-1], -1)
 
 
+# ---- fp8 fuse: GEMM B-load 内即时反量化 fp8->int8(省 int8 缓存, 1B/参数) ----
+# 与 int8_prefill_linear 逐 bit 一致(同 mma.s8 路径 + 同 def 反量化), 见 firefly_fused.cu。
+# 懒加载 firefly_fused(torch.utils.cpp_extension.load, 首次 fused prefill 时 JIT,
+# 需镜像内 flashinfer cutlass 头 + 本目录 _cutlass_ext 头; 失败回退 int8 路径)。
+_fused_mod = None
+_fused_load_attempted = False
+
+
+def _find_fused_include_dirs() -> list[str] | None:
+    """定位 firefly_fused.cu 编译所需 include, 找不到返回 None。
+
+    需要两处:
+      1. flashinfer cutlass(2.x API + cute + fp8), 探针常见安装位置;
+      2. 本目录 _cutlass_ext(打包的 vllm cutlass_extensions/epilogue 头)。
+    """
+    here = os.path.dirname(os.path.abspath(__file__))
+    ext_dir = os.path.join(here, "_cutlass_ext")
+    ext_h = os.path.join(
+        ext_dir, "cutlass_extensions", "epilogue", "broadcast_load_epilogue_c2x.hpp"
+    )
+    if not os.path.isfile(ext_h):
+        return None
+    candidates = [
+        "/usr/local/lib/python3.12/dist-packages/flashinfer/data/cutlass/include",
+    ]
+    try:
+        import flashinfer
+
+        fi = os.path.join(
+            os.path.dirname(os.path.abspath(flashinfer.__file__)),
+            "data", "cutlass", "include",
+        )
+        if fi not in candidates:
+            candidates.append(fi)
+    except Exception:  # noqa: BLE001
+        pass
+    cutlass_inc = next((c for c in candidates if os.path.isdir(c)), None)
+    if cutlass_inc is None:
+        return None
+    return [cutlass_inc, ext_dir]
+
+
+def _load_fused_mod():
+    """懒加载 firefly_fused: 优先构建期预编译 .so(免运行时 JIT), 回退 JIT, 失败 None。"""
+    global _fused_mod, _fused_load_attempted
+    if _fused_load_attempted:
+        return _fused_mod
+    _fused_load_attempted = True
+    # 1. 构建期预编译 .so(镜像内置, 免首测 ~5min JIT; 见 firefly-fused-builder stage)
+    prebuilt = os.environ.get("VLLM_FIREFLY_FUSED_PREBUILT_PATH")
+    if prebuilt and os.path.isfile(prebuilt):
+        try:
+            import importlib.util
+
+            spec = importlib.util.spec_from_file_location("firefly_fused", prebuilt)
+            if spec is not None and spec.loader is not None:
+                module = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(module)
+                _fused_mod = module
+                logger.info(
+                    "firefly fused kernel loaded (prebuilt %s)", prebuilt
+                )
+                return _fused_mod
+        except Exception as e:  # noqa: BLE001 - 预编译加载失败回退 JIT
+            logger.warning("firefly fused prebuilt load failed, try JIT: %s", e)
+    # 2. JIT 回退(单 arch sm_75; 开发/cp-in 场景)
+    try:
+        here = os.path.dirname(os.path.abspath(__file__))
+        cu_path = os.path.join(here, "firefly_fused.cu")
+        if not os.path.exists(cu_path):
+            logger.warning("firefly_fused source not found at %s; skip fused", cu_path)
+            return None
+        inc = _find_fused_include_dirs()
+        if inc is None:
+            logger.warning("firefly_fused: cutlass include not found; skip fused")
+            return None
+        from torch.utils.cpp_extension import load as _load_ext
+
+        os.environ.setdefault("TORCH_CUDA_ARCH_LIST", "7.5")
+        _fused_mod = _load_ext(
+            name="firefly_fused",
+            sources=[cu_path],
+            extra_cuda_cflags=["-O3"],
+            extra_include_paths=inc,
+            verbose=False,
+        )
+        logger.info("firefly fused kernel loaded (fp8 B-load dequant)")
+    except Exception as e:  # noqa: BLE001 - 编译/无 CUDA 回退 int8
+        logger.warning("firefly fused ext load failed, fallback to int8: %s", e)
+        _fused_mod = None
+    return _fused_mod
+
+
+def compute_c_n_fp8(w_fp8: torch.Tensor, s_inv: torch.Tensor) -> torch.Tensor:
+    """fp8(e4m3)+128x128 block scale -> per-channel c_n [N] fp32。
+
+    只做 fp8_to_int8 的 c_n pass(amax_k|w_deq|/127), 不物化 w_int8 —— fuse
+    路径省 int8 缓存(1B/参数), w_deq 在 GEMM B-load 里现算。
+    """
+    N, K = w_fp8.shape
+    w_deq = w_fp8.to(torch.float32)
+    s_exp = (
+        s_inv.to(torch.float32)
+        .repeat_interleave(128, 0)
+        .repeat_interleave(128, 1)[:N, :K]
+    )
+    w_deq = w_deq * s_exp
+    return w_deq.abs().amax(dim=1) / 127.0
+
+
+def fp8_fused_prefill_linear(
+    x: torch.Tensor,
+    w_fp8: torch.Tensor,  # [N, K] fp8 e4m3 行主序
+    s_inv: torch.Tensor,  # [N/128, K/128] block scale
+    c_n: torch.Tensor,  # [N]
+) -> torch.Tensor:
+    """x [*, K] -> per-token 动态 int8 -> fused GEMM(B-load 内 fp8->int8) -> [*, N]。
+
+    与 int8_prefill_linear 逐 bit 一致(同 mma 路径 + 同 def 反量化)。
+    """
+    orig = x.shape
+    x2d = x.reshape(-1, x.shape[-1])
+    x_q, x_s, _ = ops.scaled_int8_quant(x2d.contiguous())
+    mod = _load_fused_mod()
+    y = mod.fp8_fused_scaled_mm(x_q, w_fp8, s_inv, c_n, x_s, x.dtype)
+    return y.reshape(*orig[:-1], -1)
+
+
 # ---- B1-hard: 从 marlin 布局现反回干净 int4(不存干净 int4 副本) ----
 # 镜像 csrc/libtorch_stable/quantization/marlin/gptq_marlin_repack.cu 的
 # repack_tile, 仅 int4/fp16 场景(num_bits=4, has_perm=false, is_a_8bit=false):

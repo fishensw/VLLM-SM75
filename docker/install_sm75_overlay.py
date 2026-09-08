@@ -31,6 +31,8 @@ def main() -> None:
         "model_executor/layers/quantization/utils/marlin_utils_fp8.py",
         "model_executor/layers/quantization/utils/firefly.py",
         "model_executor/layers/quantization/utils/firefly.cu",
+        "model_executor/layers/quantization/utils/firefly_fused.cu",
+        "model_executor/layers/quantization/utils/_cutlass_ext/cutlass_extensions/epilogue/broadcast_load_epilogue_c2x.hpp",
         "v1/attention/backends/flashinfer.py",
         "v1/attention/backends/gdn_attn.py",
         "v1/engine/async_llm.py",

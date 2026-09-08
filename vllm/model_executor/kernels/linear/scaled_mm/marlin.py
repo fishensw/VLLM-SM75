@@ -22,6 +22,8 @@ from vllm.model_executor.layers.quantization.utils.fp8_utils import (
     process_fp8_weight_block_strategy,
 )
 from vllm.model_executor.layers.quantization.utils.firefly import (
+    compute_c_n_fp8,
+    fp8_fused_prefill_linear,
     fp8_to_int8,
     int8_prefill_linear,
 )
@@ -43,6 +45,7 @@ from .ScaledMMLinearKernel import (
 
 logger = logging.getLogger(__name__)
 _firefly_int8_logged = False
+_firefly_fused_logged = False
 
 
 def _ff_dbg_log(x: torch.Tensor, take_int8: bool) -> None:
@@ -52,6 +55,17 @@ def _ff_dbg_log(x: torch.Tensor, take_int8: bool) -> None:
         _firefly_int8_logged = True
         logger.info(
             "[firefly-fp8] int8 IMMA prefill active (first M=%d)",
+            x.numel() // x.shape[-1],
+        )
+
+
+def _ff_fused_dbg_log(x: torch.Tensor) -> None:
+    # 首次 fused prefill 触发时打一次点(确认走了 B-load dequant, 非静默回退 int8)。
+    global _firefly_fused_logged
+    if not _firefly_fused_logged:
+        _firefly_fused_logged = True
+        logger.info(
+            "[firefly-fp8] FUSED GEMM prefill active (first M=%d)",
             x.numel() // x.shape[-1],
         )
 
@@ -118,9 +132,18 @@ class MarlinFP8ScaledMMLinearKernel(FP8ScaledMMLinearKernel):
         if self._firefly_enabled():
             w_fp8 = layer.weight.contiguous()  # [N, K] fp8 e4m3
             s_inv = layer.weight_scale_inv.contiguous()  # [N/128, K/128]
-            w_int8, c_n = fp8_to_int8(w_fp8, s_inv)
-            layer._firefly_w_int8 = w_int8  # [N, K] int8 行主序
-            layer._firefly_c_n = c_n  # [N] fp32
+            if envs.VLLM_FIREFLY_FUSED:
+                # fused: 只算 c_n, 不物化 w_int8(省 int8 缓存, 1B/参数);
+                # prefill 时 GEMM B-load 内即时反量化 fp8->int8。
+                layer._firefly_w_fp8 = w_fp8
+                layer._firefly_s_inv = s_inv
+                layer._firefly_c_n = compute_c_n_fp8(w_fp8, s_inv)
+                layer._firefly_fused = True
+            else:
+                w_int8, c_n = fp8_to_int8(w_fp8, s_inv)
+                layer._firefly_w_int8 = w_int8  # [N, K] int8 行主序
+                layer._firefly_c_n = c_n  # [N] fp32
+                layer._firefly_fused = False
 
         if self.block_quant:
             weight, weight_scale_inv = process_fp8_weight_block_strategy(
@@ -143,14 +166,19 @@ class MarlinFP8ScaledMMLinearKernel(FP8ScaledMMLinearKernel):
         x: torch.Tensor,
         bias: torch.Tensor | None = None,
     ) -> torch.Tensor:
-        # firefly-fp8: 大 M(prefill)把 fp8 现反量化缓存的 int8 走 cutlass(IMMA);
-        # 小 M(decode)走上游 weight-only fp8 Marlin(带宽最优)。
-        # int8 GEMM 复用 int8_prefill_linear(per-token 动态 int8 激活)。
-        w_int8 = getattr(layer, "_firefly_w_int8", None)
-        take_int8 = w_int8 is not None and self._firefly_m_large(x)
-        _ff_dbg_log(x, take_int8)
-        if take_int8:
-            y = int8_prefill_linear(x, w_int8, layer._firefly_c_n)
+        # firefly-fp8: 大 M(prefill) 走 int8 IMMA; 小 M(decode) 走上游 fp8 Marlin。
+        # VLLM_FIREFLY_FUSED=1: fused GEMM(B-load 内 fp8->int8, 用 w_fp8/s_inv/c_n);
+        # =0: 现有 int8 路径(用 load 时物化的 w_int8)。两条逐 bit 一致(同 mma + def)。
+        if self._firefly_enabled() and self._firefly_m_large(x):
+            fused = getattr(layer, "_firefly_fused", False)
+            _ff_dbg_log(x, True)
+            if fused:
+                _ff_fused_dbg_log(x)
+                y = fp8_fused_prefill_linear(
+                    x, layer._firefly_w_fp8, layer._firefly_s_inv, layer._firefly_c_n
+                )
+            else:
+                y = int8_prefill_linear(x, layer._firefly_w_int8, layer._firefly_c_n)
             if bias is not None:
                 y = y + bias
             return y
