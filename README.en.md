@@ -8,19 +8,17 @@ vLLM-SM75 v0.1.3 is based on vLLM 0.28.0 and integrates MTP, DFlash2 and auto-sl
 
 ## v0.1.3 Update Summary
 
+- Adds idle auto-sleep with transparent wake-up; the launch script defaults to deep sleep after 30 minutes.
+- Starts the idle timer when a request completes and the engine becomes idle.
+
+## Features
+
 - FlashQLA-SM75 GDN prefill, Triton decode, FlashInfer 0.6.18, Marlin FP8 and FP8 KV.
-- SM75 CUDA Graph adaptation and fused GDN metadata preparation.
-- Native MTP verification optimizations and an MTP5 preset.
-- DFlash2 SM75 numerical compatibility, AWQ dtype and TP4 adaptations.
-- Reduced allocation pressure when loading a draft after an FP8 target.
-- ModelScope support and persistent model/compiler caches.
-- Idle auto-sleep with transparent wake-up; the launch script defaults to deep sleep after 30 minutes.
-- Adds idle auto-sleep: after an idle timeout the engine automatically
-  offloads its weights to free GPU memory and wakes automatically on the next
-  request — keeping weights in pinned CPU memory, discarding and reloading
-  them from the checkpoint, or exiting the engine process entirely (deep
-  sleep, transparently cold-restarted on the next request). See "Idle
-  auto-sleep" below.
+- SM75 CUDA Graph, fused GDN metadata preparation, and the native MTP5 verification path.
+- DFlash2 SM75 numerical compatibility, AWQ dtype and TP4 handling.
+- ModelScope support and persistent model, vLLM and FlashInfer compilation caches.
+- One image supports ordinary inference, MTP5 and DFlash2, selected by launch parameters.
+- Idle auto-sleep supports CPU, reload and exit; exit releases the engine process, CUDA context, workers and GPU memory, then transparently cold-starts on the next request.
 
 ## Performance
 
@@ -55,14 +53,11 @@ Real-world performance varies with hardware, models, request content and configu
 
 ### Persistent compilation caches
 
-The launch script persists `/root/.cache/vllm` and `/root/.cache/flashinfer` to avoid repeated compilation on subsequent starts.
+The host persists `/root/.cache/vllm` and `/root/.cache/flashinfer`, including DFlash2 draft and candidate-selector artifacts. Keep these bind mounts when recreating containers.
 
-| Compilation phase | Time |
-| :---------------- | ---: |
-| Without cache reuse (historical record) | About 4–5 minutes |
-| Cache hit (current FP8 MTP5 run) | **3.70 seconds** |
+The corrected FP8 DFlash2 build on four T10 GPUs reused all three cache keys across startup, 60-second exit sleep/wake, and a restart configured for 30 minutes: **12 AOT loads and zero graph recompilations** per phase. Cache-loading phases were 3.81 / 0.76 / 0.06 seconds; complete wake-up took about 135.7 seconds. These are different measurements, not universal latency guarantees.
 
-This run took approximately **202 seconds** from the first startup log to API startup. These records come from separate runs; cache acceleration requires matching compiled artifacts.
+Keep model files and compilation artifacts separate: `VLLM_SM75_MODEL_CACHE_ROOT` selects the model directory and `VLLM_SM75_CACHE_ROOT` selects the compilation-cache directory, as shown in the launch example below. Reuse existing model storage and migrate existing compilation caches when updating the launcher to avoid repeated downloads and compilation.
 
 ### 1. Clone
 
@@ -85,8 +80,9 @@ Uses the digest-pinned official `vllm/vllm-openai:v0.28.0-cu129` image, installs
 
 ```bash
 export VLLM_API_KEY='replace-with-your-api-key'
-# Replace with an actual absolute host path for persistent model/compiler caches.
-export VLLM_SM75_CACHE_ROOT=/path/to/vllm-sm75-cache
+# Use actual absolute host paths; keep model downloads separate.
+export VLLM_SM75_CACHE_ROOT=/path/to/vllm-sm75/cache
+export VLLM_SM75_MODEL_CACHE_ROOT=/path/to/model-cache
 VARIANT=base FORMAT=fp8 bash docker/run.sh
 ```
 
@@ -145,53 +141,27 @@ Notes:
 
 ## Idle auto-sleep
 
-After an idle timeout the engine automatically offloads its weights to free
-GPU memory, and wakes (or rebuilds) automatically when a new request arrives;
-callers need no extra API calls. Disabled by default
-(`--auto-sleep-idle-timeout 0`); set a timeout to turn it on.
-
-Example configuration (auto-sleep after 5 idle minutes into **deep sleep**:
-the whole engine process exits — GPU memory, CUDA context, and worker
-processes all go to zero; the next request transparently cold-restarts it):
+For low idle GPU power and DFlash2, use `exit`. The API stays online while the engine and workers exit; the next inference request transparently rebuilds them. The launcher defaults to 30 minutes and exit, whereas direct `vllm serve` defaults to disabled auto-sleep and target cpu. Add to your existing serve arguments:
 
 ```bash
-vllm serve Qwen/Qwen3.8-27B-FP8 \
-  ... \
-  --auto-sleep-idle-timeout 30 \
-  --auto-sleep-offload-target exit
+--auto-sleep-idle-timeout 30 --auto-sleep-offload-target exit
 ```
 
-| Flag | Default | Description |
+The timeout is in **minutes**: use `1` for a 60-second test, `30` for daily use, and `0` to disable. Idle timing begins after requests finish.
+
+| Mode | Required resources and flags | Behavior |
 | --- | --- | --- |
-| `--auto-sleep-idle-timeout` | `0` (disabled) | Auto-sleep after this many idle minutes; float, e.g. `0.2` = 12 s for short test windows |
-| `--auto-sleep-offload-target` | `cpu` | `cpu`: pinned CPU backup (sleep level 1, wake ~1-2 s, ~30 GiB host RAM, needs `--enable-sleep-mode`); `reload`: discard weights, reload from the checkpoint on wake (sleep level 2, no CPU memory, wake ~20-60 s, needs `--enable-sleep-mode`); `exit`: terminate the engine-core process entirely (deep sleep — GPU memory, CUDA context, and workers all go to zero; the GPU drops to its deepest idle state; transparently cold-restarted on the next request, ~1-3 min; does **not** need `--enable-sleep-mode`) |
-| `--auto-sleep-reload-path` | startup model path | Checkpoint used to reload weights on wake in `reload` mode |
-| `--auto-sleep-page-cache-keep-interval` | `600` | In `reload` mode, re-warm the checkpoint into the OS page cache every this many seconds while sleeping, so the wake-time disk read hits the cache instead of cold NVMe; `0` disables the background warm (a one-shot warm on sleep/wake still happens). In `exit` mode the checkpoint is warmed once just before exit so the cold start reads from cache |
+| `exit` | Readable main/draft model files and persistent compilation caches; no `--enable-sleep-mode` required | Releases engine CUDA contexts; full rebuild is paid by the first request |
+| `cpu` | Extra pinned host RAM for actual weight allocations, including draft weights; `--enable-sleep-mode` | Restores weights from RAM; keeps processes/contexts, so P8 is not guaranteed |
+| `reload` | Readable checkpoint; `--enable-sleep-mode`; currently do not use with DFlash2 | Discards weights and reloads the main model; processes, buffers and other CPU allocations remain |
 
-Notes:
+The launcher supplies `--enable-sleep-mode` for cpu/reload. Optional variables are `AUTO_SLEEP_RELOAD_PATH` (container path) and `AUTO_SLEEP_PAGE_CACHE_KEEP_INTERVAL` (seconds, default 600). Setting the latter to 0 disables reload's sleep-entry and background file-page warm-up; the one-shot hint before wake-up remains. OS cache residency is not guaranteed. Exit issues a one-shot main-model hint before exiting.
 
-- Wake time is paid by the first request after idleness: `reload` mode reads
-  the checkpoint from disk and re-runs the quantization repack (~20-60 s);
-  `cpu` mode takes ~1-2 s; `exit` mode is a full cold start (process +
-  model load + quantization repack, ~1-3 min) in exchange for the GPU being
-  completely idle while asleep.
-- `exit` mode (deep sleep) terminates the engine process — the most thorough
-  power saving — at the cost of the slowest wake. It suits long idle periods
-  (e.g. overnight). Currently supported only for the single-API-server,
-  DP=1 topology.
-- `reload` mode requires the model checkpoint to stay readable on disk (the
-  `vllm-hf-cache` volume must remain mounted).
-- `reload` mode warms the checkpoint into the OS page cache by default while
-  sleeping (every 600 s; tune or disable with
-  `--auto-sleep-page-cache-keep-interval`). This lets the wake-time
-  `reload_weights` read hit the cache instead of cold NVMe, cutting wake time
-  by roughly 10-25 s on NVMe; it is a no-op for pages already resident.
-- On hosts with limited CPU RAM (e.g. the 31 GiB validation host), prefer
-  `reload` or `exit`; `cpu` mode needs ~30 GiB of extra pinned CPU memory.
-- With a speculative decoding drafter, prefer `cpu` mode (drafter weights
-  are not reloaded together with the main model).
-- Manual `POST /sleep` / `POST /wake_up` / `GET /is_sleeping` live on the
-  dev endpoints; mixing them with auto mode is undefined.
+Neither exit nor reload writes a runtime-memory snapshot to disk. Budget for normal loading memory and the launcher's existing 8 GiB CPU KV offload separately from pinned weight backups. Keep full main/draft weights and leave disk space for compilation artifacts. A migrated host path is safe only when the container-side path and matching artifacts remain available; model/code/TP/dtype changes can still invalidate caches.
+
+FP8 DFlash2 exit was measured on T10 ×4 with the API online: P8 on all cards, 3 MiB per card, 9.97–15.31 W. Other GPU users and drivers can prevent P8. Validated topology is single API server, DP=1, TP4; cpu/reload GPU behavior and other topologies were not validated in this cache-fix run. Client/proxy timeouts must accommodate the full wake-up. Do not mix automatic sleep with development-only manual sleep/wake endpoints.
+
+See the [complete guide and resource requirements (Chinese)](docs/sleep-and-cache.md). This is a same-version fix: the image remains `vllm-sm75:v0.1.3`.
 
 ## License
 

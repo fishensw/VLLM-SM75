@@ -8,17 +8,18 @@ vLLM-SM75 v0.1.3 基于 vLLM 0.28.0，集成 MTP、DFlash2 和自动休眠适配
 
 ## v0.1.3 更新简要
 
-- 保留 FlashQLA-SM75 GDN prefill、Triton decode、FlashInfer 0.6.18、Marlin FP8 和 FP8 KV 支持。
-- 适配 SM75 CUDA Graph，融合 GDN 状态准备，减少投机验证及调度开销。
-- 优化原生 MTP 验证路径，提供 MTP5 配置。
-- 完善 DFlash2 的 SM75 数值兼容、AWQ 数据类型及 TP4 处理。
-- 修复 FP8 加载 draft 时的显存分配压力。
-- 支持 ModelScope、模型与编译缓存持久化。
-- 新增空闲自动休眠与透明唤醒，启动脚本默认 30 分钟后进入深度休眠。
-- 新增空闲自动睡眠（auto-sleep）：空闲超时后自动卸载权重释放显存，
-  新请求到达自动唤醒（权重可备份到 CPU 内存、丢弃后从 checkpoint 重载，
-  或直接退出引擎进程进入深度睡眠、下一请求透明冷启动），调用方无需任何
-  额外接口。详见下文「空闲自动睡眠」。
+- 新增空闲自动休眠与透明唤醒，启动脚本默认空闲 30 分钟后进入深度休眠。
+- 修正空闲计时起点，从请求完成并进入 idle 状态后开始计时。
+- 同版本修复 sleep 参数及引擎重建导致的编译缓存失效，DFlash2 草稿与候选选择器也复用缓存；镜像仍为 `vllm-sm75:v0.1.3`。
+
+## 功能要点
+
+- FlashQLA-SM75 GDN prefill、Triton decode、FlashInfer 0.6.18、Marlin FP8 和 FP8 KV。
+- SM75 CUDA Graph、GDN 状态准备融合及原生 MTP5 验证路径。
+- DFlash2 的 SM75 数值兼容、AWQ 数据类型和 TP4 处理。
+- ModelScope、模型缓存与 vLLM/FlashInfer 编译缓存持久化。
+- 统一镜像支持普通推理、MTP5 和 DFlash2，通过启动参数选择模式。
+- 空闲自动睡眠支持 CPU、reload 和 exit；exit 模式释放引擎进程、CUDA context、worker 和显存，下一请求透明冷启动。
 
 ## 性能参考
 
@@ -53,14 +54,7 @@ v0.1.2 的基础推理验收见[验证记录](docs/validation/v0.1.2.md)；v0.1.
 
 ### 编译缓存持久化
 
-启动脚本已持久化 `/root/.cache/vllm` 和 `/root/.cache/flashinfer`，避免后续启动重复编译。
-
-| 编译阶段 | 耗时 |
-| :------- | ---: |
-| 未复用缓存（历史记录） | 约 4–5 分钟 |
-| 命中缓存（本次 FP8 MTP5） | **3.70 秒** |
-
-本次完整启动约 **202 秒**。以上为不同轮次记录；缓存加速适用于已有匹配编译缓存的启动。
+启动脚本将 vLLM 和 FlashInfer 编译缓存保存在宿主机，包含 DFlash2 草稿模型及候选选择器的编译产物。重建容器时保留缓存挂载，可复用匹配缓存，避免重复编译。
 
 ### 1. 克隆
 
@@ -83,8 +77,9 @@ bash docker/build.sh
 
 ```bash
 export VLLM_API_KEY='replace-with-your-api-key'
-# 替换为实际绝对路径：持久化模型、vLLM 编译及 FlashInfer 缓存。
-export VLLM_SM75_CACHE_ROOT=/path/to/vllm-sm75-cache
+# 替换为实际绝对路径：编译缓存与模型下载目录分开。
+export VLLM_SM75_CACHE_ROOT=/path/to/vllm-sm75/cache
+export VLLM_SM75_MODEL_CACHE_ROOT=/path/to/model-cache
 
 VARIANT=base FORMAT=fp8 bash docker/run.sh
 ```
@@ -112,6 +107,8 @@ curl --fail http://localhost:8000/v1/models \
   --header "Authorization: Bearer $VLLM_API_KEY"
 ```
 
+已完成本地 GPU 验证的配置、可复制的完整命令与实测效果见[FP8 DFlash2 推荐配置](docs/recommended-fp8-dflash2.md)。
+
 ## firefly（大 M prefill 加速）
 
 v0.1.3 镜像默认开（`VLLM_FIREFLY=1`），要纯 W4A16 基线运行时用 `-e VLLM_FIREFLY=0` 关；非镜像直接用 env 时 envs.py 默认关（设 `VLLM_FIREFLY=1` 开）。仅加速大 M prefill，decode 和权重加载不变。
@@ -123,50 +120,77 @@ v0.1.3 镜像默认开（`VLLM_FIREFLY=1`），要纯 W4A16 基线运行时用 `
 | 2× T10, TP2, 27B W4A16/AWQ | 端到端验证通过 |
 | 0.6B FP8 | 1.24× |
 
-## 空闲自动睡眠（auto-sleep）
+## 空闲自动休眠
 
-引擎空闲超过设定时间后自动卸载权重、释放 GPU 显存；新请求到达时自动唤醒
-（或重建）并继续服务，调用方无需任何额外调用。默认关闭
-（`--auto-sleep-idle-timeout 0`），显式传入超时时开启。
+请求完成并进入空闲后开始计时，达到设定时间自动休眠；新推理请求到达时自动恢复，API 服务保持在线。主要用途是降低长时间闲置时的显存占用和 GPU 功耗。
 
-示例配置（空闲 30 分钟自动进入**深度睡眠**：整个引擎进程退出，显存、
-CUDA context、worker 进程全部归零；下一个请求透明地冷启动重拉）：
+**日常省电、内存有限或使用 DFlash2，推荐 `exit`。** 启动脚本默认空闲 30 分钟后退出引擎及 GPU worker，下一请求自动重建；直接调用 `vllm serve` 则默认关闭自动休眠。
+
+### 模式怎么选
+
+| 模式 | 休眠和唤醒方式 | 必要条件 | 效果与限制 |
+| --- | --- | --- | --- |
+| **`exit`（推荐）** | 退出引擎和 worker；从已有磁盘模型文件重建，并复用匹配编译缓存 | 主模型、草稿模型及配置文件持续可读；保留缓存挂载；不需要 `--enable-sleep-mode` | 释放本引擎的 CUDA 上下文，本地已测四卡 P8；首个请求需等待完整重建 |
+| `cpu` | 权重备份到 pinned CPU 内存，唤醒复制回 GPU | `--enable-sleep-mode`；额外 RAM 足够容纳实际权重备份（含草稿），另留服务内存 | 减少从磁盘重载权重的工作；保留进程和 CUDA 上下文，不保证 P8 |
+| `reload` | 丢弃 GPU 权重，唤醒从 checkpoint 重载主模型 | `--enable-sleep-mode`；可读且支持重载的 checkpoint；**当前不要用于 DFlash2**，草稿不随主模型一起重载 | 不保留整模型权重备份，但进程、缓冲区等仍占内存；不保证 P8 |
+
+exit/reload **不把运行时内存快照写入磁盘**，恢复来源是已有模型文件。编译缓存保存编译产物，不保存对话 KV；重启或 exit 唤醒后，长对话可能仍需重新处理输入。
+
+内存与磁盘预算：cpu 需额外预留权重备份空间，不能简单按压缩模型文件大小计算；本地约 31 GiB 内存主机不采用整模型 cpu 备份。脚本原有 **8 GiB CPU KV offload** 是另一项内存开销，选择 exit/reload 不会取消它。磁盘保留完整主模型、草稿和编译缓存即可，无需单独准备休眠快照文件；文件页缓存也会使用可回收主机内存。
+
+### 怎么配置
+
+保留原推理参数，在 `vllm serve` 命令末尾添加：
 
 ```bash
-vllm serve Qwen/Qwen3.8-27B-FP8 \
-  ... \
-  --auto-sleep-idle-timeout 30 \
-  --auto-sleep-offload-target exit
+--auto-sleep-idle-timeout 30 --auto-sleep-offload-target exit
 ```
 
-| 参数 | 默认 | 说明 |
-| --- | --- | --- |
-| `--auto-sleep-idle-timeout` | `0`（关闭） | 空闲超过该分钟数触发自动睡眠；float，如 `0.2` = 12 秒（短窗口测试用） |
-| `--auto-sleep-offload-target` | `cpu` | `cpu` = 权重备份到 CPU 内存（sleep level 1，唤醒约 1-2s，占约 30 GiB 主机内存，需 `--enable-sleep-mode`）；`reload` = 权重直接丢弃、唤醒时从 checkpoint 重载（sleep level 2，不占 CPU 内存，唤醒约 20-60s，需 `--enable-sleep-mode`）；`exit` = 退出整个引擎进程（深度睡眠，显存/CUDA context/worker 全归零，GPU 进 P8 待机，下一请求透明冷启动约 1-3 min，**无需** `--enable-sleep-mode`） |
-| `--auto-sleep-reload-path` | 启动时的模型路径 | `reload` 模式唤醒使用的 checkpoint 路径 |
-| `--auto-sleep-page-cache-keep-interval` | `600` | `reload` 模式下，睡眠期间每隔该秒数把 checkpoint 重新预热进 OS page cache，保证唤醒时的读盘走缓存而非冷读 NVMe；`0` = 关闭后台预热（睡眠/唤醒瞬间仍会各预热一次）。`exit` 模式在退出前预热一次，让冷启动读盘走缓存 |
+超时单位是**分钟**：`1` = 60 秒测试，`30` = 日常 30 分钟，`0` = 关闭。使用仓库脚本时，在前文模型和路径设置的基础上任选对应配置：
 
-注意事项：
+```bash
+# 60 秒测试
+AUTO_SLEEP_IDLE_TIMEOUT=1 AUTO_SLEEP_OFFLOAD_TARGET=exit bash docker/run.sh
+# 日常 30 分钟
+AUTO_SLEEP_IDLE_TIMEOUT=30 AUTO_SLEEP_OFFLOAD_TARGET=exit bash docker/run.sh
+# 关闭自动休眠
+AUTO_SLEEP_IDLE_TIMEOUT=0 bash docker/run.sh
+```
 
-- 唤醒耗时计入空闲后第一个请求的 TTFT：`reload` 模式需要从磁盘读
-  checkpoint 并重跑量化 repack（约 20-60 秒）；`cpu` 模式约 1-2 秒；
-  `exit` 模式是完整冷启动（重建进程 + 模型加载 + 量化 repack，约 1-3 分钟），
-  换取睡眠期间 GPU 完全空闲。
-- `exit` 模式（深度睡眠）退出整个引擎进程，睡眠期间显存、CUDA context、
-  worker 进程全部归零，省电最彻底；代价是唤醒最慢。适合长时间空闲
-  （如夜间）的场景。目前仅支持单 API server、DP=1 的部署拓扑。
-- `reload` 模式要求模型 checkpoint 在磁盘上持续可读（即
-  `vllm-hf-cache` 卷保持挂载）。
-- `reload` 模式默认在睡眠期间把 checkpoint 预热进 OS page cache（每 600 秒
-  一次，`--auto-sleep-page-cache-keep-interval` 可调、设 `0` 关闭）。这能让
-  唤醒时的 `reload_weights` 读盘命中缓存而非冷读，NVMe 场景下可缩短唤醒
-  耗时约 10-25 秒；对已在缓存中的页是零开销的空操作。
-- CPU 内存有限的主机（如 31 GiB 验证机）推荐 `reload` 或 `exit`；`cpu` 模式
-  需要额外约 30 GiB 主机内存存放 pinned 备份。
-- 启用投机解码 drafter 时推荐 `cpu` 模式（drafter 权重不随主模型
-  自动重载）。
-- 手动 `POST /sleep` / `POST /wake_up` / `GET /is_sleeping` 位于 dev
-  路由；auto 模式下手动调用的行为未定义。
+原有 `VARIANT`、`FORMAT`、模型等设置继续保留。已存在的同名容器需要按新参数重建，脚本不会自动替换它；重建时保留模型与编译缓存挂载。
+
+| 参数 | 作用 / 默认值 |
+| --- | --- |
+| `--auto-sleep-idle-timeout` | 空闲分钟数；直接 CLI 默认 `0`，脚本变量 `AUTO_SLEEP_IDLE_TIMEOUT` 默认 `30` |
+| `--auto-sleep-offload-target` | `exit` / `cpu` / `reload`；直接 CLI 默认 `cpu`，脚本变量 `AUTO_SLEEP_OFFLOAD_TARGET` 默认 `exit` |
+| `--enable-sleep-mode` | cpu/reload 必需；脚本选择这两种模式时自动添加，exit 不需要 |
+| `--auto-sleep-reload-path` | reload 的容器内 checkpoint 路径，默认启动模型路径；脚本变量 `AUTO_SLEEP_RELOAD_PATH` |
+| `--auto-sleep-page-cache-keep-interval` | reload 文件页预热间隔，默认 `600` 秒；脚本变量 `AUTO_SLEEP_PAGE_CACHE_KEEP_INTERVAL`。`0` 关闭睡眠时及后台预热，唤醒前仍提示预热一次 |
+
+exit 只在退出前提示预热主模型文件页，没有后台预热进程。预热是 OS 提示，不能保证唤醒必定命中内存中的文件页。客户端及反向代理超时应覆盖完整唤醒时间。
+
+### 已验证的推荐配置与效果
+
+**FP8 DFlash2 + 30 分钟 exit**：4 × Tesla T10 16 GiB、TP4、约 31 GiB 主机 RAM，CPU 使用 ondemand。主模型 `Qwen/Qwen3.8-27B-FP8`，草稿 `incoai/Qwen3.8-27B-DFlash2`。
+
+推理参数保持：**draft7、Graph `[8]`、seq4、batch8192、utilization 0.92、max-model-len 262144、每卡 KV 3288334336 bytes、FP8 e4m3 KV、8 GiB CPU KV offload**。这些显存预算针对该四卡环境；完整命令见[推荐配置](docs/recommended-fp8-dflash2.md)。
+
+| 项目 | 本地实测结果 |
+| --- | --- |
+| 60 秒自动休眠 | API 在线，四卡连续三次采样均 P8；显存从 13663 降至 **3 MiB/卡** |
+| 待机功耗 | 驻留单次快照约 **38–43 W/卡**；休眠三次样本约 **10–15.3 W/卡** |
+| 自动唤醒 | 两个并发短请求均成功，完整请求耗时约 **135.7 秒** |
+| 缓存复用 | 已有缓存启动、exit 唤醒、改为 30 分钟后启动，均 **12 次 AOT 命中、零重新编译**；包含主模型、草稿和候选选择器 |
+| 缓存加载阶段 | 主模型 / 草稿 / 候选选择器约 **3.81 / 0.76 / 0.06 秒**，不等于完整唤醒耗时 |
+| 正式 30 分钟配置 | 已启动并通过健康检查和推理；本轮未额外等待完整 30 分钟休眠周期 |
+
+验收时先用 60 秒：完成一次推理后等待空闲超时及退出清理，确认 `/health` 在线，用下面命令观察 P-state、显存和功耗，再发请求确认能恢复，最后改回 30 分钟。
+
+```bash
+nvidia-smi --query-gpu=index,pstate,memory.used,power.draw --format=csv
+```
+
+P8 还取决于其他 GPU 进程、硬件和驱动，显存不要求绝对归零。当前 exit 验证环境为单 API server、DP=1、TP4；上述结果不代表其他模式、所有模型或 262K 长上下文都完成了本轮验收。CPU/reload 本轮只有状态机与参数测试，没有 GPU 唤醒性能保证。
 
 ## License
 

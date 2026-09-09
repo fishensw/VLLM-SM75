@@ -12,6 +12,7 @@ from abc import ABC, abstractmethod
 from collections import Counter, defaultdict
 from collections.abc import Awaitable, Callable, Sequence
 from concurrent.futures import Future
+from copy import copy
 from dataclasses import dataclass
 from multiprocessing.connection import Connection
 from multiprocessing.queues import Queue
@@ -530,6 +531,9 @@ class MPClient(EngineCoreClient):
         client_addresses: dict[str, Any] | None = None,
     ):
         self.vllm_config = vllm_config
+        # The ready handshake replaces block_size with the scheduler's derived
+        # value. Rebuilding must use the original input, just like a cold start.
+        self._respawn_initial_block_size = vllm_config.cache_config.block_size
 
         # ZMQ setup.
         sync_ctx = zmq.Context(io_threads=2)
@@ -783,6 +787,13 @@ class MPClient(EngineCoreClient):
             target=monitor_engine_cores, daemon=True, name="MPClientEngineMonitor"
         ).start()
 
+    def _make_respawn_config(self) -> VllmConfig:
+        config = copy(self.vllm_config)
+        config.cache_config = copy(self.vllm_config.cache_config)
+        config.cache_config.block_size = self._respawn_initial_block_size
+        config.cache_config.num_gpu_blocks = 0
+        return config
+
     def _respawn_launch(self) -> None:
         # vllm-sm75 overlay: deep-sleep respawn (spawn + handshake only).
         #
@@ -807,7 +818,7 @@ class MPClient(EngineCoreClient):
         # before the fresh engine reports its value again.
         self.vllm_config.cache_config.num_gpu_blocks = 0
         with launch_core_engines(
-            self.vllm_config,
+            self._make_respawn_config(),
             self._respawn_executor_class,
             self._respawn_log_stats,
             self._respawn_addresses,

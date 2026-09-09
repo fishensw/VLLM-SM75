@@ -76,6 +76,7 @@ LABEL org.opencontainers.image.created="${BUILD_DATE}" \
 
 COPY vllm/envs.py /tmp/sm75-overlay/envs.py
 COPY vllm/config/model.py /tmp/sm75-overlay/config/model.py
+COPY vllm/config/compilation.py /tmp/sm75-overlay/config/compilation.py
 COPY vllm/engine/arg_utils.py /tmp/sm75-overlay/engine/arg_utils.py
 COPY vllm/entrypoints/serve/utils/api_utils.py \
     /tmp/sm75-overlay/entrypoints/serve/utils/api_utils.py

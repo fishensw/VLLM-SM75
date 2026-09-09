@@ -21,6 +21,7 @@ def main() -> None:
     files = [
         "envs.py",
         "config/model.py",
+        "config/compilation.py",
         "engine/arg_utils.py",
         "entrypoints/serve/utils/api_utils.py",
         "distributed/kv_transfer/kv_connector/v1/base.py",
