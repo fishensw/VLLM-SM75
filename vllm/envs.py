@@ -190,6 +190,7 @@ if TYPE_CHECKING:
     VLLM_FIREFLY_FUSED: str = "auto"
     VLLM_FIREFLY_AR: str = "auto"
     VLLM_FIREFLY_AR_MAX_SIZE: int = 33554432
+    VLLM_FIREFLY_AR_MIN_SIZE: int = 1048576
     VLLM_FIREFLY_AR_BACKEND: str = "auto"
     VLLM_HUMMING_ONLINE_QUANT_CONFIG: dict[str, Any] | None = None
     VLLM_HUMMING_INPUT_QUANT_CONFIG: dict[str, Any] | None = None
@@ -1621,6 +1622,13 @@ environment_variables: dict[str, Callable[[], Any]] = {
     # 默认 32MB = 4096x4096 fp16 (M*H*2), 即 27B prefill 最大 allreduce。
     "VLLM_FIREFLY_AR_MAX_SIZE": lambda: int(
         os.environ.get("VLLM_FIREFLY_AR_MAX_SIZE", "33554432")
+    ),
+    # 只对大消息走 FireflyAllReduce, 小消息回退 NCCL。decode 小消息 (几百 KB)
+    # 时 firefly 的 amax 扫描 + 多轮 flag spin 固定开销可能超过砍半省下的传输
+    # 时间 → 反而更慢。默认 1MB (fp16 字节): 27B decode M=1 单 AR 8KB << 1MB,
+    # 走 NCCL; prefill M>=256 (2MB) 起走 firefly。见 firefly_allreduce.py。
+    "VLLM_FIREFLY_AR_MIN_SIZE": lambda: int(
+        os.environ.get("VLLM_FIREFLY_AR_MIN_SIZE", "1048576")
     ),
     # FireflyAllReduce 传输 backend: auto(默认, 运行时 _can_p2p 选 P2P 优先) /
     # p2p(强制) / shm(强制)。P2P 有 NVLink/PCIe 直连时 data/flag 全 device 显存

@@ -413,7 +413,11 @@ class FireflyAllReduce:
             return False
         if inp.dtype != torch.float16 or not inp.is_contiguous():
             return False
-        if inp.numel() == 0 or inp.numel() * 2 > self._max_size:
+        nbytes = inp.numel() * 2  # fp16 字节数
+        # 下限: decode 小消息的 amax 扫描 + 多轮 flag spin 固定开销可能超过
+        #   砍半省下的传输时间 → 反而更慢, 回退 NCCL。
+        # 上限: 大消息超 shm/p2p buffer, 回退 NCCL。
+        if nbytes < envs.VLLM_FIREFLY_AR_MIN_SIZE or nbytes > self._max_size:
             return False
         return True
 

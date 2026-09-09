@@ -417,6 +417,11 @@ void firefly_ar_butterfly(at::Tensor x, at::Tensor work, at::Tensor out,
   // 全局 amax (本 rank 原始输入 x, butterfly 前算一次; 各 rank x 同形状)
   cudaMemsetAsync(amax_dev, 0, sizeof(float), stream);
   ar_amax_partial<<<grid, threads, 0, stream>>>(xp, amax_dev, n);
+  // N-way amax 交换 -> common scale, **只在 butterfly 前算一次**: scale 全程
+  //   固定为 global_amax*N/448 (amax_dev 不变), 中间和 <= N*amax 不饱和; 循环内
+  //   重复交换是同一个值, 纯属浪费 N-1 卡 spin (4 卡省 1 次, 8 卡省 2 次)。
+  ar_scale_exchange_n<<<1, 1, 0, stream>>>(bases_dev, data_half, rank, world,
+                                           amax_dev, scale_dev, seq_dev);
 
   for (int64_t offset = 1; offset < world; offset <<= 1) {
     int64_t partner = rank ^ offset;
@@ -440,11 +445,9 @@ void firefly_ar_butterfly(at::Tensor x, at::Tensor work, at::Tensor out,
         reinterpret_cast<uint64_t*>(peer + world * data_half + 24 + 8 * world) +
         partner;
 
-    // round1: N-way amax 交换 -> common scale (scale_dev 本 allreduce 用一次)
-    ar_scale_exchange_n<<<1, 1, 0, stream>>>(bases_dev, data_half, rank, world,
-                                             amax_dev, scale_dev, seq_dev);
     // round2: quant(work, 当前部分和) -> 写 own slot + data flag +
-    //   dequant(own+peer) 写独立 work (部分和) + barrier + bump seq
+    //   dequant(own+peer) 写独立 work (部分和) + barrier + bump seq。
+    //   (scale 交换已提到循环外, 见上注释)
     ar_quant<<<grid, threads, 0, stream>>>(wp, own_data, scale_dev, n);
     ar_set_spin<<<1, 1, 0, stream>>>(own_flag_data, peer_flag_data, seq_dev);
     ar_dequant_sum<<<grid, threads, 0, stream>>>(own_data, peer_data, wp,
@@ -499,6 +502,10 @@ void firefly_ar_butterfly_shm(at::Tensor x, at::Tensor work, at::Tensor xq,
   // 全局 amax (本 rank 原始输入 x, butterfly 前算一次, 与 P2P 版一致)
   cudaMemsetAsync(amax_dev, 0, sizeof(float), stream);
   ar_amax_partial<<<grid, threads, 0, stream>>>(xp, amax_dev, n);
+  // N-way amax 交换 -> common scale, **只在 butterfly 前算一次** (scale 全程
+  //   固定, 循环内重复交换是同一个值, 纯属浪费; 4 卡省 1 次, 8 卡省 2 次)。
+  ar_scale_exchange_n_shm<<<1, 1, 0, stream>>>(base, data_half, rank, world,
+                                               amax_dev, scale_dev, seq_dev);
 
   // metadata 区指针 (相对 shm_base 单一基址, 布局见上)
   uint64_t* flag_data =
@@ -514,11 +521,9 @@ void firefly_ar_butterfly_shm(at::Tensor x, at::Tensor work, at::Tensor xq,
     uint8_t* peer_data =
         reinterpret_cast<uint8_t*>(base) + partner * data_half;
 
-    // round1: N-way amax 交换 (SHM host 区) -> common scale
-    ar_scale_exchange_n_shm<<<1, 1, 0, stream>>>(base, data_half, rank, world,
-                                                 amax_dev, scale_dev, seq_dev);
     // round2: dev quant -> D2H 到 own shm slot + data flag -> H2D partner slot
-    //   -> dequant+sum 写回 work -> barrier + bump seq
+    //   -> dequant+sum 写回 work -> barrier + bump seq。
+    //   (scale 交换已提到循环外, 见上注释)
     ar_quant<<<grid, threads, 0, stream>>>(wp, xqp, scale_dev, n);
     cudaMemcpyAsync(own_data, xqp, (size_t)n, cudaMemcpyDeviceToHost, stream);
     ar_set_spin<<<1, 1, 0, stream>>>(flag_data + rank, flag_data + partner,
