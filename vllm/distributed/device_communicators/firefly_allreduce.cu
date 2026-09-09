@@ -285,6 +285,7 @@ __global__ void ar_bump_seq(uint64_t* __restrict__ seq_dev) {
 }  // namespace
 
 // host launcher: 全 GPU round1+round2 (无 host sync, 可 cudagraph capture)。
+// 单 stream: D2H/H2D 串行 (T10 PCIe 半双工, 双 stream 重叠实测无收益 2026-09-09)。
 // x: fp16 [M,H] contiguous (输入); xq/xq_peer: fp8 [n] device scratch;
 //   out: fp16 [M,H] (x0+x1); scratch: device [16B] (amax/scale/seq, by-pointer);
 //   shm_base: 已 cudaHostRegister 的 shm 首址; data_half: 数据半区字节数(>=n);

@@ -14,8 +14,16 @@ world_size 为 >=4 的 2 的幂 (TP4/8/...) 走 butterfly (SHM/P2P, 无 P2P 如 
 
 env:
   VLLM_FIREFLY_AR (auto/0/fp8, auto 跟随 VLLM_FIREFLY)
-  VLLM_FIREFLY_AR_MAX_SIZE (只对小/中消息走本 AR, 大消息回退 NCCL)
+  VLLM_FIREFLY_AR_MIN_SIZE (小消息回退 NCCL; decode 小消息的 amax+flag 固定
+    开销可能超过砍半省下的传输, 见 MIN_SIZE 注释)
 """
+
+# 单次 AR 的数据槽容量 (fp16 字节)。所有消息都走 firefly (无 max-size NCCL 回退);
+# 超过此容量的消息按 CHUNK 字节分块循环 (buffer 固定不随消息增长, 内存恒定)。
+# 128MB = 覆盖 27B(hidden=5120) 8192-token chunk 的 84MB fp16 allreduce, 大块
+# 一次走完不分块; 更大 (如更长 prompt / 更大 hidden) 自动分块, 数值等价 (fp8
+# 是按 chunk 独立 amax/scale, 逐块求和与整体一致 —— allreduce 无跨块耦合)。
+_CHUNK_BYTES = 128 * 1024 * 1024
 
 import ctypes
 import logging
@@ -145,9 +153,10 @@ class FireflyAllReduce:
         if self._mod is None:
             return
 
-        # data_half (fp8 bytes) = max_size / 2 (fp16 2B/elem -> fp8 1B/elem)
-        self._max_size = envs.VLLM_FIREFLY_AR_MAX_SIZE
-        self._data_half = self._max_size // 2
+        # data_half (fp8 bytes) = chunk / 2 (fp16 2B/elem -> fp8 1B/elem)。
+        # buffer 固定为 _CHUNK_BYTES, 不随消息增长; 超 chunk 的消息分块循环。
+        self._chunk = _CHUNK_BYTES
+        self._data_half = self._chunk // 2
         self._ptrs = None
 
         if world_size >= 4:
@@ -173,8 +182,8 @@ class FireflyAllReduce:
         self._scratch = torch.zeros(2, dtype=torch.int64, device=self.device)
         self._scratch[1] = 1
         if world_size >= 4:
-            # butterfly 运行部分和缓冲 (fp16, max M*H); 首轮前 all_reduce 拷入 x
-            self._work = torch.empty(self._max_size // 2,
+            # butterfly 运行部分和缓冲 (fp16, 一个 chunk); 首轮前 all_reduce 拷入 x
+            self._work = torch.empty(self._data_half,
                                      dtype=torch.float16, device=self.device)
         self.disabled = False
         logger.info(
@@ -416,13 +425,14 @@ class FireflyAllReduce:
         nbytes = inp.numel() * 2  # fp16 字节数
         # 下限: decode 小消息的 amax 扫描 + 多轮 flag spin 固定开销可能超过
         #   砍半省下的传输时间 → 反而更慢, 回退 NCCL。
-        # 上限: 大消息超 shm/p2p buffer, 回退 NCCL。
-        if nbytes < envs.VLLM_FIREFLY_AR_MIN_SIZE or nbytes > self._max_size:
+        # 无上限: 超 chunk 的消息分块循环处理 (all_reduce), 不再回退 NCCL。
+        if nbytes < envs.VLLM_FIREFLY_AR_MIN_SIZE:
             return False
         return True
 
-    def all_reduce(self, inp: torch.Tensor) -> torch.Tensor:
-        # 全 GPU, 无 CPU sync (.item()), 可被 cudagraph capture。
+    def _all_reduce_chunk(self, inp: torch.Tensor, out: torch.Tensor) -> None:
+        # 单块 allreduce (n <= data_half)。全 GPU, 无 CPU sync (.item()), 可被
+        #   cudagraph capture。
         #   2-GPU SHM: round1 (amax + SHM 交换) + round2 (quant + D2H + flag
         #        + H2D + dequant+sum + barrier + bump seq)。
         #   2-GPU P2P: 同流程但 data/flag 全 device 显存 (quant 写 own_data,
@@ -431,7 +441,6 @@ class FireflyAllReduce:
         #        data flag + dequant(P2P 读 partner) + barrier + bump seq,
         #        部分和存 _work; 末轮拷入 out。data/flag 全 IPC 显存。
         n = inp.numel()
-        out = torch.empty_like(inp)
         if self.world_size >= 4:
             self._work[:n] = inp.view(-1)
             if self._backend == "p2p":
@@ -458,6 +467,21 @@ class FireflyAllReduce:
                 inp, self._xq, self._xq_peer, out, self._scratch, self._base,
                 self._data_half, self.rank, n,
             )
+
+    def all_reduce(self, inp: torch.Tensor) -> torch.Tensor:
+        # 消息超过 chunk 容量时按块循环 (allreduce 无跨块耦合: 每块独立
+        #   amax/scale/求和, 逐块拼接即整体和)。buffer 固定, 内存不随消息增长。
+        n = inp.numel()
+        cap = self._data_half  # 单块元素数 (fp8 字节数 == fp16 元素数)
+        out = torch.empty_like(inp)
+        if n <= cap:
+            self._all_reduce_chunk(inp, out)
+            return out
+        flat_in = inp.view(-1)
+        flat_out = out.view(-1)
+        for s in range(0, n, cap):
+            e = min(s + cap, n)
+            self._all_reduce_chunk(flat_in[s:e], flat_out[s:e])
         return out
 
     def _teardown_shm(self) -> None:

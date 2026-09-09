@@ -189,7 +189,6 @@ if TYPE_CHECKING:
     VLLM_FIREFLY_DEQUANT_MODEL: str = "def"
     VLLM_FIREFLY_FUSED: str = "auto"
     VLLM_FIREFLY_AR: str = "auto"
-    VLLM_FIREFLY_AR_MAX_SIZE: int = 33554432
     VLLM_FIREFLY_AR_MIN_SIZE: int = 1048576
     VLLM_FIREFLY_AR_BACKEND: str = "auto"
     VLLM_HUMMING_ONLINE_QUANT_CONFIG: dict[str, Any] | None = None
@@ -1618,11 +1617,6 @@ environment_variables: dict[str, Callable[[], Any]] = {
     # AllReduce 量减半 (fp16->fp8), 省 ~480-530ms/27B prefill。见
     # distributed/device_communicators/firefly_allreduce.py / PLAN-fp8-allreduce。
     "VLLM_FIREFLY_AR": _firefly_ar_mode,
-    # 只对小/中消息走 FireflyAllReduce, 大消息回退 NCCL (host bounce 拖累)。
-    # 默认 32MB = 4096x4096 fp16 (M*H*2), 即 27B prefill 最大 allreduce。
-    "VLLM_FIREFLY_AR_MAX_SIZE": lambda: int(
-        os.environ.get("VLLM_FIREFLY_AR_MAX_SIZE", "33554432")
-    ),
     # 只对大消息走 FireflyAllReduce, 小消息回退 NCCL。decode 小消息 (几百 KB)
     # 时 firefly 的 amax 扫描 + 多轮 flag spin 固定开销可能超过砍半省下的传输
     # 时间 → 反而更慢。默认 1MB (fp16 字节): 27B decode M=1 单 AR 8KB << 1MB,
