@@ -3,6 +3,7 @@ AGENTS.md
 tmp/
 
 local-tests/
+metrics
 .venv/
 .ruff_cache/
 .env
