@@ -87,14 +87,26 @@ def _load_cuda_mod():
 
 
 def _unlink_shm(name: str) -> None:
+    """清 stale 段 (上一进程 pkill -9 未走 destroy unlink 残留)。
+
+    必须用公共 API:
+      - sb.close()  内部 release buf + close mmap + close fd (buf 不先 release 会
+                    BufferError: cannot close exported pointers exist)。
+      - sb.unlink() 真正的 shm_unlink。
+    坑: mmap.mmap 没有 .unlink() 方法 (sm75 环境实测 hasattr==False), 用
+      sb._mmap.unlink() 会 AttributeError 被吞 → 段根本没删, 下次 create=True
+      (O_CREAT|O_EXCL) 撞 EEXIST 挡启动。曾踩。
+    """
     from multiprocessing.shared_memory import SharedMemory
 
     try:
         sb = SharedMemory(name=name, create=False)
-        sb._mmap.close()
-        sb.close()
-        sb._mmap.unlink()
     except FileNotFoundError:
+        return
+    sb.close()
+    try:
+        sb.unlink()
+    except Exception:  # noqa: BLE001
         pass
 
 
@@ -126,9 +138,25 @@ class FireflyAllReduce:
 
         # 建/挂 SHM: rank0 建 (先清旧), rank1 重试挂 (两 rank 同时起, 用重试兜底)
         if rank_in_group == 0:
-            _unlink_shm(shm_name)
-            time.sleep(0.3)
-            self._shm = SharedMemory(name=shm_name, create=True, size=total)
+            # create=True 走 O_CREAT|O_EXCL: stale 段残留 (上一进程 pkill -9 未走
+            #   destroy unlink) 且 _unlink_shm 未及时清掉 → EEXIST。重试 unlink+create
+            #   兜底 (rank1 并发 attach 不持有 name, shm_unlink 即刻生效)。
+            for _attempt in range(10):
+                _unlink_shm(shm_name)
+                try:
+                    self._shm = SharedMemory(
+                        name=shm_name, create=True, size=total
+                    )
+                    break
+                except FileExistsError:
+                    time.sleep(0.3)
+                    self._shm = None
+            if self._shm is None:
+                logger.warning(
+                    "firefly ar SHM create timeout (stale %s); fallback NCCL",
+                    shm_name,
+                )
+                return
         else:
             self._shm = None
             for _ in range(400):
