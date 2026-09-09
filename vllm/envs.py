@@ -191,6 +191,7 @@ if TYPE_CHECKING:
     VLLM_FIREFLY_AR: str = "auto"
     VLLM_FIREFLY_AR_MIN_SIZE: int = 1048576
     VLLM_FIREFLY_AR_BACKEND: str = "auto"
+    VLLM_MONITOR: bool = True
     VLLM_HUMMING_ONLINE_QUANT_CONFIG: dict[str, Any] | None = None
     VLLM_HUMMING_INPUT_QUANT_CONFIG: dict[str, Any] | None = None
     VLLM_HUMMING_USE_F16_ACCUM: bool = False
@@ -488,6 +489,20 @@ def _firefly_ar_backend() -> str:
     if v in ("shm", "host", "shared"):
         return "shm"
     return "auto"
+
+
+def _monitor() -> bool:
+    """VLLM_MONITOR 归一化: 默认开; '0'/'off'/'false'/'no' 关。
+
+    开 = serve 在 /monitor 挂单文件 HTML 监控页(自拉同源 /metrics 渲染, 无 CDN,
+    见 entrypoints/serve/instrumentator/monitor.py); 关 = 不挂该路由。
+    """
+    return os.getenv("VLLM_MONITOR", "1").strip().lower() not in (
+        "0",
+        "off",
+        "false",
+        "no",
+    )
 
 
 def env_list_with_choices(
@@ -1628,6 +1643,11 @@ environment_variables: dict[str, Callable[[], Any]] = {
     # p2p(强制) / shm(强制)。P2P 有 NVLink/PCIe 直连时 data/flag 全 device 显存
     # 无 host bounce; 无 P2P (PHB 如 T10) 回 SHM。见 firefly_allreduce.py。
     "VLLM_FIREFLY_AR_BACKEND": _firefly_ar_backend,
+    # 单文件 HTML 监控页开关, 默认开(_monitor 归一化)。
+    # 开 = serve 在 /monitor 挂自包含 HTML 看板(纯前端 canvas 图表, 无 CDN,
+    # 轮询同源 /metrics); 0/off/false/no = 关(不挂路由)。见
+    # entrypoints/serve/instrumentator/monitor.py。
+    "VLLM_MONITOR": _monitor,
     # The online quantization dtype for humming kernel
     "VLLM_HUMMING_ONLINE_QUANT_CONFIG": lambda: maybe_convert_json_str_or_file(
         os.environ.get("VLLM_HUMMING_ONLINE_QUANT_CONFIG", None)
