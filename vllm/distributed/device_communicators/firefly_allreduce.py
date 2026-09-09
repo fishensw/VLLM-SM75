@@ -8,8 +8,9 @@ TP2 每层 2 次 AllReduce([M,H] fp16 residual stream) 在 PCIe 瓶颈上量减�
 传输: /dev/shm + cudaHostRegister (两进程 map 同一 tmpfs 区, 各自 register 成
 pinned 设备可访问, 物理页经 tmpfs 共享)。POC 验证 vfio 下可行。
 
-只支持 world_size=2 (TP2)、fp16 输入、SHM backend (无 P2P, 如 T10)。
-P2P backend (有 P2P 机器) 后加。
+只支持 fp16 输入。world_size=2 (TP2) 走 2 卡互发 (SHM/P2P);
+world_size 为 >=4 的 2 的幂 (TP4/8/...) 走 butterfly (SHM/P2P, 无 P2P 如 T10
+走 SHM, 单一 shm_base host-mapped 区 + D2H/H2D memcpy)。
 
 env:
   VLLM_FIREFLY_AR (auto/0/fp8, auto 跟随 VLLM_FIREFLY)
@@ -150,10 +151,15 @@ class FireflyAllReduce:
         self._ptrs = None
 
         if world_size >= 4:
-            # N 卡 butterfly 必须 P2P/IPC (需直读 peer 显存), SHM 不支持 N 卡。
-            self._backend = "p2p" if self._init_p2p_butterfly() else "off"
-            if self._backend == "off":
-                return
+            # N 卡 butterfly: auto 按 _can_p2p 选 (无 P2P 如 T10 → SHM), 或
+            # VLLM_FIREFLY_AR_BACKEND 强制 shm/p2p。
+            self._backend = self._select_backend_n(rank_in_group)
+            if self._backend == "p2p" and not self._init_p2p_butterfly():
+                self._backend = "shm"
+            if self._backend == "shm":
+                total = world_size * self._data_half + 28 * world_size
+                if not self._init_shm_n(total, shm_name):
+                    return
         else:  # world_size == 2: P2P 优先 (无 host bounce), 无 P2P 回 SHM
             total = 2 * self._data_half + 56
             self._backend = self._select_backend(rank_in_group)
@@ -226,6 +232,26 @@ class FireflyAllReduce:
             )
             return False
 
+    def _select_backend_n(self, rank_in_group: int) -> str:
+        """N 卡 (>=4) butterfly 后端: VLLM_FIREFLY_AR_BACKEND 优先, auto 按
+        _can_p2p 选 (无 P2P 如 T10 PCIe → SHM, 有 P2P → p2p)。"""
+        pref = envs.VLLM_FIREFLY_AR_BACKEND
+        if pref == "p2p":
+            return "p2p"
+        if pref == "shm":
+            return "shm"
+        # auto: 有 P2P 选 P2P (group 缺失无法交换 IPC handle, 回 SHM)
+        if self._group is None:
+            return "shm"
+        try:
+            from vllm.distributed.device_communicators.custom_all_reduce import (
+                _can_p2p,
+            )
+            return "p2p" if _can_p2p(rank_in_group, self.world_size) else "shm"
+        except Exception as e:  # noqa: BLE001 - P2P 检测失败回 SHM
+            logger.debug("firefly ar N-GPU P2P check failed, use SHM: %s", e)
+            return "shm"
+
     def _init_p2p_butterfly(self) -> bool:
         """N 卡 (4/8) butterfly: 单 IPC buffer (N*data_half + 24 + 16N 字节,
         每 rank 一 buffer, 内含本 rank 的 data slot + per-rank flag 数组),
@@ -260,6 +286,70 @@ class FireflyAllReduce:
             )
             self._bases_dev = None
             return False
+
+    def _init_shm_n(self, total: int, shm_name: str) -> bool:
+        """N 卡 (>=4) SHM butterfly: 单一 shm_base (host-mapped pinned, 所有
+        rank map 同一 tmpfs 区)。布局: [0, N*D) data slots, 之后 28N 字节
+        metadata (amax/flag_scale/flag_data/barrier 各 N 槽)。rank0 建并清
+        metadata, 其余 attach (重试保证 rank0 建完)。"""
+        from multiprocessing.shared_memory import SharedMemory
+
+        if self.rank == 0:
+            # create=True 走 O_CREAT|O_EXCL: stale 段残留 → EEXIST, 重试
+            # unlink+create 兜底 (同 2 卡 _init_shm)。
+            for _attempt in range(10):
+                _unlink_shm(shm_name)
+                try:
+                    self._shm = SharedMemory(
+                        name=shm_name, create=True, size=total
+                    )
+                    break
+                except FileExistsError:
+                    time.sleep(0.3)
+                    self._shm = None
+            if self._shm is None:
+                logger.warning(
+                    "firefly ar SHM create timeout (stale %s); fallback NCCL",
+                    shm_name,
+                )
+                return False
+            # 清零 metadata 区 (tmpfs 新建段本已全 0, 显式清幂等稳妥; 只清
+            #   末 28N 字节 metadata 即可, data 区无所谓——但 tmpfs 新建段
+            #   全 0, 此处全清也可; 其余 rank attach 重试已保证在 rank0 建完后)
+            n_meta = 28 * self.world_size
+            meta_off = total - n_meta
+            self._shm.buf[meta_off:total] = b"\x00" * n_meta
+        else:
+            self._shm = None
+            for _ in range(400):
+                try:
+                    self._shm = SharedMemory(name=shm_name, create=False)
+                    break
+                except FileNotFoundError:
+                    time.sleep(0.05)
+            if self._shm is None:
+                logger.warning(
+                    "firefly ar SHM attach timeout: %s; fallback NCCL", shm_name
+                )
+                return False
+        self._arr = (ctypes.c_char * total).from_buffer(self._shm.buf)
+        self._host_ptr = ctypes.addressof(self._arr)
+        r = _LIB.cudaHostRegister(self._host_ptr, total, 0)
+        if r != 0:
+            logger.warning(
+                "firefly ar cudaHostRegister failed err=%d; fallback NCCL", r
+            )
+            self._teardown_shm()
+            return False
+
+        # fp8 data scratch (device, max size; 实际 allreduce 用 n 字节子集)
+        self._xq = torch.empty(self._data_half, dtype=torch.uint8,
+                               device=self.device)
+        self._xq_peer = torch.empty(self._data_half, dtype=torch.uint8,
+                                    device=self.device)
+        self._base = self._host_ptr
+        self._shm_name = shm_name
+        return True
 
     def _init_shm(self, total: int, shm_name: str) -> bool:
         """SHM backend: /dev/shm + cudaHostRegister (无 P2P, 如 T10 PHB)。"""
@@ -340,10 +430,20 @@ class FireflyAllReduce:
         out = torch.empty_like(inp)
         if self.world_size >= 4:
             self._work[:n] = inp.view(-1)
-            self._mod.firefly_ar_butterfly(
-                inp, self._work, out, self._scratch, self._bases_dev,
-                self._data_half, self.rank, n,
-            )
+            if self._backend == "p2p":
+                # bases_host = self._ptrs (host list[int], pybind 转 vector);
+                #   bases_dev_ptr = device 数组首址, 仅作 ar_scale_exchange_n
+                #   的 kernel 实参 (kernel 内解引用合法, host 不读)。
+                self._mod.firefly_ar_butterfly(
+                    inp, self._work, out, self._scratch, self._ptrs,
+                    self._bases_dev.data_ptr(), self._data_half, self.rank, n,
+                )
+            else:  # shm: data/flag 全 host-mapped shm, D2H/H2D memcpy
+                self._mod.firefly_ar_butterfly_shm(
+                    inp, self._work, self._xq, self._xq_peer, out,
+                    self._scratch, self._base, self._data_half, self.rank,
+                    self.world_size, n,
+                )
         elif self._backend == "p2p":
             self._mod.firefly_ar_exchange_p2p(
                 inp, out, self._scratch, self._own_base, self._peer_base,
@@ -383,7 +483,7 @@ class FireflyAllReduce:
             return
         if self._backend == "p2p":
             self._teardown_p2p()
-        else:
+        else:  # shm: 2 卡 / N 卡共用 (都走 _host_ptr + _shm + rank0 unlink)
             try:
                 _LIB.cudaHostUnregister(self._host_ptr)
             except Exception:  # noqa: BLE001
