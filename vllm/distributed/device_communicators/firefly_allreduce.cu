@@ -46,6 +46,28 @@
 //   [+0, +4)  amax_dev (f32)   全局 amax accumulator (每步 memset 0 后 atomicMax)
 //   [+4, +8)  scale_dev (f32)  common scale (ar_scale_exchange 算, quant/dequant 读)
 //   [+8, +16) seq_dev (u64)    flag 计数 (初始 1, 每 allreduce +1, 所有 flag 用它)
+//
+// 双 backend:
+//   - SHM: 无 P2P (PHB, 如 T10)。data D2H/H2D 经 /dev/shm 共享 host 区,
+//     launcher `firefly_ar_exchange` (host-mapped shm_base 单一指针)。
+//   - P2P: 有 P2P (NVLink/PCIe 直连)。data/flag 全在 device 显存, 直接 P2P
+//     读写 peer 显存 (无 host bounce), launcher `firefly_ar_exchange_p2p`
+//     (own_base + peer_base 两显存指针)。buffer 布局与 SHM 完全一致, 只是指针
+//     来自 CUDA IPC (每 rank 一 IPC buffer, 交换 handle 拿 peer 显存指针)。
+//   quant/dequant/amax/set_spin/bump_seq 两 backend 共用; 仅 scale_exchange 有
+//     指针版 (ar_scale_exchange_p2p), round2 数据搬运不同 (SHM 走 memcpy, P2P 直读)。
+//
+// N 卡 (world_size = 4/8, P2P/IPC): butterfly (递归折半) allreduce,
+//   launcher `firefly_ar_butterfly` (own_base + 本 rank 全部 base 指针数组)。
+//   log2(N) 轮, 每轮 partner = rank ^ offset (offset=1,2,4,...); 每轮:
+//     round1 (amax exchange 全体 N 卡, scale = global_amax * N / 448 防部分和
+//       re-quant 到 e4m3 饱和 —— butterfly 中间和最大 N*amax) ->
+//     round2 (quant -> 写 own data slot + flag -> partner 互读 -> dequant+sum
+//       -> barrier 防下一轮覆盖)。out = sum_{r} x_r。精度同 2 卡 (fp8 近无损);
+//   中间 re-quant 误差被 transformer 吸收 (PLAN §3.6), N 越大 re-quant 越多但
+//   仍远小于 int8 定点 (PLAN §3.5)。quant/dequant/amax/set_spin/bump_seq 复用,
+//   仅新增 ar_scale_exchange_n (N-way amax)。buffer 布局与 2 卡一致 (D=每 rank
+//   slot 字节数), N 卡下 data 总量 = N*D (比 NCCL butterfly 2(N-1) 小)。
 #include <torch/extension.h>
 
 #include <c10/cuda/CUDAStream.h>  // 轻量 stream API, 不拖 cusparse/cublas
@@ -110,6 +132,76 @@ __global__ void ar_scale_exchange(char* __restrict__ shm_base,
     }                                                  // 等对端 (acquire)
     float peer_amax = amax_shm[1 - rank];
     *scale_dev = fmaxf(local_amax, peer_amax) / 448.0f;  // e4m3fn max finite
+  }
+}
+
+// ---- kernel: P2P 版 amax 交换 (round1, GPU 侧) ----
+// own_base/peer_base = 本端/对端 IPC buffer 显存首址; 写 own[2D] amax 区 +
+// own[2D+8] flag, 等 peer[2D+8] flag, 读 peer[2D] amax。内存序 .sys (跨设备)。
+__global__ void ar_scale_exchange_p2p(char* __restrict__ own_base,
+                                      char* __restrict__ peer_base,
+                                      int64_t data_half,
+                                      const float* __restrict__ amax_dev,
+                                      float* __restrict__ scale_dev,
+                                      const uint64_t* __restrict__ seq_dev) {
+  if (threadIdx.x == 0) {
+    uint64_t seq = *seq_dev;
+    float local_amax =
+        __uint_as_float(*reinterpret_cast<const unsigned int*>(amax_dev));
+    // amax 区紧接 data 双区之后 (布局同 SHM: [2D, 2D+4) amax, [2D+8] flag_scale)
+    float* own_amax =
+        reinterpret_cast<float*>(own_base + 2 * data_half);
+    float* peer_amax =
+        reinterpret_cast<float*>(peer_base + 2 * data_half);
+    uint64_t* own_flag =
+        reinterpret_cast<uint64_t*>(own_base + 2 * data_half + 8);
+    uint64_t* peer_flag =
+        reinterpret_cast<uint64_t*>(peer_base + 2 * data_half + 8);
+    *own_amax = local_amax;                        // 写本端 amax
+    st_release_sys_u64(own_flag, seq);             // 发布 (release)
+    while (ld_acquire_sys_u64(peer_flag) != seq) {
+    }                                              // 等对端 (acquire)
+    *scale_dev = fmaxf(local_amax, *peer_amax) / 448.0f;
+  }
+}
+
+// ---- kernel: N-way amax 交换 (round1, butterfly 用) ----
+// bases_dev[i] = 第 i 个 rank 的 IPC buffer 显存首址 (device array, 本 rank 持
+// 有全体, 含自己)。写 own[2D] amax + own[2D+8] flag, 等其余 N-1 卡 [2D+8] flag
+// = seq, 读全体 [2D] amax 取 global max。
+// **scale = global_amax * N / 448** (非 amax/448): butterfly 每轮 dequant+sum
+// 后部分和最大到 k*amax (k 累加卡数), 下一轮 re-quant 到 e4m3 会饱和; 用 N 倍
+// 裕量让中间和 (<=N*amax) 量化到 ~amax/e4m3_max 比例, 精度等价 2 卡 (最终
+// /N 抵消)。内存序 .sys (跨设备显存)。
+__global__ void ar_scale_exchange_n(char** __restrict__ bases_dev,
+                                    int64_t data_half, int64_t rank,
+                                    int64_t world,
+                                    const float* __restrict__ amax_dev,
+                                    float* __restrict__ scale_dev,
+                                    const uint64_t* __restrict__ seq_dev) {
+  if (threadIdx.x == 0) {
+    uint64_t seq = *seq_dev;
+    float local_amax =
+        __uint_as_float(*reinterpret_cast<const unsigned int*>(amax_dev));
+    char* own = bases_dev[rank];
+    // metadata 在 N 个 data slot (N*D) 之后 (2-GPU 时 N*D==2D, 同 P2P 版布局)
+    float* own_amax = reinterpret_cast<float*>(own + world * data_half);
+    uint64_t* own_flag =
+        reinterpret_cast<uint64_t*>(own + world * data_half + 8);
+    *own_amax = local_amax;                    // 写本端 amax
+    st_release_sys_u64(own_flag, seq);         // 发布 (release)
+    float global_amax = local_amax;
+    for (int64_t r = 0; r < world; ++r) {
+      if (r == rank) continue;
+      char* peer = bases_dev[r];
+      uint64_t* peer_flag =
+          reinterpret_cast<uint64_t*>(peer + world * data_half + 8);
+      while (ld_acquire_sys_u64(peer_flag) != seq) {
+      }                                              // 等其余卡 (acquire)
+      float pa = *reinterpret_cast<float*>(peer + world * data_half);
+      if (pa > global_amax) global_amax = pa;
+    }
+    *scale_dev = global_amax * (float)world / 448.0f;
   }
 }
 
@@ -203,9 +295,147 @@ void firefly_ar_exchange(at::Tensor x, at::Tensor xq, at::Tensor xq_peer,
   ar_bump_seq<<<1, 1, 0, stream>>>(seq_dev);
 }
 
+// host launcher (P2P backend): 全 GPU round1+round2, 同 SHM 版但 data 走 device
+// 显存 P2P (无 D2H/H2D)。own_base/peer_base = 本端/对端 IPC buffer 显存首址;
+// data slot / flag / barrier 偏移与 SHM 一致 (布局同, 只是指针来自 IPC)。
+// x: fp16 [M,H] (输入); out: fp16 (x0+x1); scratch: device [16B] (by-pointer);
+// data_half: 数据半区字节数(>=n); rank: 0/1; n: 实际元素数(M*H)。
+void firefly_ar_exchange_p2p(at::Tensor x, at::Tensor out, at::Tensor scratch,
+                             int64_t own_base, int64_t peer_base,
+                             int64_t data_half, int64_t rank, int64_t n) {
+  const cudaStream_t stream = c10::cuda::getCurrentCUDAStream().stream();
+  const __half* xp = reinterpret_cast<const __half*>(x.data_ptr());
+  __half* outp = reinterpret_cast<__half*>(out.data_ptr());
+  void* sp = scratch.data_ptr();
+  float* amax_dev = reinterpret_cast<float*>(sp);
+  float* scale_dev = reinterpret_cast<float*>(sp) + 1;
+  uint64_t* seq_dev = reinterpret_cast<uint64_t*>(sp) + 1;
+  char* own = reinterpret_cast<char*>(own_base);
+  char* peer = reinterpret_cast<char*>(peer_base);
+  uint8_t* own_data = reinterpret_cast<uint8_t*>(own) + rank * data_half;
+  uint8_t* peer_data = reinterpret_cast<uint8_t*>(peer) + (1 - rank) * data_half;
+  uint64_t* own_flag_data =
+      reinterpret_cast<uint64_t*>(own + 2 * data_half + 24) + rank;
+  uint64_t* peer_flag_data =
+      reinterpret_cast<uint64_t*>(peer + 2 * data_half + 24) + (1 - rank);
+  uint64_t* own_flag_barrier =
+      reinterpret_cast<uint64_t*>(own + 2 * data_half + 40) + rank;
+  uint64_t* peer_flag_barrier =
+      reinterpret_cast<uint64_t*>(peer + 2 * data_half + 40) + (1 - rank);
+  constexpr int threads = 256;
+  const dim3 grid((unsigned)((n + threads - 1) / threads));
+
+  // round1 (GPU): 全局 amax -> P2P 交换 -> common scale
+  cudaMemsetAsync(amax_dev, 0, sizeof(float), stream);
+  ar_amax_partial<<<grid, threads, 0, stream>>>(xp, amax_dev, n);
+  ar_scale_exchange_p2p<<<1, 1, 0, stream>>>(
+      own, peer, data_half, amax_dev, scale_dev, seq_dev);
+  // round2 (GPU): quant -> 写 own_data (P2P 可被 peer 读) + data flag +
+  //   dequant (P2P 读 own/peer data) + barrier + bump seq
+  ar_quant<<<grid, threads, 0, stream>>>(xp, own_data, scale_dev, n);
+  ar_set_spin<<<1, 1, 0, stream>>>(own_flag_data, peer_flag_data, seq_dev);
+  ar_dequant_sum<<<grid, threads, 0, stream>>>(own_data, peer_data, outp,
+                                               scale_dev, n);
+  ar_set_spin<<<1, 1, 0, stream>>>(own_flag_barrier, peer_flag_barrier,
+                                   seq_dev);
+  ar_bump_seq<<<1, 1, 0, stream>>>(seq_dev);
+}
+
+// host launcher (N 卡 butterfly, world = 4/8, P2P/IPC backend): out = sum x_r。
+// 算法: log2(N) 轮, 每轮 partner = rank ^ offset (offset=1,2,4,...)。每轮两卡
+// 互读对方 data slot 后 dequant+sum 得新部分和写 work; 末轮 work = 全体和, 拷入
+// out。data/flag 全 device 显存 (IPC buffer), 无 host bounce。
+// 关键: dequant 的 out 参数用独立 work 缓冲, **不**写回 own data slot —— 若写回
+// slot, dequant 的写会覆盖 quant 刚写入的 fp8 (同地址), peer 读到坏值。
+// x: fp16 [M,H] (本 rank 输入, 只读); work: fp16 [n] device (运行部分和,
+//   python 侧持久分配, 首轮前 python 已把 x 拷入); out: fp16 (sum, 独立缓冲);
+// scratch: device [16B] (amax/scale/seq, by-pointer, replay 安全); bases_dev:
+//   device int64 [N] (本 rank 持有的全体 rank IPC buffer 显存首址, 含自己);
+// data_half: 每 rank data slot 字节数(>=n); rank: 本 rank; n: 元素数(M*H)。
+void firefly_ar_butterfly(at::Tensor x, at::Tensor work, at::Tensor out,
+                          at::Tensor scratch, at::Tensor bases_dev,
+                          int64_t data_half, int64_t rank, int64_t n) {
+  const cudaStream_t stream = c10::cuda::getCurrentCUDAStream().stream();
+  const __half* xp = reinterpret_cast<const __half*>(x.data_ptr());
+  __half* wp = reinterpret_cast<__half*>(work.data_ptr());
+  __half* outp = reinterpret_cast<__half*>(out.data_ptr());
+  void* sp = scratch.data_ptr();
+  float* amax_dev = reinterpret_cast<float*>(sp);
+  float* scale_dev = reinterpret_cast<float*>(sp) + 1;
+  uint64_t* seq_dev = reinterpret_cast<uint64_t*>(sp) + 1;
+  int64_t world = bases_dev.numel();  // N (world_size)
+  constexpr int threads = 256;
+  const dim3 grid((unsigned)((n + threads - 1) / threads));
+
+  // 全局 amax (本 rank 原始输入 x, butterfly 前算一次; 各 rank x 同形状)
+  cudaMemsetAsync(amax_dev, 0, sizeof(float), stream);
+  ar_amax_partial<<<grid, threads, 0, stream>>>(xp, amax_dev, n);
+
+  char** bases = reinterpret_cast<char**>(bases_dev.data_ptr());
+  for (int64_t offset = 1; offset < world; offset <<= 1) {
+    int64_t partner = rank ^ offset;
+    char* own = bases[rank];
+    char* peer = bases[partner];
+    uint8_t* own_data = reinterpret_cast<uint8_t*>(own) + rank * data_half;
+    uint8_t* peer_data =
+        reinterpret_cast<uint8_t*>(peer) + partner * data_half;
+    // metadata 区在 N*D 之后 (布局, 相对 base=world*data_half):
+    //   [0) amax f32 | [8) flag_scale u64 | [24, 24+8w) flag_data u64[w]
+    //   [24+8w, 24+16w) barrier u64[w]  (w=world; world=2 时 barrier@40, 同 2 卡)
+    uint64_t* own_flag_data =
+        reinterpret_cast<uint64_t*>(own + world * data_half + 24) + rank;
+    uint64_t* peer_flag_data =
+        reinterpret_cast<uint64_t*>(peer + world * data_half + 24) + partner;
+    uint64_t* own_flag_barrier =
+        reinterpret_cast<uint64_t*>(own + world * data_half + 24 + 8 * world) +
+        rank;
+    uint64_t* peer_flag_barrier =
+        reinterpret_cast<uint64_t*>(peer + world * data_half + 24 + 8 * world) +
+        partner;
+
+    // round1: N-way amax 交换 -> common scale (scale_dev 本 allreduce 用一次)
+    ar_scale_exchange_n<<<1, 1, 0, stream>>>(bases, data_half, rank, world,
+                                             amax_dev, scale_dev, seq_dev);
+    // round2: quant(work, 当前部分和) -> 写 own slot + data flag +
+    //   dequant(own+peer) 写独立 work (部分和) + barrier + bump seq
+    ar_quant<<<grid, threads, 0, stream>>>(wp, own_data, scale_dev, n);
+    ar_set_spin<<<1, 1, 0, stream>>>(own_flag_data, peer_flag_data, seq_dev);
+    ar_dequant_sum<<<grid, threads, 0, stream>>>(own_data, peer_data, wp,
+                                                 scale_dev, n);
+    ar_set_spin<<<1, 1, 0, stream>>>(own_flag_barrier, peer_flag_barrier,
+                                     seq_dev);
+    ar_bump_seq<<<1, 1, 0, stream>>>(seq_dev);
+  }
+  // 末轮 work == 全体和 -> 拷入独立 out (不动输入 x)
+  cudaMemcpyAsync(outp, wp, (size_t)n * sizeof(__half),
+                  cudaMemcpyDeviceToDevice, stream);
+}
+
+// host: 把某 IPC buffer 的 metadata 区 (amax/flag_scale/flag_data/barrier)
+// 清零。cudaMalloc'd 显存初始是垃圾, flag 初始非 0 → 首 spin 误判「已完成」假
+// 命中、dequant 读未写 data 错值。base=buffer 首址; 零区 = [base+world*D,
+// base+world*D + 24+16*world)。world=2 时零 56B (= 2 卡 metadata 区, 同 SHM)。
+// python init 后对 own + 每个 peer buffer 各调一次, 再 synchronize。
+void firefly_ar_zero_meta(int64_t base, int64_t data_half, int64_t world) {
+  const cudaStream_t stream = c10::cuda::getCurrentCUDAStream().stream();
+  char* p = reinterpret_cast<char*>(base) + world * data_half;
+  cudaMemsetAsync(p, 0, (size_t)(24 + 16 * world), stream);
+}
+
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {  // NOLINT
   m.def("firefly_ar_exchange", &firefly_ar_exchange,
         "firefly allreduce SHM full-GPU (round1 amax + round2 exchange): "
         "amax + scale-exchange + quant + D2H + flag + H2D + dequant+sum + "
         "barrier + bump-seq, capture-safe");
+  m.def("firefly_ar_exchange_p2p", &firefly_ar_exchange_p2p,
+        "firefly allreduce P2P full-GPU: amax + scale-exchange + quant + "
+        "P2P data flag + dequant(P2P read) + barrier + bump-seq, "
+        "capture-safe");
+  m.def("firefly_ar_butterfly", &firefly_ar_butterfly,
+        "firefly allreduce N-GPU butterfly (world=4/8, P2P/IPC): logN rounds, "
+        "each amax-exchange(N) + quant + data-flag + dequant(P2P read) + "
+        "barrier + bump-seq; scale=amax*N/448; capture-safe");
+  m.def("firefly_ar_zero_meta", &firefly_ar_zero_meta,
+        "firefly allreduce: zero an IPC buffer metadata region "
+        "(amax/flags/barrier); call on own + each peer after init");
 }

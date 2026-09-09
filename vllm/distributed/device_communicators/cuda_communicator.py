@@ -63,9 +63,14 @@ class CudaCommunicator(DeviceCommunicatorBase):
             use_aiter_allreduce = use_custom_allreduce and bool(
                 rocm_aiter_ops.is_custom_all_reduce_enabled()
             )
-            from .firefly_allreduce import firefly_ar_active
+            from .firefly_allreduce import (
+                firefly_ar_active,
+                firefly_ar_world_ok,
+            )
 
-            use_firefly_ar = firefly_ar_active()
+            use_firefly_ar = firefly_ar_active() and firefly_ar_world_ok(
+                self.world_size
+            )
 
         self.use_custom_allreduce = use_custom_allreduce
         self.use_torch_symm_mem = use_torch_symm_mem
@@ -138,9 +143,12 @@ class CudaCommunicator(DeviceCommunicatorBase):
             # an MI300 series.
             self.qr_comm = QuickAllReduce(group=self.cpu_group, device=self.device)
 
-        if use_firefly_ar and self.world_size == 2:
-            # FireflyAllReduce: fp8 2-GPU allreduce (SHM backend, 无 P2P 如 T10)。
-            # VLLM_FIREFLY_AR auto 跟随 VLLM_FIREFLY; 只 TP2 + fp16 + <= max_size。
+        if use_firefly_ar:
+            # FireflyAllReduce: fp8 allreduce, 任意 2 的幂 world (2/4/8/16/...)。
+            # 2 卡走 SHM(无 P2P 如 T10)/P2P; N>=4 走 P2P butterfly (IPC 显存,
+            # 需全互联)。VLLM_FIREFLY_AR auto 跟随 VLLM_FIREFLY; 只 fp16 +
+            # <= max_size。backend/disabled 在类内判定, 不适用时 disabled=True
+            # 自动回退 NCCL。
             from .firefly_allreduce import FireflyAllReduce
 
             shm_name = "firefly_ar_" + "_".join(
@@ -151,6 +159,7 @@ class CudaCommunicator(DeviceCommunicatorBase):
                 world_size=self.world_size,
                 device=self.device,
                 shm_name=shm_name,
+                group=self.cpu_group,
             )
 
         if self.world_size > 1:

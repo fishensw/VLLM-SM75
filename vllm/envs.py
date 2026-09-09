@@ -190,6 +190,7 @@ if TYPE_CHECKING:
     VLLM_FIREFLY_FUSED: str = "auto"
     VLLM_FIREFLY_AR: str = "auto"
     VLLM_FIREFLY_AR_MAX_SIZE: int = 33554432
+    VLLM_FIREFLY_AR_BACKEND: str = "auto"
     VLLM_HUMMING_ONLINE_QUANT_CONFIG: dict[str, Any] | None = None
     VLLM_HUMMING_INPUT_QUANT_CONFIG: dict[str, Any] | None = None
     VLLM_HUMMING_USE_F16_ACCUM: bool = False
@@ -460,14 +461,30 @@ def _firefly_ar_mode() -> str:
 
     auto = firefly 模式开 (VLLM_FIREFLY=1) 时 fp8 allreduce 自动启用 (fp8 近乎
     无损, PLAN-fp8-allreduce §3.5); firefly 关 → AR 关。'fp8' 单独开 (firefly
-    不用也开 AR); '0' 单独关 (firefly 开但 AR 不用)。FireflyAllReduce 只做 fp8
-    (SHM backend, 无 P2P 如 T10; P2P backend 后加)。
+    不用也开 AR); '0' 单独关 (firefly 开但 AR 不用)。FireflyAllReduce 只做 fp8,
+    双 backend (P2P / SHM, 见 VLLM_FIREFLY_AR_BACKEND)。
     """
     v = os.getenv("VLLM_FIREFLY_AR", "").strip().lower()
     if v in ("0", "off", "false", "no"):
         return "0"
     if v in ("fp8", "1", "on", "true", "yes"):
         return "fp8"
+    return "auto"
+
+
+def _firefly_ar_backend() -> str:
+    """VLLM_FIREFLY_AR_BACKEND 归一化: 'auto'(默认, 运行时按 _can_p2p 选 P2P
+    优先) / 'p2p'(强制 P2P) / 'shm'(强制 SHM)。
+
+    auto = 有 P2P (NVLink/PCIe 直连) 选 P2P (data/flag 全 device 显存, 无 host
+    bounce); 无 P2P (PHB, 如 T10) 回 SHM (/dev/shm + cudaHostRegister)。
+    'p2p'/'shm' 强制指定 (P2P 初始化失败仍自动回 SHM 兜底)。
+    """
+    v = os.getenv("VLLM_FIREFLY_AR_BACKEND", "").strip().lower()
+    if v in ("p2p",):
+        return "p2p"
+    if v in ("shm", "host", "shared"):
+        return "shm"
     return "auto"
 
 
@@ -1600,6 +1617,10 @@ environment_variables: dict[str, Callable[[], Any]] = {
     "VLLM_FIREFLY_AR_MAX_SIZE": lambda: int(
         os.environ.get("VLLM_FIREFLY_AR_MAX_SIZE", "33554432")
     ),
+    # FireflyAllReduce 传输 backend: auto(默认, 运行时 _can_p2p 选 P2P 优先) /
+    # p2p(强制) / shm(强制)。P2P 有 NVLink/PCIe 直连时 data/flag 全 device 显存
+    # 无 host bounce; 无 P2P (PHB 如 T10) 回 SHM。见 firefly_allreduce.py。
+    "VLLM_FIREFLY_AR_BACKEND": _firefly_ar_backend,
     # The online quantization dtype for humming kernel
     "VLLM_HUMMING_ONLINE_QUANT_CONFIG": lambda: maybe_convert_json_str_or_file(
         os.environ.get("VLLM_HUMMING_ONLINE_QUANT_CONFIG", None)
