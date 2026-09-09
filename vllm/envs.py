@@ -443,9 +443,11 @@ def _firefly_fused_mode() -> str:
     """VLLM_FIREFLY_FUSED 归一化: 'auto'(默认, 选最快) / '1'=强制 fused /
     '0'=强制非 fused。
 
-    auto = 给每种类型内置最快的子模式(当前 int4/fp8 都关闭: int4 fused 未实现,
-    fp8 firefly 不赚走 marlin); 1 = 强制 fused; 0 = 强制非 fused。仅 fp8 firefly
-    启用时有意义(int4 只有非 fused, 不受此控)。见 PLAN-fp8-allreduce。
+    auto = 给每种类型内置最快的子模式(当前 int4/fp8 都关: int4/fp8 firefly fused
+    均比非 fused 慢——int4 fused 慢 ~10x(GEMM 每 M-tile 重复反量化 B + marlin 分散
+    读), fp8 fused 慢 ~1.5-1.7x; fp8 firefly 本身也不比 marlin 快); 1 = 强制 fused;
+    0 = 强制非 fused。int4 和 fp8 都受此控(VLLM_FIREFLY 开 + 本值 1/0 且非 auto 时)。
+    见 PLAN-fp8-allreduce。
     """
     v = os.getenv("VLLM_FIREFLY_FUSED", "").strip().lower()
     if v in ("1", "on", "true", "yes"):
@@ -1599,13 +1601,16 @@ environment_variables: dict[str, Callable[[], Any]] = {
     "VLLM_FIREFLY_DEQUANT_MODEL": lambda: (
         os.environ.get("VLLM_FIREFLY_DEQUANT_MODEL", "def")
     ),
-    # fp8 firefly 子模式选择(_firefly_fused_mode 归一化), auto=给每种类型内置最快:
-    #   auto(默认)= 选最快 → 当前 int4/fp8 都关闭(int4 fused 未实现; fp8 firefly 不赚
-    #     走 marlin, fp8 加速走 VLLM_FIREFLY_AR); 1 = 强制 fused GEMM(B-load 内反量化,
-    #     最省显存但 T10 慢 5-10x); 0 = 强制非 fused hard(transient 反量化+int8 GEMM,
-    #     T10 快 5-10x 但物化 transient int8 多占显存)。两模式逐 bit 一致。
-    # 仅 fp8 firefly 启用时有意义(int4 只有非 fused, 不受此控; fp8 需 VLLM_FIREFLY 开
-    # 且此处非 auto)。见 firefly_fused.cu / PLAN-fp8-allreduce。
+    # firefly 子模式选择(int4/fp8 共用, _firefly_fused_mode 归一化), auto=给每种类型
+    # 内置最快:
+    #   auto(默认)= 选最快 → 当前 int4/fp8 都走非 fused(int4/fp8 firefly fused 均比
+    #     非 fused 慢: int4 fused 慢 ~10x, fp8 fused 慢 ~1.5-1.7x; fp8 firefly 本身也
+    #     不比 marlin 快, fp8 加速走 VLLM_FIREFLY_AR); 1 = 强制 fused GEMM(B-load 内
+    #     即时反量化); 0 = 强制非 fused hard(transient 反量化 + int8 GEMM, 快)。
+    #   两模式逐 bit 一致。fused 慢因: GEMM 每 M-tile 重复反量化同一份 B, int4 的
+    #     marlin 布局还是分散 int32 随机读(比 fp8 连续字节读贵得多)。
+    # int4 和 fp8 都受此控(均需 VLLM_FIREFLY 开且此处非 auto; int4 走 W4A16, fp8 走
+    # 128x128 block quant)。见 firefly_fused.cu / PLAN-fp8-allreduce。
     "VLLM_FIREFLY_FUSED": _firefly_fused_mode,
     # fp8 allreduce (FireflyAllReduce, SHM backend, 无 P2P 如 T10)。auto(默认)
     # 跟随 VLLM_FIREFLY (firefly 开→AR 自动开); fp8 单独开; 0 单独关。TP2 每层 2 次

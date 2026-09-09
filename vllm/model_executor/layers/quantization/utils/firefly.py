@@ -32,6 +32,17 @@ def firefly_active_int4() -> bool:
     return envs.VLLM_FIREFLY == "1"
 
 
+def firefly_active_int4_fused() -> bool:
+    """int4(W4A16) prefill 是否走 fused(GEMM B-load 内即时反量化):
+    VLLM_FIREFLY 开 且 VLLM_FIREFLY_FUSED=1(强制 fused)。
+
+    0 = 强制非 fused(transient 反量化 + int8 GEMM); auto(默认)= 选最快 = 当前
+    非 fused(见 VLLM_FIREFLY_FUSED 注释, 实测数据决定)。fused 省 transient
+    反量化 kernel, 但 B-load 内反量化拖 GEMM 主循环, 净赚与否需 T10 bench。
+    """
+    return envs.VLLM_FIREFLY == "1" and envs.VLLM_FIREFLY_FUSED == "1"
+
+
 def firefly_active_fp8() -> bool:
     """fp8(W8A8) prefill 是否走 firefly: VLLM_FIREFLY 开 且 VLLM_FIREFLY_FUSED 显式
     选了 fused(1)或非 fused(0)(非 auto)。
@@ -273,6 +284,50 @@ def fp8_fused_prefill_linear(
     x_q, x_s, _ = ops.scaled_int8_quant(x2d.contiguous())
     mod = _load_fused_mod()
     y = mod.fp8_fused_scaled_mm(x_q, w_fp8, s_inv, c_n, x_s, x.dtype)
+    return y.reshape(*orig[:-1], -1)
+
+
+def int4_fused_prefill_linear(
+    x: torch.Tensor,
+    w_marlin: torch.Tensor,  # marlin packed int4 [padded_k/16, padded_n*2] int32
+    w_s_clean: torch.Tensor,  # 干净 scale [N, K/gs] fp16/bf16(N 在前)
+    w_zp_packed: torch.Tensor | None,  # None/空=对称(zp=8); AWQ packed qzeros [N/8, K/gs]
+    c_n: torch.Tensor,  # [N] 预计算 per-channel scale
+    size_k: int,
+    size_n: int,
+    group_size: int,
+    padded_n: int,
+) -> torch.Tensor:
+    """x [*, K] -> per-token 动态 int8 -> fused GEMM(B-load 内 marlin int4->int8) -> [*, N]。
+
+    与 int8_prefill_linear(dequant_marlin_to_int8_cached 反量化后走 cutlass_scaled_mm)
+    逐 bit 一致(同 fetch_q 反解 + 同 (q-zp)*s/c_n def 除法 + 同 int8 IMMA GEMM)。
+    省掉非 fused 的 transient 全权重反量化 kernel(省 int8 缓存, B-load 内现算)。
+    """
+    orig = x.shape
+    x2d = x.reshape(-1, x.shape[-1])
+    x_q, x_s, _ = ops.scaled_int8_quant(x2d.contiguous())
+    mod = _load_fused_mod()
+    if w_zp_packed is not None and w_zp_packed.numel() > 0:
+        # AWQ 非对称: packed qzeros -> 干净 [N, K/gs] float(kernel 内 zp_[n, k/gs])
+        zp_t = _unpack_awq_zp(
+            w_zp_packed, size_n, w_s_clean.shape[1]
+        ).contiguous()
+    else:
+        zp_t = torch.empty(0, dtype=torch.float32, device=x.device)
+    y = mod.int4_fused_scaled_mm(
+        x_q,
+        w_marlin,
+        w_s_clean.contiguous(),
+        zp_t,
+        c_n,
+        x_s,
+        size_k,
+        size_n,
+        group_size,
+        padded_n,
+        x.dtype,
+    )
     return y.reshape(*orig[:-1], -1)
 
 
