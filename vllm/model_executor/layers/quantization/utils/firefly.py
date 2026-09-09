@@ -49,7 +49,8 @@ def firefly_active_fp8() -> bool:
 
     auto(默认)= 选最快 = 当前关闭(sm75 实测 firefly-fp8 不比 marlin 快, 走 marlin;
     fp8 加速走 VLLM_FIREFLY_AR, 见 PLAN-fp8-allreduce)。1 = 强制 fused; 0 = 强制
-    非 fused。int4 不受 VLLM_FIREFLY_FUSED 影响(只有非 fused)。
+    非 fused。int4 同受此控(=1 强制 fused, auto 选非 fused, 见
+    firefly_active_int4_fused)。
     """
     return envs.VLLM_FIREFLY == "1" and envs.VLLM_FIREFLY_FUSED in ("1", "0")
 
