@@ -239,14 +239,6 @@ nvidia-smi --query-gpu=index,pstate,memory.used,power.draw --format=csv
 
 P8 还取决于其他 GPU 进程、硬件和驱动，显存不要求绝对归零。当前 exit 验证环境为单 API server、DP=1、TP4；上述结果不代表其他模式、所有模型或 262K 长上下文都完成了本轮验收。CPU/reload 本轮只有状态机与参数测试，没有 GPU 唤醒性能保证。
 
-### 实验性磁盘快照
-
-本地保留 `disk` 快照休眠开发代码：保存模型分配并原位恢复，KV按休眠协议失效，CUDA上下文仍保留，不保证P8。需要真实磁盘挂载及足够快照空间，尚不作为v0.1.4日常推荐；配置见[完整休眠说明](docs/sleep-and-cache.md)。
-
-## 验证范围
-
-FP8/AWQ性能数据来自PR兼容修补镜像；整合镜像已完成构建、AWQ启动和单请求检查，CPU KV实际恢复及完整休眠/P8回归未在本轮重测。历史v0.1.3休眠数据不等于v0.1.4验收，范围与证据分别保留在详细报告中。
-
 ## License
 
 vLLM 修改遵循上游 Apache-2.0 License。FlashQLA-SM75 保留原始 MIT License 与[来源说明](vllm/third_party/flash_qla_sm75/SOURCE.md)。

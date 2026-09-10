@@ -155,14 +155,6 @@ FP8 DFlash2 exit was measured on T10 ×4 with the API online: P8 on all cards, 3
 
 See the [complete guide and resource requirements (Chinese)](docs/sleep-and-cache.md). This draft targets `vllm-sm75:v0.1.4`; historical sleep measurements are not combined-image acceptance.
 
-### Experimental disk snapshots
-
-The existing local `disk` backend saves model allocations and restores them in place. KV contents are invalidated and CUDA contexts remain alive; P8 is not guaranteed. It requires a writable real-disk mount and snapshot capacity. It is not part of the recommended v0.1.4 configuration or this GPU acceptance round.
-
-## Validation scope
-
-FP8/AWQ measurements belong to the compatibility-patched PR image. The combined image passed its build, AWQ startup and a single-request check. CPU KV recovery and a full sleep/P8 cycle were not repeated in this round. Historical v0.1.3 sleep results do not validate v0.1.4. Full data and conditions are linked above.
-
 ## License
 
 vLLM changes retain Apache-2.0. FlashQLA-SM75 retains its MIT license and [source attribution](vllm/third_party/flash_qla_sm75/SOURCE.md).
