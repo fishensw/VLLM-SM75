@@ -8,11 +8,11 @@ vLLM-SM75 v0.1.4 基于 vLLM 0.29.0，集成 MTP、DFlash2 和自动休眠适配
 
 ## v0.1.4 更新简要
 
-- **Firefly prefill**：为 INT4（W4A16/AWQ）提供 INT8 IMMA 加速，提升 prefill 吞吐。采用 hard-only 路径，prefill 时从 Marlin 权重布局即时反量化，不额外常驻完整 INT8 或干净 INT4 权重副本。当前 W8A8-FP8 prefill 仍走 Marlin。
-- **Firefly all-reduce**：自定义 FP8 量化通信，支持 SHM、P2P 和多卡 butterfly，并对大消息分块，减少 PCIe 通信开销、改善多卡 prefill；支持2及更大的2次幂卡数。
-- **Auto-sleep / deep-sleep**：将已有自动 offload、`exit` 透明冷启动 respawn 和并发唤醒加固适配至新版底座，保留空闲释放GPU资源、降低待机功耗及新请求自动唤醒。
-- **`/monitor` 单文件监控看板**：直接查看吞吐、延迟、并发、KV缓存和休眠状态，无需额外部署；`VLLM_MONITOR` 控制开关，默认开启。
-- **升级 vLLM 底座与完善镜像构建流程**：基于 vLLM 0.29.0 构建 `vllm-sm75:v0.1.4`，保留官方启动入口和默认界面样式；提供完整镜像构建与本地快速构建两种方式，支持挂载源码、更新适配代码及按需编译扩展。
+- **Firefly prefill 加速**：提升 AWQ INT4 长文本处理吞吐。
+- **FP8 all-reduce 优化**：降低多卡通信开销，提升 prefill 性能。
+- **自动休眠适配**：保留低功耗待机与自动唤醒，加固并发处理。
+- **新增 `/monitor` 看板**：直接查看运行状态和性能指标。
+- **跟进 vLLM 0.29.0 适配**。
 
 ### 兼容性修复
 

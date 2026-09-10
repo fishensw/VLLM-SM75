@@ -8,11 +8,11 @@ vLLM-SM75 v0.1.4 is based on vLLM 0.29.0 and integrates MTP, DFlash2 and auto-sl
 
 ## v0.1.4 Update Summary
 
-- **Firefly prefill**: INT8 IMMA acceleration for INT4 (W4A16/AWQ), improving prefill throughput. The hard-only path dequantizes from Marlin weights during prefill without retaining an additional full INT8 or clean INT4 weight copy. W8A8-FP8 prefill currently remains on Marlin.
-- **Firefly all-reduce**: custom FP8 quantized communication with SHM, P2P, multi-GPU butterfly and large-message chunking, reducing PCIe communication overhead for multi-GPU prefill. Supports power-of-two world sizes starting at two GPUs.
-- **Auto-sleep / deep-sleep**: adapts existing idle offload, transparent cold-start respawn and concurrent wake-up hardening to the new base, retaining GPU resource release, lower idle power and automatic wake-up.
-- **Single-file `/monitor` dashboard**: throughput, latency, concurrency, KV cache and sleep status without a separate deployment; enabled by default and controlled by `VLLM_MONITOR`.
-- **vLLM 0.29.0 base and v0.1.4 builds**: unified `vllm-sm75:v0.1.4` image with the official entrypoint and default UI presentation, plus a fast local build workflow for iterating on mounted source.
+- **Firefly prefill acceleration**: improves AWQ INT4 throughput for long inputs.
+- **FP8 all-reduce optimization**: reduces multi-GPU communication overhead and improves prefill performance.
+- **Auto-sleep compatibility**: retains low-power idle and automatic wake-up, with stronger concurrency handling.
+- **New `/monitor` dashboard**: displays runtime status and performance metrics.
+- **Compatibility with upstream vLLM 0.29.0**.
 
 ### Compatibility fixes
 
