@@ -16,7 +16,7 @@ vLLM-SM75 v0.1.4 is based on vLLM 0.29.0 and integrates MTP, DFlash2 and auto-sl
 
 ### Compatibility fixes
 
-Adapts DFlash2 weight loading and KV layouts to the new APIs, corrects CPU KV group identification, adds DFlash input/sampling warmup, and completes Triton/extension cache mounts. DFlash2, CPU KV offload, persistent caches and low-power sleep already existed in v0.1.3 and remain available.
+Adapts DFlash2 weight loading and KV layouts to the new APIs, corrects CPU KV group identification, adds DFlash input/sampling warmup, and completes Triton/extension cache mounts.
 
 See [release notes](docs/releases/v0.1.4.zh-CN.md), [FP8 measurements](docs/validation/v0.1.4.md), [AWQ measurements](docs/validation/v0.1.4-awq.md) and [AWQ configuration](docs/recommended-awq-dflash2.md). The throughput improvement concerns prefill, not a general decode speedup.
 
