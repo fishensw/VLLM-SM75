@@ -757,6 +757,7 @@ class EngineArgs:
     auto_sleep_idle_timeout: float = 0.0
     auto_sleep_offload_target: str = "cpu"
     auto_sleep_reload_path: str | None = None
+    auto_sleep_disk_path: str | None = None
     auto_sleep_page_cache_keep_interval: float = 600.0
     override_generation_config: dict[str, Any] = get_field(
         ModelConfig, "override_generation_config"
@@ -904,10 +905,10 @@ class EngineArgs:
                 "--auto-sleep-idle-timeout must be >= 0, "
                 f"got {self.auto_sleep_idle_timeout}"
             )
-        if self.auto_sleep_offload_target not in ("cpu", "reload", "exit"):
+        if self.auto_sleep_offload_target not in ("cpu", "reload", "exit", "disk"):
             raise ValueError(
                 "--auto-sleep-offload-target must be 'cpu', 'reload', or "
-                f"'exit', got {self.auto_sleep_offload_target!r}"
+                f"'exit', or 'disk', got {self.auto_sleep_offload_target!r}"
             )
         if self.auto_sleep_page_cache_keep_interval < 0:
             raise ValueError(
@@ -924,6 +925,10 @@ class EngineArgs:
             )
         os.environ["VLLM_AUTO_SLEEP_IDLE_TIMEOUT"] = str(self.auto_sleep_idle_timeout)
         os.environ["VLLM_AUTO_SLEEP_OFFLOAD_TARGET"] = self.auto_sleep_offload_target
+        if self.auto_sleep_offload_target == "disk":
+            if not self.auto_sleep_disk_path or not os.path.isabs(self.auto_sleep_disk_path):
+                raise ValueError("Disk sleep requires --auto-sleep-disk-path (absolute)")
+            os.environ["VLLM_AUTO_SLEEP_DISK_PATH"] = self.auto_sleep_disk_path
         os.environ["VLLM_AUTO_SLEEP_RELOAD_PATH"] = (
             self.auto_sleep_reload_path or str(self.model)
         )
@@ -1032,9 +1037,11 @@ class EngineArgs:
         )
         model_group.add_argument(
             "--auto-sleep-offload-target",
-            choices=["cpu", "reload", "exit"],
+            choices=["cpu", "reload", "exit", "disk"],
             default="cpu",
-            help="'cpu': keep weights in pinned CPU memory (sleep level 1, "
+            help="'disk': save runtime model allocations to disk and restore "
+            "them in place (requires --auto-sleep-disk-path); "
+            "'cpu': keep weights in pinned CPU memory (sleep level 1, "
             "fast wake); 'reload': discard weights and reload them from the "
             "checkpoint on wake (sleep level 2, slow wake, no CPU backup); "
             "'exit': terminate the engine-core process entirely (deep sleep, "
@@ -1055,6 +1062,11 @@ class EngineArgs:
             "sleeps in 'reload' mode; keeps the checkpoint in the OS page "
             "cache so the wake-time reload read is fast. 0 disables the "
             "background keeper (a one-shot warm on sleep/wake still happens).",
+        )
+        model_group.add_argument(
+            "--auto-sleep-disk-path", type=str, default=None,
+            help="Absolute disk directory for per-worker runtime snapshots. "
+            "Use a persistent bind mount, not tmpfs or /dev/shm.",
         )
         model_group.add_argument("--model-impl", **model_kwargs["model_impl"])
         model_group.add_argument(
@@ -1949,6 +1961,8 @@ class EngineArgs:
             generation_config=self.generation_config,
             override_generation_config=self.override_generation_config,
             enable_sleep_mode=self.enable_sleep_mode,
+            sleep_mode_backend=("disk" if self.auto_sleep_offload_target == "disk"
+                                else ModelConfig.sleep_mode_backend),
             enable_cumem_allocator=self.enable_cumem_allocator,
             model_impl=self.model_impl,
             logits_processors=self.logits_processors,

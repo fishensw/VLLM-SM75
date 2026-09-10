@@ -62,5 +62,5 @@ ENV FLASH_QLA_SM75_PREBUILT_EXTENSION_PATH=/opt/vllm-sm75/extensions/flash_qla_s
     SM75_GDN_B1_METADATA=1
 
 FROM runtime AS final
-ENTRYPOINT ["vllm"]
-CMD ["--help"]
+# Inherit the official ENTRYPOINT ["vllm", "serve"] and unset CMD.
+# Keep upstream CLI startup presentation and default UI assets.

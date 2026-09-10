@@ -554,6 +554,7 @@ class GPUModelRunner(LoRAModelRunnerMixin):
         is_profiling: bool = False,
         kv_cache_allocation_context: AbstractContextManager | None = None,
     ) -> None:
+        _sm75_fa2_graph.sync_attention_cache_layout(self.vllm_config)
         # GPUWorker finalizes the PD interleave before KV cache initialization.
         self.cp_interleave = self.parallel_config.cp_kv_cache_interleave_size
         kv_cache_config = deepcopy(kv_cache_config)
@@ -969,6 +970,44 @@ class GPUModelRunner(LoRAModelRunnerMixin):
                         ):
                             self._dummy_run(**batch)
                     self.adaptive_verification.set_initial_cost_curves(timings)
+
+        # DFlash input preparation and probabilistic rejection are outside the
+        # captured forward graphs. Exercise the real serving paths before the
+        # worker enables JIT monitoring and reports itself ready.
+        from vllm.v1.worker.gpu.spec_decode.dflash.speculator import DFlashSpeculator
+
+        if isinstance(self.speculator, DFlashSpeculator):
+            nreq = self.max_num_reqs
+            query_len = self.decode_query_len
+            ntokens = nreq * query_len
+            hidden_states, _ = self._dummy_run(ntokens, uniform_decode=True)
+            assert hidden_states is not None
+            batch = InputBatch.make_dummy(nreq, ntokens, self.input_buffers)
+            batch.num_draft_tokens = nreq * (query_len - 1)
+            batch.num_draft_tokens_per_req = np.full(
+                nreq, query_len - 1, dtype=np.int32
+            )
+            batch.logits_indices = torch.arange(ntokens, device=self.device)
+            batch.cu_num_logits = batch.query_start_loc
+            batch.cu_num_logits_np = batch.query_start_loc_np
+            batch.expanded_idx_mapping = batch.idx_mapping.repeat_interleave(query_len)
+            batch.expanded_local_pos = torch.arange(
+                query_len, dtype=torch.int32, device=self.device
+            ).repeat(nreq)
+            assert self.sampler is not None
+            temperature = self.sampler.sampling_states.temperature
+            saved_gpu = temperature.gpu.clone()
+            saved_cpu = temperature.np.copy()
+            try:
+                for value in (0.0, 1.0):
+                    temperature.np.fill(value)
+                    temperature.gpu.fill_(value)
+                    self.sample(hidden_states, batch, None)
+            finally:
+                temperature.np[:] = saved_cpu
+                temperature.gpu.copy_(saved_gpu)
+            torch.cuda.synchronize(self.device)
+            logger.info("DFlash input preparation and rejection sampling warmup complete")
 
         end_time = time.perf_counter()
         end_free_gpu_memory = torch.accelerator.get_memory_info()[0]

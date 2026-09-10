@@ -7,7 +7,20 @@ export MODEL_ROOT="$VLLM_SM75_CACHE_ROOT"
 export MODEL=/models/test-model DRAFT_MODEL=/models/test-draft
 docker() {
   local args=" $* "
-  [[ "$args" == *' vllm-sm75:v0.1.4 serve '* ]]
+  [[ "$args" != *' vllm-sm75:v0.1.4 serve '* ]]
+  if [[ "$FORMAT" == awq ]]; then
+    [[ "$args" == *'--max-num-seqs 8 '* ]]
+    [[ "$args" == *'--max-num-batched-tokens 16384 '* ]]
+    [[ "$args" == *'--gpu-memory-utilization 0.87 '* ]]
+    [[ "$args" == *'/awq/vllm:/root/.cache/vllm'* ]]
+    [[ "$args" == *'/awq/triton:/root/.triton/cache'* ]]
+    if [[ "$VARIANT" == dflash2 ]]; then
+      [[ "$args" == *'--kv-cache-memory-bytes 4294967296 '* ]]
+      [[ "$args" == *'"num_speculative_tokens":7'* ]]
+      [[ "$args" == *'"cpu_bytes_to_use":8589934592'* ]]
+    fi
+  fi
+  [[ "$args" == *' vllm-sm75:v0.1.4 '* ]]
   [[ "$args" != *'v0.1.4-mtp'* && "$args" != *'v0.1.4-dflash2'* ]]
   if [[ "$VARIANT" == base ]]; then
     [[ "$args" != *'--speculative-config'* ]]

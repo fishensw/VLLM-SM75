@@ -18,13 +18,21 @@ class BuildContract(unittest.TestCase):
         self.assertNotIn('git init', script)
         self.assertNotIn('prepare_upstream', script)
 
+    def test_official_entrypoint_inheritance(self):
+        for name in ('Dockerfile.vllm-sm75-v0.1.4', 'Dockerfile.fast.vllm-sm75-v0.1.4'):
+            text = (ROOT / 'docker' / name).read_text(encoding='utf-8')
+            self.assertIsNone(re.search(r'^(ENTRYPOINT|CMD)\s', text, re.M))
+        installer = (ROOT / 'docker/install_sm75_overlay.py').read_text(encoding='utf-8')
+        for path in ('entrypoints/cli/main.py', 'entrypoints/cli/serve.py', 'entrypoints/serve/entry.py'):
+            self.assertNotIn('"' + path + '"', installer)
+
     def test_installer(self):
         install = runpy.run_path(str(ROOT / 'docker/install_speculative.py'))['install']
         with tempfile.TemporaryDirectory() as tmp:
             package = Path(tmp) / 'site-packages/vllm'
             evidence = Path(tmp) / 'evidence/speculative-files.json'
             result = install(ROOT / 'docker/speculative', package, evidence)
-            self.assertEqual(len(result), 6)
+            self.assertEqual(len(result), 8)
             self.assertTrue(evidence.is_file())
             self.assertTrue((package.parent / 'sm75_fa2_graph.py').is_file())
 

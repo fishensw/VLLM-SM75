@@ -327,6 +327,17 @@ class EngineCore:
         kv_cache_configs = get_kv_cache_configs(
             vllm_config, kv_cache_specs, available_gpu_memory
         )
+        if (vllm_config.speculative_config is not None
+                and vllm_config.speculative_config.method == "dflash"):
+            draft_names = set().union(*self.model_executor.collective_rpc(
+                "get_draft_attn_layer_names"))
+            if not draft_names:
+                raise RuntimeError("DFlash cache annotation requires loaded draft layers")
+            for config in kv_cache_configs:
+                for group in config.kv_cache_groups:
+                    group.is_eagle_group |= bool(draft_names.intersection(group.layer_names))
+            logger.info("Annotated DFlash cache groups from %d loaded draft layers", len(draft_names))
+
         for kv_cache_config in kv_cache_configs:
             kv_cache_config.kv_cache_layout = vllm_config.cache_config.kv_cache_layout
 

@@ -8,9 +8,17 @@ vLLM-SM75 v0.1.4 is based on vLLM 0.29.0 and integrates MTP, DFlash2 and auto-sl
 
 ## v0.1.4 Update Summary
 
-- Bumps the base image from vLLM 0.28.0 to 0.29.0 and adapts the 14 modified overlay files to the 0.29 package layout; image name is now `vllm-sm75:v0.1.4`.
-- Follows 0.29 interface changes: Marlin FP8 hook uses `_block_scale_name`, envs additions/removals, new engine methods, and the allreduce flashinfer-AR refactor. Torch and FlashInfer versions are unchanged.
-- Fixes a build failure caused by the `/monitor` overlay pages not being copied into the image. See the [release notes](docs/releases/v0.1.4.zh-CN.md).
+- **Firefly prefill acceleration**: improves AWQ INT4 throughput for long inputs.
+- **FP8 all-reduce optimization**: reduces multi-GPU communication overhead and improves prefill performance.
+- **Auto-sleep compatibility**: retains low-power idle and automatic wake-up, with stronger concurrency handling.
+- **New `/monitor` dashboard**: displays runtime status and performance metrics.
+- **Compatibility with upstream vLLM 0.29.0**.
+
+### Compatibility fixes
+
+Adapts DFlash2 weight loading and KV layouts to the new APIs, corrects CPU KV group identification, adds DFlash input/sampling warmup, and completes Triton/extension cache mounts.
+
+See [release notes](docs/releases/v0.1.4.zh-CN.md), [FP8 measurements](docs/validation/v0.1.4.md), [AWQ measurements](docs/validation/v0.1.4-awq.md) and [AWQ configuration](docs/recommended-awq-dflash2.md). The throughput improvement concerns prefill, not a general decode speedup.
 
 ## v0.1.3 Update Summary
 
@@ -59,11 +67,7 @@ Real-world performance varies with hardware, models, request content and configu
 
 ### Persistent compilation caches
 
-The host persists `/root/.cache/vllm` and `/root/.cache/flashinfer`, including DFlash2 draft and candidate-selector artifacts. Keep these bind mounts when recreating containers.
-
-The corrected FP8 DFlash2 build on four T10 GPUs reused all three cache keys across startup, 60-second exit sleep/wake, and a restart configured for 30 minutes: **12 AOT loads and zero graph recompilations** per phase. Cache-loading phases were 3.81 / 0.76 / 0.06 seconds; complete wake-up took about 135.7 seconds. These are different measurements, not universal latency guarantees.
-
-Keep model files and compilation artifacts separate: `VLLM_SM75_MODEL_CACHE_ROOT` selects the model directory and `VLLM_SM75_CACHE_ROOT` selects the compilation-cache directory, as shown in the launch example below. Reuse existing model storage and migrate existing compilation caches when updating the launcher to avoid repeated downloads and compilation.
+The launcher persists vLLM, FlashInfer, Triton and PyTorch extension caches on the host, including matching DFlash2 draft and selector artifacts. Keep model and compilation directories separate and preserve mounts when recreating containers. First use and code/dependency/configuration changes can still require compilation; cache loading is only part of startup.
 
 ### 1. Clone
 
@@ -84,6 +88,10 @@ Uses the digest-pinned official `vllm/vllm-openai:v0.29.0-cu129` image, installs
 
 ### 3. Run
 
+Start the container with `docker run`, placing the model path and startup options after the image name.
+
+
+
 ```bash
 export VLLM_API_KEY='replace-with-your-api-key'
 # Use actual absolute host paths; keep model downloads separate.
@@ -94,7 +102,7 @@ VARIANT=base FORMAT=fp8 bash docker/run.sh
 
 The default FP8 model is `Qwen/Qwen3.8-27B-FP8`, resolved through ModelScope. The script sets the API key, port, listening address and cache mounts. Stop the previous GPU service before selecting another mode; the script does not stop existing services.
 
-Firefly prefill defaults to `VLLM_FIREFLY=auto` in the image: int8 acceleration for int4 weights (AWQ/GPTQ, W4A16) only; fp8 stays on upstream Marlin (on SM75 firefly-fp8 is not faster than Marlin — fp8 acceleration goes through the separate `VLLM_FIREFLY_AR` allreduce). Set `-e VLLM_FIREFLY=0` for a pure Marlin baseline. `docker/run.sh` does not yet forward this variable, so run `docker run -e VLLM_FIREFLY=0 …` manually or append `--env VLLM_FIREFLY=0` to the script's `docker run` block.
+Firefly controls are forwarded by `docker/run.sh`; see the defaults and disable switches above.
 
 ```bash
 VARIANT=mtp FORMAT=fp8 bash docker/run.sh
@@ -115,36 +123,13 @@ curl --fail http://localhost:8000/v1/models \
 
 See [build and launch details](docker/BUILD-v0.1.4.md).
 
-## firefly (int4/fp8 weights -> int8 prefill acceleration)
+## Firefly
 
-In the image this defaults to `VLLM_FIREFLY=auto` (int4 accelerated, fp8 on Marlin);
-`1` and `auto` are equivalent, `0` disables. `MIN_M` uses default. Related
-environment variables:
+INT4 uses the large-prefill path. FP8 linear computation stays on Marlin; the FP8 optimization tested here is quantized all-reduce. Small messages fall back to NCCL, with a default 1 MiB threshold and automatic backend selection. AWQ throughput has been measured at 1–128K; model quality and the final integrated fixes still require validation.
 
-| Variable | Default | Description |
-| --- | --- | --- |
-| `VLLM_FIREFLY` | `0` (off) | Master switch: `0`/unset = off (all upstream Marlin, default not active); `1`/`auto` = on (equivalent) — int8 acceleration for int4 weights (AWQ/GPTQ, W4A16) only, fp8 stays on upstream Marlin (on SM75 firefly-fp8 is not faster than Marlin) |
-| `VLLM_FIREFLY_MIN_M` | `1024` | Firefly prefill kicks in only when batch M exceeds this value; small M (decode) keeps int4 Marlin. Dequantization is a fixed cost independent of M, so smaller M means a higher overhead ratio — tune up based on measurements |
+## `/monitor` dashboard
 
-Note: the former `VLLM_FIREFLY_FUSED` sub-mode (fused vs non-fused) has been removed — it was slower (the GEMM re-dequantizes the same B matrix once per M-tile: int4 ~10x, fp8 ~1.7x). Firefly now only keeps the non-fused path.
-
-Notes:
-
-- Only large-M prefill is affected; decode and weight loading are bit-identical
-  to upstream.
-- Both symmetric int4 (W4A16/GPTQ, zp=8) and asymmetric int4 (AWQ, per-group
-  zero point) are supported; dequantization is unified as `w_deq = (q - zp) * s`.
-- The int8 GEMM introduces one extra weight int8 quantization folding step;
-  prefill output has a tiny numerical difference from int4 Marlin
-  (cos_sim > 0.9999 magnitude), no impact on readability.
-- Requires the in-image CUDA toolchain to support `sm_75` via
-  `torch.utils.cpp_extension` JIT; without a GPU or on compilation failure it
-  automatically falls back to PyTorch dequantization (correct but ~50ms/layer
-  slower), without affecting service startup.
-- End-to-end validated on 2 x Tesla T10 (SM75), TP2, Qwen3.8 27B W4A16/AWQ
-  (int4); W8A8-FP8 (fp8 weights) is also supported: large-M prefill dequantizes
-  fp8 -> int8 (validated on 0.6B-fp8, 1.24x e2e prefill, outputs match baseline),
-  decode and loading unchanged.
+Open `http://HOST:PORT/monitor`. The self-contained page polls same-origin `/metrics`; no CDN or separate monitoring deployment is required. Set the container environment variable `VLLM_MONITOR=0` and recreate the container to disable it (`docker run -e VLLM_MONITOR=0`). The launcher does not separately forward this host variable. The dashboard and metrics currently do not require the model API key.
 
 ## Idle auto-sleep
 
@@ -168,7 +153,7 @@ Neither exit nor reload writes a runtime-memory snapshot to disk. Budget for nor
 
 FP8 DFlash2 exit was measured on T10 ×4 with the API online: P8 on all cards, 3 MiB per card, 9.97–15.31 W. Other GPU users and drivers can prevent P8. Validated topology is single API server, DP=1, TP4; cpu/reload GPU behavior and other topologies were not validated in this cache-fix run. Client/proxy timeouts must accommodate the full wake-up. Do not mix automatic sleep with development-only manual sleep/wake endpoints.
 
-See the [complete guide and resource requirements (Chinese)](docs/sleep-and-cache.md). This is a same-version fix: the image remains `vllm-sm75:v0.1.3`.
+See the [complete guide and resource requirements (Chinese)](docs/sleep-and-cache.md). This draft targets `vllm-sm75:v0.1.4`; historical sleep measurements are not combined-image acceptance.
 
 ## License
 

@@ -15,6 +15,12 @@ docker() {
   has_arg "$VLLM_SM75_CACHE_ROOT/shared/flashinfer:/root/.cache/flashinfer" "$@"
   has_arg "$VLLM_SM75_MODEL_CACHE_ROOT:/root/.cache/modelscope" "$@"
   has_arg "$VLLM_SM75_MODEL_CACHE_ROOT:/root/.cache/huggingface" "$@"
+  has_arg "$VLLM_SM75_CACHE_ROOT/$FORMAT/triton:/root/.triton/cache" "$@"
+  has_arg "$VLLM_SM75_CACHE_ROOT/shared/torch_extensions:/root/.cache/torch_extensions" "$@"
+  has_arg TRITON_CACHE_DIR=/root/.triton/cache "$@"
+  has_arg TORCH_EXTENSIONS_DIR=/root/.cache/torch_extensions "$@"
+  has_arg "VLLM_FIREFLY_AR=${VLLM_FIREFLY_AR:-auto}" "$@"
+  has_arg "VLLM_ALLREDUCE_USE_FLASHINFER=${VLLM_ALLREDUCE_USE_FLASHINFER:-0}" "$@"
   has_arg vllm-sm75:v0.1.4 "$@"
   if [[ "$AUTO_SLEEP_IDLE_TIMEOUT" == 0 ]]; then
     ! has_arg --auto-sleep-idle-timeout "$@"
@@ -32,7 +38,7 @@ docker() {
   fi
 }
 export -f docker has_arg
-for AUTO_SLEEP_OFFLOAD_TARGET in exit cpu reload; do
+for AUTO_SLEEP_OFFLOAD_TARGET in exit cpu reload disk; do
   export AUTO_SLEEP_OFFLOAD_TARGET AUTO_SLEEP_IDLE_TIMEOUT=1
   bash "$ROOT/docker/run.sh"
   printf 'PASS %s required flags and persistent mounts\n' "$AUTO_SLEEP_OFFLOAD_TARGET"
@@ -43,3 +49,8 @@ printf 'PASS disabled sleep\n'
 export AUTO_SLEEP_IDLE_TIMEOUT=1 AUTO_SLEEP_OFFLOAD_TARGET=invalid
 if bash "$ROOT/docker/run.sh" >/dev/null 2>&1; then echo 'invalid mode accepted' >&2; exit 1; fi
 printf 'PASS invalid mode rejected\n'
+
+export AUTO_SLEEP_OFFLOAD_TARGET=exit AUTO_SLEEP_IDLE_TIMEOUT=30
+export VLLM_FIREFLY_AR=0 VLLM_ALLREDUCE_USE_FLASHINFER=1
+bash "$ROOT/docker/run.sh"
+printf "PASS explicit all-reduce overrides\n"

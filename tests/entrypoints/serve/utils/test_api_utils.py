@@ -3,7 +3,7 @@
 
 import pytest
 
-from vllm.entrypoints.openai.engine.protocol import StreamOptions
+from vllm.entrypoints.generate.base.protocol import StreamOptions
 from vllm.entrypoints.serve.utils.api_utils import (
     get_max_tokens,
     redact_sensitive_args,

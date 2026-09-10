@@ -36,7 +36,7 @@ bash docker/build_fast.sh    # 产物 vllm-sm75-fast:v0.1.4，只含底座+Flash
 启动后挂载本仓库目录，容器内软编译（只改 `.py` 秒级；只有 `.cu` 变了才触发对应 nvcc 重编）：
 
 ```bash
-docker run -d --name dev --gpus all -p 8000:8000 -v <本仓库>:/work vllm-sm75-fast:v0.1.4 sleep infinity
+docker run -d --name dev --gpus all -p 8000:8000 -v <本仓库>:/work --entrypoint sleep vllm-sm75-fast:v0.1.4 infinity
 docker exec dev bash /opt/vllm-sm75/fast_compile.sh   # 应用 overlay + 软编译 FlashQLA
 docker restart dev                                   # overlay/.so 进容器文件系统, 再 serve
 docker exec -d dev vllm serve /data/<model> ...      # 或改 entrypoint 直接 serve

@@ -19,6 +19,7 @@ import traceback
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
+from unittest.mock import patch
 
 
 def _load_auto_sleep() -> Any:
@@ -80,6 +81,8 @@ class _FakeExecutor:
 
     def collective_rpc(self, method: str, kwargs: dict | None = None):
         self._fake.rpc_calls.append((method, kwargs))
+        if callable(method):
+            return [{"ok": True}] * 4
         return None
 
 
@@ -147,7 +150,8 @@ def _drain_wakeup(fake: _FakeEngine, controller: Any, timeout: float = 3.0) -> N
             continue
         if request_type == controller._wakeup_request_type:
             controller.on_wakeup_poke()
-            return
+            if controller._timer is None:
+                return
     raise AssertionError("WAKEUP sentinel was not enqueued by the timer")
 
 
@@ -377,7 +381,7 @@ def test_request_arrival_cancels_armed_timer():
     assert fake.sleep_calls == []
 
 
-def test_idle_timeout_starts_when_request_becomes_idle(monkeypatch):
+def test_idle_timeout_starts_when_request_becomes_idle():
     fake = _FakeEngine()
     controller = _make_controller(fake, auto_sleep, timeout_seconds=60.0)
     delays = []
@@ -392,10 +396,10 @@ def test_idle_timeout_starts_when_request_becomes_idle(monkeypatch):
         def cancel(self):
             pass
 
-    monkeypatch.setattr(auto_sleep.threading, "Timer", _Timer)
-    controller.on_request_arrival()
-    controller._last_activity -= 90.0
-    controller.on_idle(fake)
+    with patch.object(auto_sleep.threading, "Timer", _Timer):
+        controller.on_request_arrival()
+        controller._last_activity -= 90.0
+        controller.on_idle(fake)
     assert delays == [60.0]
 
 
@@ -449,7 +453,7 @@ def test_cpu_target_wake_does_not_reload():
     assert fake.rpc_calls == [], "cpu target must not reload weights"
 
 
-def test_wake_up_failure_propagates_and_stays_active():
+def test_wake_up_failure_propagates_and_stays_sleeping():
     fake = _FakeEngine()
     fake.wake_up_error = RuntimeError("boom")
     controller = _make_controller(fake, auto_sleep, timeout_seconds=0.05)
@@ -461,6 +465,39 @@ def test_wake_up_failure_propagates_and_stays_active():
         assert str(exc) == "boom"
     else:
         raise AssertionError("wake_up failure must propagate to the caller")
+    assert controller.state is auto_sleep.AutoSleepState.SLEEPING
+
+
+def test_disk_sleep_keeps_runtime_weights_and_rolls_back_failed_save():
+    fake = _FakeEngine()
+    controller = _make_controller(fake, auto_sleep, offload_target="disk")
+    assert controller._config.sleep_level == 1
+    def failed_sleep(level):
+        assert level == 1
+        fake.sleeping = True  # scheduler paused before a worker save fails
+        raise OSError("disk full")
+    fake.sleep = failed_sleep
+    fake.resume_scheduler = lambda: setattr(fake, "sleeping", False)
+    controller._sleep()
+    assert fake.rpc_calls[-1] == ("wake_up", {"tags": None})
+    assert not fake.sleeping
+    assert controller.state is auto_sleep.AutoSleepState.ACTIVE
+
+
+def test_disk_prepare_failure_does_not_pause_or_release_any_worker():
+    fake = _FakeEngine()
+    controller = _make_controller(fake, auto_sleep, offload_target="disk")
+    calls = []
+    def rpc(method, kwargs=None):
+        calls.append(method.__name__)
+        if method is auto_sleep._prepare_disk_worker:
+            return [{"ok": True}, {"ok": False, "error": "disk full"}]
+        return [{"ok": True}] * 2
+    fake.model_executor.collective_rpc = rpc
+    controller._sleep()
+    assert calls == ["_prepare_disk_worker", "_cancel_disk_worker"]
+    assert not fake.sleeping
+    assert fake.sleep_calls == []
     assert controller.state is auto_sleep.AutoSleepState.ACTIVE
 
 
@@ -471,6 +508,26 @@ def test_no_double_sleep_while_sleeping():
 
     controller.on_idle(fake)
     assert controller._timer is None, "no timer while engine is already sleeping"
+
+
+def test_manual_wake_rearms_automatic_sleep():
+    fake = _FakeEngine()
+    controller = _make_controller(fake, auto_sleep, timeout_seconds=60)
+    controller._sleep()
+    fake.wake_up()
+    controller.on_idle(fake)
+    assert controller.state is auto_sleep.AutoSleepState.ACTIVE
+    assert controller._timer is not None
+    controller._cancel_timer()
+
+
+def test_early_timer_poke_is_rearmed():
+    fake = _FakeEngine()
+    controller = _make_controller(fake, auto_sleep, timeout_seconds=60)
+    controller.on_wakeup_poke()
+    assert fake.sleep_calls == []
+    assert controller._timer is not None
+    controller._cancel_timer()
 
     controller.on_wakeup_poke()
     assert fake.sleep_calls == [], "must not sleep an already-sleeping engine"
@@ -683,8 +740,9 @@ def test_cli_arg_validation_and_env_propagation():
             auto_sleep.OFFLOAD_TARGET_ENV: None,
             auto_sleep.RELOAD_PATH_ENV: None,
             auto_sleep.PAGE_CACHE_KEEP_INTERVAL_ENV: None,
+            "VLLM_AUTO_SLEEP_DISK_PATH": None,
         }
-    ):
+    ), patch.object(arg_utils, "get_model_path", side_effect=lambda model, revision: model):
         # timeout without --enable-sleep-mode must be rejected
         try:
             arg_utils.EngineArgs(
@@ -730,6 +788,14 @@ def test_cli_arg_validation_and_env_propagation():
             enable_sleep_mode=True,
         )
         assert os.environ[auto_sleep.RELOAD_PATH_ENV] == "/other"
+
+        arg_utils.EngineArgs(
+            model="/m", auto_sleep_idle_timeout=1.0,
+            auto_sleep_offload_target="disk", auto_sleep_disk_path="/disk",
+            enable_sleep_mode=True,
+        )
+        assert os.environ["VLLM_AUTO_SLEEP_DISK_PATH"] == "/disk"
+        assert os.environ[auto_sleep.OFFLOAD_TARGET_ENV] == "disk"
 
         # disabled by default: no env side effects.  Clear what the cases
         # above set, then verify a fresh EngineArgs (timeout=0) adds nothing
