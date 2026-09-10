@@ -4,7 +4,13 @@
 
 持续同步官方 [vLLM](https://github.com/vllm-project/vllm)，完善 SM75 兼容支持与内核优化。
 
-vLLM-SM75 v0.1.3 基于 vLLM 0.28.0，集成 MTP、DFlash2 和自动休眠适配。
+vLLM-SM75 v0.1.4 基于 vLLM 0.29.0，集成 MTP、DFlash2 和自动休眠适配。
+
+## v0.1.4 更新简要
+
+- 底座 vLLM 0.28.0 升级到 0.29.0，14 个被改 overlay 文件适配到 0.29 包结构；镜像名 `vllm-sm75:v0.1.4`。
+- 跟随 0.29 的接口演进：Marlin FP8 hook 改用 `_block_scale_name`、envs 新增/删除项、引擎链路新增方法、allreduce flashinfer-AR 重构。torch 与 flashinfer 版本不变。
+- 修复 `/monitor` 监控页 overlay 漏拷导致的构建失败。详见[更新说明](docs/releases/v0.1.4.zh-CN.md)。
 
 ## v0.1.3 更新简要
 
@@ -71,7 +77,7 @@ Linux x86_64，需安装 Docker、Git 和 Bash。启动模型另需 NVIDIA 驱�
 bash docker/build.sh
 ```
 
-基于固定 digest 的官方 `vllm/vllm-openai:v0.28.0-cu129` 镜像，安装全部适配并编译 SM75 扩展，生成 `vllm-sm75:v0.1.3`。
+基于固定 digest 的官方 `vllm/vllm-openai:v0.29.0-cu129` 镜像，安装全部适配并编译 SM75 扩展，生成 `vllm-sm75:v0.1.4`。
 
 ### 3. 启动
 
@@ -99,7 +105,7 @@ DRAFT_MODEL=/models/Qwen3.8-27B-DFlash2 VARIANT=dflash2 FORMAT=fp8 \
 ```
 
 DFlash draft 使用 `incoai/Qwen3.8-27B-DFlash2`，完整模型文件放入上述挂载目录。
-AWQ 使用 `philbert440/Qwen3.8-27B-W4A16-AWQ`，下载后设置 `MODEL=/models/Qwen3.8-27B-W4A16-AWQ FORMAT=awq`。其余配置见[构建与启动说明](docker/BUILD-v0.1.3.md)。
+AWQ 使用 `philbert440/Qwen3.8-27B-W4A16-AWQ`，下载后设置 `MODEL=/models/Qwen3.8-27B-W4A16-AWQ FORMAT=awq`。其余配置见[构建与启动说明](docker/BUILD-v0.1.4.md)。
 
 ```bash
 curl --fail http://localhost:8000/health
@@ -111,7 +117,7 @@ curl --fail http://localhost:8000/v1/models \
 
 ## firefly（大 M prefill 加速）
 
-v0.1.3 镜像默认开（`VLLM_FIREFLY=1`），要纯 W4A16 基线运行时用 `-e VLLM_FIREFLY=0` 关；非镜像直接用 env 时 envs.py 默认关（设 `VLLM_FIREFLY=1` 开）。仅加速大 M prefill，decode 和权重加载不变。
+v0.1.4 镜像默认开（`VLLM_FIREFLY=1`），要纯 W4A16 基线运行时用 `-e VLLM_FIREFLY=0` 关；非镜像直接用 env 时 envs.py 默认关（设 `VLLM_FIREFLY=1` 开）。仅加速大 M prefill，decode 和权重加载不变。
 
 适用：int4 权重（W4A16/AWQ）及 W8A8-FP8 权重。
 

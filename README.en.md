@@ -4,7 +4,13 @@
 
 SM75 compatibility and kernel optimizations, kept in sync with upstream [vLLM](https://github.com/vllm-project/vllm).
 
-vLLM-SM75 v0.1.3 is based on vLLM 0.28.0 and integrates MTP, DFlash2 and auto-sleep support.
+vLLM-SM75 v0.1.4 is based on vLLM 0.29.0 and integrates MTP, DFlash2 and auto-sleep support.
+
+## v0.1.4 Update Summary
+
+- Bumps the base image from vLLM 0.28.0 to 0.29.0 and adapts the 14 modified overlay files to the 0.29 package layout; image name is now `vllm-sm75:v0.1.4`.
+- Follows 0.29 interface changes: Marlin FP8 hook uses `_block_scale_name`, envs additions/removals, new engine methods, and the allreduce flashinfer-AR refactor. Torch and FlashInfer versions are unchanged.
+- Fixes a build failure caused by the `/monitor` overlay pages not being copied into the image. See the [release notes](docs/releases/v0.1.4.zh-CN.md).
 
 ## v0.1.3 Update Summary
 
@@ -74,7 +80,7 @@ Requires Linux x86_64, Docker with BuildKit, Git and Bash. Inference additionall
 bash docker/build.sh
 ```
 
-Uses the digest-pinned official `vllm/vllm-openai:v0.28.0-cu129` image, installs the adaptations and compiles the SM75 extension to produce `vllm-sm75:v0.1.3`.
+Uses the digest-pinned official `vllm/vllm-openai:v0.29.0-cu129` image, installs the adaptations and compiles the SM75 extension to produce `vllm-sm75:v0.1.4`.
 
 ### 3. Run
 
@@ -107,7 +113,7 @@ curl --fail http://localhost:8000/v1/models \
   --header "Authorization: Bearer $VLLM_API_KEY"
 ```
 
-See [build and launch details](docker/BUILD-v0.1.3.md).
+See [build and launch details](docker/BUILD-v0.1.4.md).
 
 ## firefly (int4/fp8 weights -> int8 prefill acceleration)
 
@@ -117,9 +123,10 @@ environment variables:
 
 | Variable | Default | Description |
 | --- | --- | --- |
-| `VLLM_FIREFLY` | `0` (off) | Master switch: `0`/unset = off (all upstream Marlin, default not active); `1`/`auto` = on (equivalent) — int8 acceleration for int4 weights (AWQ/GPTQ, W4A16) only, fp8 stays on upstream Marlin (on SM75 firefly-fp8 is not faster than Marlin, fused is 2x slower) |
+| `VLLM_FIREFLY` | `0` (off) | Master switch: `0`/unset = off (all upstream Marlin, default not active); `1`/`auto` = on (equivalent) — int8 acceleration for int4 weights (AWQ/GPTQ, W4A16) only, fp8 stays on upstream Marlin (on SM75 firefly-fp8 is not faster than Marlin) |
 | `VLLM_FIREFLY_MIN_M` | `1024` | Firefly prefill kicks in only when batch M exceeds this value; small M (decode) keeps int4 Marlin. Dequantization is a fixed cost independent of M, so smaller M means a higher overhead ratio — tune up based on measurements |
-| `VLLM_FIREFLY_FUSED` | `auto` | firefly sub-mode (int4 and fp8 both), `auto` = pick the fastest per weight type (currently non-fused for both: fused is slower — int4 fused ~10x slower, fp8 fused ~1.7x slower, because the GEMM re-dequantizes the same B matrix once per M-tile; fp8 firefly isn't faster than Marlin either — fp8 acceleration goes through `VLLM_FIREFLY_AR`). `1` = force fused GEMM (dequant inside the B-load, bit-exact but slower); `0` = force non-fused hard (separate transient dequant + int8 GEMM, faster). Only matters when firefly is on (`VLLM_FIREFLY` on and this set to `1`/`0`, not `auto`). Both modes are bit-identical. |
+
+Note: the former `VLLM_FIREFLY_FUSED` sub-mode (fused vs non-fused) has been removed — it was slower (the GEMM re-dequantizes the same B matrix once per M-tile: int4 ~10x, fp8 ~1.7x). Firefly now only keeps the non-fused path.
 
 Notes:
 

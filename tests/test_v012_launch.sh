@@ -7,8 +7,8 @@ export MODEL_ROOT="$VLLM_SM75_CACHE_ROOT"
 export MODEL=/models/test-model DRAFT_MODEL=/models/test-draft
 docker() {
   local args=" $* "
-  [[ "$args" == *' vllm-sm75:v0.1.3 serve '* ]]
-  [[ "$args" != *'v0.1.3-mtp'* && "$args" != *'v0.1.3-dflash2'* ]]
+  [[ "$args" == *' vllm-sm75:v0.1.4 serve '* ]]
+  [[ "$args" != *'v0.1.4-mtp'* && "$args" != *'v0.1.4-dflash2'* ]]
   if [[ "$VARIANT" == base ]]; then
     [[ "$args" != *'--speculative-config'* ]]
   else

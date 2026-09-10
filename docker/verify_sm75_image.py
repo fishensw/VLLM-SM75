@@ -12,7 +12,7 @@ from pathlib import Path
 import torch
 
 EXPECTED_PACKAGES = {
-    "vllm": "0.28.0",
+    "vllm": "0.29.0",
     "flashinfer-python": "0.6.18",
     "flashinfer-cubin": "0.6.18",
     "transformers": "5.15.1",
@@ -39,14 +39,14 @@ def main() -> None:
         raise RuntimeError(f"Expected CUDA 12.9, found {torch.version.cuda}")
 
     from vllm.config.model import _normalize_config_dtype
-    from vllm.entrypoints.serve.utils.api_utils import _redact_sensitive_args
+    from vllm.entrypoints.serve.utils.api_utils import redact_sensitive_args
 
-    redacted = _redact_sensitive_args(
+    redacted = redact_sensitive_args(
         {"api_key": ["build-secret"], "hf_token": "build-token", "model": "ok"}
     )
     if redacted != {
-        "api_key": "<REDACTED>",
-        "hf_token": "<REDACTED>",
+        "api_key": "***",
+        "hf_token": "***",
         "model": "ok",
     }:
         raise RuntimeError(f"Sensitive argument redaction failed: {redacted}")
@@ -89,7 +89,7 @@ def main() -> None:
     # imports pull in the whole engine stack (executor, model executor,
     # attention backends) and add several GiB of peak memory to the build,
     # on top of the parallel nvcc stage.
-    engine_source = Path("/opt/vllm-sm75/source/v0.1.3/vllm/v1/engine")
+    engine_source = Path("/opt/vllm-sm75/source/v0.1.4/vllm/v1/engine")
 
     def _class_members(path: Path) -> dict[str, set[str]]:
         tree = ast.parse(path.read_text(), filename=str(path))

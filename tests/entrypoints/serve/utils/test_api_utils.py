@@ -5,8 +5,8 @@ import pytest
 
 from vllm.entrypoints.openai.engine.protocol import StreamOptions
 from vllm.entrypoints.serve.utils.api_utils import (
-    _redact_sensitive_args,
     get_max_tokens,
+    redact_sensitive_args,
     should_include_usage,
 )
 
@@ -18,11 +18,11 @@ def test_sensitive_args_are_redacted_without_mutating_input():
         "model": "example/model",
     }
 
-    redacted = _redact_sensitive_args(args)
+    redacted = redact_sensitive_args(args)
 
     assert redacted == {
-        "api_key": "<REDACTED>",
-        "hf_token": "<REDACTED>",
+        "api_key": "***",
+        "hf_token": "***",
         "model": "example/model",
     }
     assert args["api_key"] == ["secret-api-key"]

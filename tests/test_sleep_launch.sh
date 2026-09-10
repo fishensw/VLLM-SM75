@@ -15,7 +15,7 @@ docker() {
   has_arg "$VLLM_SM75_CACHE_ROOT/shared/flashinfer:/root/.cache/flashinfer" "$@"
   has_arg "$VLLM_SM75_MODEL_CACHE_ROOT:/root/.cache/modelscope" "$@"
   has_arg "$VLLM_SM75_MODEL_CACHE_ROOT:/root/.cache/huggingface" "$@"
-  has_arg vllm-sm75:v0.1.3 "$@"
+  has_arg vllm-sm75:v0.1.4 "$@"
   if [[ "$AUTO_SLEEP_IDLE_TIMEOUT" == 0 ]]; then
     ! has_arg --auto-sleep-idle-timeout "$@"
     ! has_arg --enable-sleep-mode "$@"

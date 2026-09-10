@@ -26,7 +26,7 @@ if [[ -n "${MODEL_ROOT:-}" ]]; then
 fi
 seq=4; batch=8192; util=0.87; length=auto
 [[ "$FORMAT" != awq ]] || { seq=8; batch=16384; }
-image=vllm-sm75:v0.1.3
+image=vllm-sm75:v0.1.4
 graph='{"cudagraph_mode":"FULL_AND_PIECEWISE"}'
 extra=()
 AUTO_SLEEP_IDLE_TIMEOUT="${AUTO_SLEEP_IDLE_TIMEOUT:-30}"

@@ -35,12 +35,9 @@ from vllm.model_executor.layers.quantization.utils.marlin_utils import (
     unpack_cols,
 )
 from vllm.model_executor.layers.quantization.utils.firefly import (
-    _load_fused_mod,
     dequant_marlin_to_int8,
     dequant_marlin_to_int8_cached,
     firefly_active_int4,
-    firefly_active_int4_fused,
-    int4_fused_prefill_linear,
     int8_prefill_linear,
 )
 from vllm.model_executor.parameter import BasevLLMParameter, permute_param_layout_
@@ -100,25 +97,10 @@ def _ff_hybrid_linear(
     has_zp: bool,
     is_k_full: bool,
     use_recip: bool,
-    use_fused: bool,
 ) -> torch.Tensor:
     m = x.numel() // x.shape[-1]
     if m > min_m:
-        if use_fused:
-            # fused: GEMM B-load 内即时反量化 int4->int8(省 transient 反量化 kernel,
-            # 与 int8_prefill_linear 逐 bit 一致, 见 firefly_fused.cu)。
-            return int4_fused_prefill_linear(
-                x,
-                w_q,
-                w_s_clean,
-                w_zp_clean if w_zp_clean.numel() > 0 else None,
-                c_n,
-                size_k,
-                size_n,
-                gs,
-                padded_n,
-            )
-        # 非 fused: transient 反量化 int4→int8 + cutlass_scaled_mm(SM75 即 IMMA)
+        # prefill: transient 反量化 int4→int8 + cutlass_scaled_mm(SM75 即 IMMA)
         w_int8 = dequant_marlin_to_int8_cached(
             w_q,
             w_s_clean,
@@ -177,7 +159,6 @@ def _(
     _has_zp,
     _is_k_full,
     _use_recip,
-    _use_fused,
 ):
     return torch.empty(x.shape[:-1] + (size_n,), dtype=x.dtype, device=x.device)
 
@@ -313,11 +294,6 @@ class MarlinLinearKernel(MPLinearKernel):
             # 非对称(AWQ): 快照干净 qzeros(packed [N/8, K/gs]); 对称: None(zp=8)。
             layer._firefly_wzp = (
                 getattr(layer, self.w_zp_name).data.clone() if c.zero_points else None
-            )
-            # fused 子模式(VLLM_FIREFLY_FUSED=1): GEMM B-load 内即时反量化。
-            # .so 加载失败 → 回退非 fused(transient 反量化), 非上游 Marlin。
-            layer._firefly_fused_ok = (
-                firefly_active_int4_fused() and _load_fused_mod() is not None
             )
             # 只有 hard: 不存干净 int4 副本, prefill 步现从 marlin 布局反回。
 
@@ -488,7 +464,6 @@ class MarlinLinearKernel(MPLinearKernel):
                 c.zero_points,
                 self.is_k_full,
                 envs.VLLM_FIREFLY_DEQUANT_MODEL == "fast",
-                getattr(layer, "_firefly_fused_ok", False),
             )
 
         c = self.config
