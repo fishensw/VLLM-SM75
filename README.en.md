@@ -88,7 +88,7 @@ Uses the digest-pinned official `vllm/vllm-openai:v0.29.0-cu129` image, installs
 
 ### 3. Run
 
-Pass the model and options directly after the image name in `docker run`, without another `serve`. Commands executed inside a container still use `vllm serve ...`. Remove a leading `serve` from older container argument lists when migrating. `/monitor` remains an additional page.
+When starting with `docker run`, place the model path and options directly after the image name; do not add `serve`.
 
 
 

@@ -108,7 +108,7 @@ bash docker/build.sh
 
 ### 3. 启动
 
-直接 `docker run` 时镜像名后填写模型和参数，**不再添加 `serve`**；在容器内手动执行仍使用 `vllm serve ...`。从旧自定义入口迁移时删除容器参数开头多余的 `serve`，模型参数保持原值。`/monitor` 为独立附加页面。
+使用 `docker run` 启动时，在镜像名后直接填写模型路径和启动参数，无需添加 `serve`。
 
 
 
