@@ -108,7 +108,7 @@ bash docker/build.sh
 
 ### 3. 启动
 
-镜像继承官方 `vllm/vllm-openai:v0.29.0-cu129` 的 `vllm serve` 入口及默认启动画面/UI样式。直接 `docker run` 时镜像名后填写模型和参数，**不再添加 `serve`**；在容器内手动执行仍使用 `vllm serve ...`。从旧自定义入口迁移时删除容器参数开头多余的 `serve`，模型参数保持原值。`/monitor` 为独立附加页面。
+直接 `docker run` 时镜像名后填写模型和参数，**不再添加 `serve`**；在容器内手动执行仍使用 `vllm serve ...`。从旧自定义入口迁移时删除容器参数开头多余的 `serve`，模型参数保持原值。`/monitor` 为独立附加页面。
 
 
 
