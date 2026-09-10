@@ -19,7 +19,6 @@ def main() -> None:
     source_root = args.overlay.resolve()
     package_root = Path(vllm.__file__).resolve().parent
     files = [
-        "envs.py",
         "config/model.py",
         "device_allocator/disk_snapshot.py",
         "device_allocator/disk_sleep.py",
@@ -29,6 +28,7 @@ def main() -> None:
         "entrypoints/serve/instrumentator/metrics.py",
         "entrypoints/serve/instrumentator/monitor.py",
         "entrypoints/serve/instrumentator/dashboard.html",
+        "envs_sm75.py",
         "distributed/kv_transfer/kv_connector/v1/base.py",
         "model_executor/kernels/linear/mixed_precision/marlin.py",
         "model_executor/kernels/linear/scaled_mm/marlin.py",
@@ -60,6 +60,18 @@ def main() -> None:
     backend_text = backend_file.read_text()
     if '"vllm.device_allocator.disk_sleep"' not in backend_text:
         backend_file.write_text(backend_text + registration)
+
+    # SM75 扩展 env: 不整文件覆盖上游 vllm/envs.py, 改为 import 注入。
+    # 往底座 envs.py 尾部追加一行, 触发 envs_sm75.apply()(把 EXTENSIONS 灌进
+    # environment_variables + wrap compile_factors)。append 在 envs 模块体最末,
+    # 此刻 environment_variables / compile_factors 均已定义。
+    # 上游 envs.py 升级随便改, 只需保证仍含 environment_variables dict +
+    # compile_factors 返回 dict; 本行与上面 backend registration 手法一致。
+    envs_file = package_root / "envs.py"
+    envs_hook = "\n# vllm-sm75 overlay: inject SM75 extension envs (idempotent).\nimport vllm.envs_sm75\nvllm.envs_sm75.apply()\n"
+    envs_text = envs_file.read_text()
+    if "vllm.envs_sm75.apply()" not in envs_text:
+        envs_file.write_text(envs_text + envs_hook)
 
     third_party_source = source_root / "third_party/flash_qla_sm75"
     third_party_destination = package_root / "third_party/flash_qla_sm75"

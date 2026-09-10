@@ -10,6 +10,7 @@ HTML 独立成 dashboard.html, 可直接用浏览器打开看样式; 每次请�
 无需重启。VLLM_MONITOR 默认开, '0'/'off'/'false'/'no' 关(不挂路由)。
 """
 
+import os
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -20,6 +21,18 @@ from vllm import envs
 # 看板 HTML(独立文件, 便于直接打开/编辑), 与 monitor.py 同目录。
 _DASHBOARD_HTML_PATH = Path(__file__).resolve().parent / "dashboard.html"
 
+# 关值集合(移植到其他 vllm 时, 若其 envs 无 VLLM_MONITOR 字段, 回退直读该 env)。
+_OFF_VALUES = ("0", "off", "false", "no")
+
+
+def _monitor_enabled() -> bool:
+    """VLLM_MONITOR 开关: 走 envs 归一化; 移植到无此字段的 vllm 时
+    (envs.VLLM_MONITOR 抛 AttributeError), 回退直读环境变量, 未设默认开。"""
+    try:
+        return bool(envs.VLLM_MONITOR)
+    except AttributeError:
+        return os.environ.get("VLLM_MONITOR", "1").strip().lower() not in _OFF_VALUES
+
 
 def attach_router(app: FastAPI) -> None:
     """按 VLLM_MONITOR 开关把 /monitor 挂到 app。
@@ -28,7 +41,7 @@ def attach_router(app: FastAPI) -> None:
     浏览器无需 API key 即可访问; 页面内 fetch /metrics 亦同源无鉴权。
     每次请求读盘 dashboard.html, 改样式直接刷新即可(无需重启)。
     """
-    if not envs.VLLM_MONITOR:
+    if not _monitor_enabled():
         return
 
     @app.get("/monitor", response_class=HTMLResponse, include_in_schema=False)
