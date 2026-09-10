@@ -1,6 +1,8 @@
-# 自动休眠与持久化缓存（v0.1.3）
+> v0.1.4 使用说明。本文历史实测按原日期保留；不等于 Firefly 整合版本已完成验收。新增对比见[验证记录](validation/v0.1.4.md)。
 
-目标是让长时间闲置的推理服务释放 GPU 资源并降低功耗，新请求到达后自动恢复。镜像名称始终为 `vllm-sm75:v0.1.3`。
+# 自动休眠与持久化缓存（v0.1.4）
+
+目标是让长时间闲置的推理服务释放 GPU 资源并降低功耗，新请求到达后自动恢复。本稿目标镜像为 `vllm-sm75:v0.1.4`。
 
 已完成本地 GPU 验证的配置、可复制的完整命令与实测效果见[FP8 DFlash2 推荐配置](recommended-fp8-dflash2.md)。
 
@@ -16,7 +18,7 @@
 
 `cpu` 和 `reload` 必须启用 `--enable-sleep-mode`；`exit` 不需要。当前 `exit` 验证拓扑为 `vllm serve`、单 API server、DP=1、TP4；多 API server、DP>1 和离线进程内引擎不在本次支持验证范围。
 
-**没有一种模式会把完整运行时模型状态、对话 KV 或 CUDA Graph 内存快照写入磁盘再原样恢复。** `exit`/`reload` 读取的是已有模型文件；编译缓存保存的是可复用的编译产物。休眠后不要依赖请求前缀/KV 缓存仍然存在，对话历史应由客户端继续提交。
+**上述 cpu/reload/exit 三种模式不把完整运行时状态写入磁盘快照。** `exit`/`reload` 读取的是已有模型文件；编译缓存保存的是可复用的编译产物。休眠后不要依赖请求前缀/KV 缓存仍然存在，对话历史应由客户端继续提交。
 
 ## 30 分钟日常使用，60 秒验收
 
@@ -94,3 +96,11 @@ P8 取决于显卡/驱动和是否有其他 GPU 进程；exit 释放的是本引
 已有缓存启动、exit 唤醒、改为 30 分钟后的启动，三个阶段均 12 次 AOT 命中（3 组件 × 4 rank）、零重新编译，三组键一致。唤醒时主模型/草稿/候选选择器编译缓存加载阶段分别约 3.81/0.76/0.06 秒，不能当作完整唤醒耗时。30 分钟阶段未额外等待完整休眠周期。
 
 这不是所有五个配置、CPU/reload 模式或所有 GPU 的验收。修复原理与同版本更新范围见[更新说明](releases/v0.1.3.zh-CN.md)。
+
+## v0.1.4 编译目录补充
+
+沿用 `VLLM_SM75_CACHE_ROOT`，脚本按格式保留 `fp8/vllm`、`awq/vllm`，共享 `shared/flashinfer`；新增 `<format>/triton` 和 `shared/torch_extensions`，对应 `/root/.triton/cache` 和 `/root/.cache/torch_extensions`。模型下载目录继续由 `VLLM_SM75_MODEL_CACHE_ROOT` 单独指定。上述目录必须可写且在容器外持久化，不能只写入 docker.img 的容器层。
+
+迁移已有容器时先保留旧宿主目录及挂载；若 Triton/扩展缓存此前只在容器层，先复制到新的宿主目录，再重建挂载。脚本不会自动迁移旧缓存。KAT 自定义容器需自行保留原参数及相应挂载，`docker/run.sh` 不生成 KAT 配置。
+
+> 本地已有的 `disk` 快照休眠开发代码已保留：保存模型分配并原位恢复，KV按休眠协议失效，CUDA上下文仍保留，不能保证P8。需要可写真实磁盘目录和足够快照空间，`--enable-sleep-mode --auto-sleep-offload-target disk --auto-sleep-disk-path /sleep-state`；脚本会挂载 `cache/sleep/<variant>-<format>`。它不属于本轮v0.1.4 AWQ GPU验收或默认推荐配置。

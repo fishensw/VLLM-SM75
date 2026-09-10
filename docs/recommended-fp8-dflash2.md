@@ -1,6 +1,8 @@
+> v0.1.4 使用说明。本文历史实测按原日期保留；不等于 Firefly 整合版本已完成验收。新增对比见[验证记录](validation/v0.1.4.md)。
+
 # 已验证推荐：FP8 DFlash2 + 30 分钟 exit
 
-适用于本地验证的 **4 × Tesla T10 16 GiB、TP4、约 31 GiB 主机内存**，优先目标为空闲省电，并复用主模型和草稿模型编译缓存。其他 GPU/内存容量不能直接套用显存预算。镜像名称保持 `vllm-sm75:v0.1.3`。
+适用于本地验证的 **4 × Tesla T10 16 GiB、TP4、约 31 GiB 主机内存**，优先目标为空闲省电，并复用主模型和草稿模型编译缓存。其他 GPU/内存容量不能直接套用显存预算。镜像名称保持 `vllm-sm75:v0.1.4`。
 
 ## 参数与要求
 
@@ -26,8 +28,8 @@
 ```bash
 # 必须替换模型/缓存目录，设置自己的 API key；草稿已完整下载到示例容器路径。
 export VLLM_API_KEY='replace-with-your-api-key'
-export MODEL_CACHE_ROOT=/mnt/user/appdata/lmdeploy
-export CACHE_ROOT=/mnt/user/appdata/vllm-sm75/cache
+export MODEL_CACHE_ROOT=/path/to/existing-model-cache
+export CACHE_ROOT=/path/to/vllm-sm75/cache
 mkdir -p "$CACHE_ROOT/fp8/vllm" "$CACHE_ROOT/shared/flashinfer"
 
 docker run --detach --name vllm-sm75-fp8-dflash2 \
@@ -44,7 +46,7 @@ docker run --detach --name vllm-sm75-fp8-dflash2 \
   --env VLLM_ENABLE_CUDA_COMPATIBILITY=0 --env OMP_NUM_THREADS=2 \
   --env VLLM_ENGINE_READY_TIMEOUT_S=1800 --env VLLM_ENGINE_ITERATION_TIMEOUT_S=1800 \
   --env VLLM_EXECUTE_MODEL_TIMEOUT_SECONDS=1800 \
-  vllm-sm75:v0.1.3 serve Qwen/Qwen3.8-27B-FP8 \
+  vllm-sm75:v0.1.4 Qwen/Qwen3.8-27B-FP8 \
   --served-model-name VLLM-Qwen3.8-27B --host 0.0.0.0 --port 8000 \
   --api-key "$VLLM_API_KEY" \
   --tensor-parallel-size 4 --gpu-memory-utilization 0.92 \

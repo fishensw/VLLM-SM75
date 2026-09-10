@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>vLLM-SM75 Monitor</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230a0e12'/%3E%3Ccircle cx='16' cy='16' r='11' fill='%23d4ff5c' opacity='0.14'/%3E%3Ccircle cx='16' cy='16' r='5' fill='%23d4ff5c'/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#0a0e12; --panel:#111820; --panel2:#0d141b; --border:#1e2a33;
+  --text:#c6d1d9; --muted:#6b7a86; --faint:#465361;
+  --fly:#d4ff5c; --fly-deep:#b6e636; --fly-soft:#eaffa6;
+  --cyan:#4fd8c8; --warn:#ffb648; --danger:#ff6b6b; --good:#5fd07f;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{
+  background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'PingFang SC','Microsoft YaHei',sans-serif;
+  display:flex;height:100%;overflow:hidden;
+}
+/* ===== 侧栏(固定, 不随主区滚动) ===== */
+.sidebar{
+  width:234px;flex:0 0 234px;height:100%;overflow:hidden;
+  border-right:1px solid var(--border);
+  background:linear-gradient(180deg,#0c1117,#0a0e12);
+  display:flex;flex-direction:column;padding:22px 16px;gap:16px;
+}
+.brand{display:flex;align-items:center;gap:12px}
+.mark{width:40px;height:40px;flex:0 0 40px}
+.brand .name{font-size:16px;font-weight:700;letter-spacing:.2px}
+.brand .sub{font-size:10px;color:var(--fly);letter-spacing:3px;margin-top:3px}
+.identity{border-top:1px solid var(--border);padding-top:14px;display:flex;flex-direction:column;gap:9px;font-size:12px}
+.id-row{display:flex;justify-content:space-between;align-items:center;color:var(--muted)}
+.id-row b{color:var(--text);font-weight:600;font-family:var(--mono);font-size:12px}
+.badge-fly{
+  align-self:flex-start;font-size:10px;letter-spacing:1.5px;color:var(--fly);
+  border:1px solid var(--fly-deep);border-radius:20px;padding:3px 11px;
+  background:rgba(212,255,92,.08);margin-top:2px;
+}
+.nav{display:flex;flex-direction:column;gap:3px}
+.nav button{
+  display:flex;align-items:center;gap:10px;width:100%;text-align:left;
+  background:transparent;border:1px solid transparent;border-radius:9px;
+  padding:9px 12px;color:var(--muted);font-size:13px;cursor:pointer;transition:all .15s;
+}
+.nav button:hover{background:rgba(255,255,255,.03);color:var(--text)}
+.nav button.active{background:rgba(212,255,92,.09);border-color:rgba(212,255,92,.25);color:var(--fly-soft)}
+.nav .ndot{width:6px;height:6px;border-radius:50%;background:var(--faint);flex:0 0 6px}
+.nav button.active .ndot{background:var(--fly);box-shadow:0 0 8px var(--fly)}
+.foot{margin-top:auto;border-top:1px solid var(--border);padding-top:14px;font-size:12px;color:var(--muted)}
+.status{display:flex;align-items:center;gap:9px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--faint);flex:0 0 8px}
+.dot.green{background:var(--good);box-shadow:0 0 8px var(--good)}
+.dot.red{background:var(--danger);box-shadow:0 0 8px var(--danger)}
+.dot.yellow{background:var(--warn);box-shadow:0 0 8px var(--warn)}
+.upd{margin-top:7px;color:var(--faint);font-family:var(--mono);font-size:11px}
+/* ===== 主区(独立滚动) ===== */
+.main{flex:1;min-width:0;padding:22px 30px 60px;overflow-y:auto}
+.pagehead{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:22px}
+.pagehead h2{font-size:20px;font-weight:700}
+.live{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)}
+.panel{margin-bottom:36px;scroll-margin-top:14px}
+.panel:last-child{margin-bottom:0}
+.sect{display:flex;align-items:baseline;gap:12px;margin-bottom:14px}
+.sect::before{content:'';width:4px;height:16px;border-radius:2px;background:var(--fly);align-self:center;flex:0 0 4px}
+.sect h3{font-size:17px;font-weight:700;white-space:nowrap;transition:color .15s}
+.sect .note{font-size:12px;color:var(--faint)}
+.panel.active .sect h3{color:var(--fly-soft)}
+/* ===== 卡片 ===== */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(185px,1fr));gap:14px}
+.kpi{
+  background:var(--panel);border:1px solid var(--border);border-radius:12px;
+  padding:15px 16px 9px;position:relative;overflow:hidden;
+}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--ac,var(--fly));opacity:.55}
+.kpi .lab{font-size:12px;color:var(--muted);letter-spacing:.3px}
+.kpi .val{font-size:30px;font-weight:700;font-family:var(--mono);margin:7px 0 0;line-height:1.05}
+.kpi .sub{font-size:11px;color:var(--faint);margin-top:3px;font-family:var(--mono)}
+.kpi .spark{width:100%;height:34px;display:block;margin-top:8px}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:18px}
+.card .ct{font-size:13px;color:var(--muted);margin-bottom:12px;letter-spacing:.3px}
+.charts-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
+.chartbox{position:relative;height:220px}
+.chartbox.sm{height:240px}
+canvas{display:block}
+.chartbox canvas{position:absolute;inset:0;width:100%;height:100%}
+/* ===== 延迟 ===== */
+.lat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:14px}
+.prow{display:flex;gap:10px;margin-top:12px}
+.pchip{flex:1;background:var(--panel2);border:1px solid var(--border);border-radius:9px;padding:11px 8px;text-align:center}
+.pchip .pl{font-size:11px;color:var(--muted);font-family:var(--mono)}
+.pchip .pv{font-size:18px;font-weight:700;font-family:var(--mono);margin-top:5px}
+/* ===== 分布 ===== */
+.dist-row{display:grid;grid-template-columns:1.45fr 1fr;gap:14px;margin-bottom:14px}
+.dtbl{margin-top:2px}
+.dtbl div{display:flex;justify-content:space-between;padding:1px 0;font-size:13px;line-height:1.95}
+.dtbl .dotc{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:9px;vertical-align:middle}
+.dtbl b{font-family:var(--mono)}
+/* ===== 状态 ===== */
+.srow{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border);font-size:13px}
+.srow:last-child{border-bottom:none}
+.srow .k{color:var(--muted)}
+.srow .v{font-family:var(--mono);color:var(--text);font-weight:600}
+.sleepbig{font-size:34px;font-weight:800;font-family:var(--mono);line-height:1.1}
+.sleepbig.good{color:var(--good)}
+.sleepbig.warn{color:var(--warn)}
+/* ===== 响应式 ===== */
+@media (max-width:1080px){ .charts-row{grid-template-columns:1fr} .dist-row{grid-template-columns:1fr} }
+@media (max-width:720px){
+  body{flex-direction:column}
+  .sidebar{width:100%;flex:none;height:auto;flex-direction:row;flex-wrap:wrap;align-items:center;gap:14px}
+  .identity,.foot{border:none;padding:0;margin:0}
+  .foot{margin-top:0}
+  .nav{flex-direction:row;flex-wrap:wrap;width:100%}
+  .main{padding:18px 16px 40px}
+}
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="brand">
+    <svg class="mark" viewBox="0 0 40 40" fill="none">
+      <circle cx="20" cy="20" r="18" fill="#d4ff5c" opacity="0.07"/>
+      <circle cx="20" cy="20" r="11" fill="#d4ff5c" opacity="0.15"/>
+      <g stroke="#b6e636" stroke-width="1.3" stroke-linecap="round" opacity="0.6">
+        <line x1="20" y1="2" x2="20" y2="6.5"/><line x1="20" y1="33.5" x2="20" y2="38"/>
+        <line x1="2" y1="20" x2="6.5" y2="20"/><line x1="33.5" y1="20" x2="38" y2="20"/>
+        <line x1="7.3" y1="7.3" x2="10.5" y2="10.5"/><line x1="29.5" y1="29.5" x2="32.7" y2="32.7"/>
+        <line x1="32.7" y1="7.3" x2="29.5" y2="10.5"/><line x1="10.5" y1="29.5" x2="7.3" y2="32.7"/>
+      </g>
+      <circle cx="20" cy="20" r="5" fill="#eaffa6"/>
+      <circle cx="20" cy="20" r="2.2" fill="#f7ffc4"/>
+    </svg>
+    <div>
+      <div class="name">vLLM-SM75</div>
+      <div class="sub">MONITOR</div>
+    </div>
+  </div>
+
+  <div class="identity">
+    <div class="id-row"><span>架构</span><b>SM75</b></div>
+    <div class="id-row"><span>GPU</span><b>Tesla T10</b></div>
+    <div class="id-row"><span>版本</span><b>v0.1.4</b></div>
+    <div class="id-row"><span>基座</span><b>vLLM 0.29.0</b></div>
+    <span class="badge-fly">FIREFLY PREFILL</span>
+  </div>
+
+  <nav class="nav">
+    <button data-tab="overview" class="active"><span class="ndot"></span>概览</button>
+    <button data-tab="latency"><span class="ndot"></span>延迟</button>
+    <button data-tab="cache"><span class="ndot"></span>缓存</button>
+    <button data-tab="dist"><span class="ndot"></span>分布</button>
+    <button data-tab="status"><span class="ndot"></span>状态</button>
+  </nav>
+
+  <div class="foot">
+    <div class="status"><span id="statusDot" class="dot red"></span><span id="statusText">未连接</span></div>
+    <div class="upd" id="updTime">等待数据…</div>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="pagehead">
+    <h2>监控看板</h2>
+    <div class="live"><span id="liveDot" class="dot red"></span><span id="liveText">未连接</span></div>
+  </div>
+
+  <!-- 概览 -->
+  <section class="panel active" data-panel="overview" id="panel-overview">
+    <div class="sect"><h3>概览</h3><span class="note">实时运行状态与核心指标</span></div>
+    <div class="kpi-grid">
+      <div class="kpi" style="--ac:var(--good)"><div class="lab">并发请求</div><div class="val" id="kRunning">—</div><div class="sub">num_requests_running</div><canvas class="spark" id="sRunning"></canvas></div>
+      <div class="kpi" style="--ac:var(--warn)"><div class="lab">队列等待</div><div class="val" id="kWaiting">—</div><div class="sub">num_requests_waiting</div><canvas class="spark" id="sWaiting"></canvas></div>
+      <div class="kpi" style="--ac:var(--cyan)"><div class="lab">KV Cache 使用率</div><div class="val" id="kKv">—</div><div class="sub">kv_cache_usage_perc</div><canvas class="spark" id="sKv"></canvas></div>
+      <div class="kpi" style="--ac:var(--fly)"><div class="lab">多模态缓存命中</div><div class="val" id="kMm">—</div><div class="sub">mm_cache_hits / queries</div><canvas class="spark" id="sMm"></canvas></div>
+      <div class="kpi" style="--ac:var(--fly)"><div class="lab">累计 Prompt Tokens</div><div class="val" id="kPrompt">—</div><div class="sub">prompt_tokens_total</div><canvas class="spark" id="sPrompt"></canvas></div>
+      <div class="kpi" style="--ac:var(--good)"><div class="lab">累计 Generation Tokens</div><div class="val" id="kGen">—</div><div class="sub">generation_tokens_total</div><canvas class="spark" id="sGen"></canvas></div>
+    </div>
+    <div class="charts-row">
+      <div class="card"><div class="ct">并发请求趋势</div><div class="chartbox"><canvas id="tRunning"></canvas></div></div>
+      <div class="card"><div class="ct">KV Cache 使用率趋势 (%)</div><div class="chartbox"><canvas id="tKv"></canvas></div></div>
+    </div>
+  </section>
+
+  <!-- 延迟 -->
+  <section class="panel" data-panel="latency" id="panel-latency">
+    <div class="sect"><h3>延迟分布</h3><span class="note">P50/P90/P99 · histogram 直方图桶</span></div>
+    <div class="lat-grid">
+      <div class="card"><div class="ct">首字延迟 TTFT · time_to_first_token</div>
+        <div class="prow"><div class="pchip"><div class="pl">P50</div><div class="pv" id="ltttft50">—</div></div><div class="pchip"><div class="pl">P90</div><div class="pv" id="ltttft90">—</div></div><div class="pchip"><div class="pl">P99</div><div class="pv" id="ltttft99">—</div></div></div></div>
+      <div class="card"><div class="ct">单 Token 间隔 ITL · inter_token_latency</div>
+        <div class="prow"><div class="pchip"><div class="pl">P50</div><div class="pv" id="litl50">—</div></div><div class="pchip"><div class="pl">P90</div><div class="pv" id="litl90">—</div></div><div class="pchip"><div class="pl">P99</div><div class="pv" id="litl99">—</div></div></div></div>
+      <div class="card"><div class="ct">Prefill 耗时 · request_prefill_time</div>
+        <div class="prow"><div class="pchip"><div class="pl">P50</div><div class="pv" id="lpre50">—</div></div><div class="pchip"><div class="pl">P90</div><div class="pv" id="lpre90">—</div></div><div class="pchip"><div class="pl">P99</div><div class="pv" id="lpre99">—</div></div></div></div>
+      <div class="card"><div class="ct">Decode 耗时 · request_decode_time</div>
+        <div class="prow"><div class="pchip"><div class="pl">P50</div><div class="pv" id="ldec50">—</div></div><div class="pchip"><div class="pl">P90</div><div class="pv" id="ldec90">—</div></div><div class="pchip"><div class="pl">P99</div><div class="pv" id="ldec99">—</div></div></div></div>
+      <div class="card"><div class="ct">端到端推理 · request_inference_time</div>
+        <div class="prow"><div class="pchip"><div class="pl">P50</div><div class="pv" id="linf50">—</div></div><div class="pchip"><div class="pl">P90</div><div class="pv" id="linf90">—</div></div><div class="pchip"><div class="pl">P99</div><div class="pv" id="linf99">—</div></div></div></div>
+      <div class="card"><div class="ct">排队等待 · request_queue_time</div>
+        <div class="prow"><div class="pchip"><div class="pl">P50</div><div class="pv" id="lque50">—</div></div><div class="pchip"><div class="pl">P90</div><div class="pv" id="lque90">—</div></div><div class="pchip"><div class="pl">P99</div><div class="pv" id="lque99">—</div></div></div></div>
+    </div>
+  </section>
+
+  <!-- 缓存 -->
+  <section class="panel" data-panel="cache" id="panel-cache">
+    <div class="sect"><h3>缓存</h3><span class="note">Prefix Cache / 多模态缓存命中率</span></div>
+    <div class="kpi-grid">
+      <div class="kpi" style="--ac:var(--good)"><div class="lab">本地 Prefix Cache 命中率</div><div class="val" id="cLocalPct">—</div><div class="sub">prefix_cache_hits / queries</div></div>
+      <div class="kpi" style="--ac:var(--cyan)"><div class="lab">外部 Prefix Cache 命中率</div><div class="val" id="cExtPct">—</div><div class="sub">external_prefix_cache_hits / queries</div></div>
+      <div class="kpi" style="--ac:var(--fly)"><div class="lab">累计缓存 Prompt Tokens</div><div class="val" id="cCached">—</div><div class="sub">prompt_tokens_cached_total</div></div>
+    </div>
+    <div class="charts-row" style="margin-top:14px">
+      <div class="card"><div class="ct">多模态缓存 (Multi-modal cache)</div>
+        <div class="srow"><span class="k">查询 (queries)</span><span class="v" id="mmQueries">—</span></div>
+        <div class="srow"><span class="k">命中 (hits)</span><span class="v" id="mmHits">—</span></div>
+        <div class="srow"><span class="k">命中率</span><span class="v" id="mmRate">—</span></div>
+      </div>
+      <div class="card"><div class="ct">说明</div>
+        <div style="font-size:13px;color:var(--muted);line-height:1.8">
+          本地命中率统计本实例 GPU prefix cache 命中的 prompt tokens 占比；外部命中率统计跨实例 / 连接器命中的部分。
+          非多模态模型下多模态缓存恒为 0，属正常。
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 分布 -->
+  <section class="panel" data-panel="dist" id="panel-dist">
+    <div class="sect"><h3>Token 分布</h3><span class="note">请求 prompt / generation 长度分布</span></div>
+    <div class="dist-row">
+      <div class="card"><div class="ct">Prompt Token 分布（基于 Histogram Bucket）</div><div class="chartbox sm"><canvas id="barPrompt"></canvas></div></div>
+      <div class="card"><div class="ct">区间统计</div><div class="dtbl" id="tblPrompt"></div></div>
+    </div>
+    <div class="dist-row">
+      <div class="card"><div class="ct">Generation Token 分布（基于 Histogram Bucket）</div><div class="chartbox sm"><canvas id="barGen"></canvas></div></div>
+      <div class="card"><div class="ct">区间统计</div><div class="dtbl" id="tblGen"></div></div>
+    </div>
+  </section>
+
+  <!-- 状态 -->
+  <section class="panel" data-panel="status" id="panel-status">
+    <div class="sect"><h3>状态与引擎</h3><span class="note">Preemption · 等待原因 · 休眠状态</span></div>
+    <div class="kpi-grid">
+      <div class="kpi" style="--ac:var(--warn)"><div class="lab">Preemption 累计</div><div class="val" id="stPreempt">—</div><div class="sub">num_preemptions_total · 内存压力</div></div>
+      <div class="kpi" style="--ac:var(--danger)"><div class="lab">等待 · 容量不足</div><div class="val" id="stWaitCap">—</div><div class="sub">waiting_by_reason=capacity</div></div>
+      <div class="kpi" style="--ac:var(--cyan)"><div class="lab">等待 · 延迟约束</div><div class="val" id="stWaitDef">—</div><div class="sub">waiting_by_reason=deferred</div></div>
+    </div>
+    <div class="charts-row" style="margin-top:14px">
+      <div class="card"><div class="ct">引擎休眠状态 · engine_sleep_state</div><div class="sleepbig" id="stSleep">—</div><div class="sub" style="margin-top:8px;color:var(--faint);font-size:11px">deep-sleep exit 唤醒 / 空闲自动休眠</div></div>
+      <div class="card"><div class="ct">连接</div>
+        <div class="srow"><span class="k">数据源</span><span class="v" id="connUrl">/metrics</span></div>
+        <div class="srow"><span class="k">轮询间隔</span><span class="v" id="connPoll">—</span></div>
+        <div class="srow"><span class="k">状态</span><span class="v" id="connState">—</span></div>
+        <div class="srow"><span class="k">最近更新</span><span class="v" id="connUpdate">—</span></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+const METRICS_URL = '/metrics';         // 同源, 无需跨域/CORS
+const POLL = 3000;
+const MAXHIST = 60;
+const MONO = 'ui-monospace, Menlo, Consolas, monospace';
+const C = { fly:'#d4ff5c', cyan:'#4fd8c8', warn:'#ffb648', danger:'#ff6b6b', good:'#5fd07f', purple:'#c792ff', orange:'#ff9e6b', pink:'#ff8fd0', grid:'#1e2a33', axis:'#6b7a86' };
+const BARCOLS = [C.fly, C.cyan, C.warn, C.purple, C.orange, C.danger, C.good, C.pink];
+const hist = { labels:[], running:[], waiting:[], kv:[], mm:[], prompt:[], gen:[] };
+let cur = { m:null };
+
+// ===== Prometheus 文本解析 =====
+function parsePrometheus(text){
+  const metrics = {};
+  const lines = text.split('\n');
+  for (const line of lines){
+    if (!line || line.startsWith('#')) continue;
+    const m = line.match(/^([a-zA-Z_:][a-zA-Z0-9_:]*(?:\{[^}]*\})?)\s+([\d.eE+\-]+|NaN|Inf|\+Inf|-Inf)$/);
+    if (!m) continue;
+    const value = m[2]==='NaN'?NaN:(m[2]==='+Inf'||m[2]==='Inf')?Infinity:m[2]==='-Inf'?-Infinity:parseFloat(m[2]);
+    const bi = m[1].indexOf('{');
+    let name, labels = {};
+    if (bi !== -1){
+      name = m[1].substring(0, bi);
+      const ls = m[1].substring(bi+1, m[1].length-1);
+      const re = /([a-zA-Z_][a-zA-Z0-9_]*)="([^"]*)"/g;
+      let lm; while ((lm = re.exec(ls)) !== null) labels[lm[1]] = lm[2];
+    } else name = m[1];
+    (metrics[name] || (metrics[name]=[])).push({ labels, value });
+  }
+  return metrics;
+}
+function sumMetric(m,name){ const e=m[name]; if(!e||!e.length) return null; return e.reduce((s,x)=>s+(isNaN(x.value)?0:x.value),0); }
+function maxMetric(m,name){ const e=m[name]; if(!e||!e.length) return null; let mx=null; for(const x of e) if(isFinite(x.value)&&(mx===null||x.value>mx)) mx=x.value; return mx; }
+function getBuckets(m,base){
+  const e=m[base+'_bucket']; if(!e) return [];
+  const by={};
+  for(const x of e){ const le=x.labels.le; if(le===undefined) continue; const b=le==='+Inf'?Infinity:parseFloat(le); by[b]=(by[b]||0)+(isNaN(x.value)?0:x.value); }
+  return Object.keys(by).map(k=>({bound:k==='Infinity'?Infinity:parseFloat(k),count:by[k]})).sort((a,b)=>a.bound-b.bound);
+}
+function computePercentile(buckets,total,p){
+  if(!buckets.length||!total) return null;
+  const target=total*p; let pb=0,pc=0;
+  for(const b of buckets){
+    if(b.count>=target){ if(b.bound===Infinity) return pb; const f=(target-pc)/(b.count-pc||1); return pb+f*(b.bound-pb); }
+    pb = b.bound===Infinity?pb:b.bound; pc=b.count;
+  }
+  return pb;
+}
+function bucketToIntervalCounts(buckets,boundaries){
+  const by={}; for(const b of buckets) by[b.bound]=b.count;
+  const totals=buckets.length?(by[Infinity]??buckets[buckets.length-1].count):0;
+  function cum(le){ if(by[le]!==undefined) return by[le]; for(const b of buckets) if(b.bound>=le) return b.count; return 0; }
+  const counts=boundaries.map((le,i)=>Math.max(0,cum(le)-(i===0?0:cum(boundaries[i-1]))));
+  counts.push(Math.max(0,totals-cum(boundaries[boundaries.length-1])));
+  const fmt=b=>b>=1e6?(b/1e6)+'M':b>=1000?(b/1000)+'K':''+b;
+  const labels=counts.map((_,i)=> i===0?'≤'+fmt(boundaries[0]) : i===boundaries.length?fmt(boundaries[boundaries.length-1])+'+' : fmt(boundaries[i-1])+'-'+fmt(boundaries[i]));
+  return { labels, counts };
+}
+const GEN_BOUNDARIES=[10,20,50,100,200,500,1000,2000,5000,10000];
+function getPromptTokenBucketCounts(m){
+  let b=getBuckets(m,'vllm:request_prompt_tokens'); if(!b.length) b=getBuckets(m,'vllm:prompt_tokens');
+  if(!b.length) return { labels:['≤500','500-1K','1K-2K','2K-5K','5K-10K','10K+'], counts:[0,0,0,0,0,0] };
+  return bucketToIntervalCounts(b,[500,1000,2000,5000,10000]);
+}
+function getGenTokenBucketCounts(m){
+  const b=getBuckets(m,'vllm:request_generation_tokens');
+  return bucketToIntervalCounts(b,GEN_BOUNDARIES);
+}
+function getWaitingReason(m,reason){ const e=m['vllm:num_requests_waiting_by_reason']; if(!e) return null; for(const x of e) if(x.labels.reason===reason) return x.value; return null; }
+function getSleepState(m){ const e=m['vllm:engine_sleep_state']; if(!e) return '-'; for(const x of e) if(x.value===1) return x.labels.sleep_state||'active'; return 'awake'; }
+
+// ===== 格式化 =====
+function formatLatency(v){ if(v===null||v===undefined||isNaN(v)) return '—'; if(v<0.001) return (v*1000000).toFixed(0)+' µs'; if(v<1) return (v*1000).toFixed(1)+' ms'; return v.toFixed(2)+' s'; }
+function formatNumber(v){ if(v===null||v===undefined||isNaN(v)) return '—'; if(v>=1e9) return (v/1e9).toFixed(2)+'B'; if(v>=1e6) return (v/1e6).toFixed(2)+'M'; if(v>=1e4) return (v/1e3).toFixed(1)+'K'; return (v||0).toLocaleString(); }
+function fmtInt(v){ return (v||0).toLocaleString(); }
+function fmtPct(v){ return v===null||v===undefined?'—':v.toFixed(1)+'%'; }
+function fmtAxis(v){ if(v>=1e6) return (v/1e6)+'M'; if(v>=1e4) return (v/1e3)+'K'; return ''+Math.round(v); }
+function timeLabel(){ const d=new Date(),p=n=>n.toString().padStart(2,'0'); return p(d.getHours())+':'+p(d.getMinutes())+':'+p(d.getSeconds()); }
+function set(id,txt){ const el=document.getElementById(id); if(el) el.textContent=txt; }
+function setClass(id,cls){ const el=document.getElementById(id); if(el) el.className=cls; }
+function niceMax(v){ if(!isFinite(v)||v<=0) return 1; const e=Math.floor(Math.log10(v)),f=v/Math.pow(10,e); let nf; if(f<=1)nf=1;else if(f<=2)nf=2;else if(f<=5)nf=5;else nf=10; return nf*Math.pow(10,e); }
+function hexA(hex,a){ const c=hex.replace('#',''); return 'rgba('+parseInt(c.slice(0,2),16)+','+parseInt(c.slice(2,4),16)+','+parseInt(c.slice(4,6),16)+','+a+')'; }
+
+// ===== 手写 canvas 图表(无 CDN) =====
+function setupCanvas(cv){ const dpr=window.devicePixelRatio||1, r=cv.getBoundingClientRect(); const w=r.width,h=r.height; if(w<20||h<20) return null; cv.width=Math.round(w*dpr); cv.height=Math.round(h*dpr); const ctx=cv.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0); return {ctx,w,h}; }
+
+function drawLine(id,data,labels,color,fixedMax){
+  const cv=document.getElementById(id); if(!cv) return;
+  const s=setupCanvas(cv); if(!s) return;
+  const {ctx,w,h}=s, padL=44,padR=12,padT=12,padB=24, pw=w-padL-padR, ph=h-padT-padB;
+  let yMax=fixedMax; if(yMax==null){ let mx=0; for(const v of data) if(v>mx) mx=v; yMax=niceMax(Math.max(mx,1)); }
+  ctx.font='10px '+MONO;
+  for(let g=0;g<=4;g++){ const val=yMax*g/4, y=padT+ph-ph*g/4;
+    ctx.strokeStyle=C.grid; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(padL,y); ctx.lineTo(padL+pw,y); ctx.stroke();
+    ctx.fillStyle=C.axis; ctx.textAlign='right'; ctx.textBaseline='middle';
+    ctx.fillText(fixedMax===100?Math.round(val*100):fmtAxis(val), padL-6, y);
+  }
+  if(!data.length){ ctx.fillStyle=C.axis; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('等待数据…', padL+pw/2, padT+ph/2); return; }
+  const n=data.length, xAt=i=>n===1?padL+pw/2:padL+pw*i/(n-1), yAt=v=>padT+ph-Math.max(0,Math.min(v,yMax))/yMax*ph;
+  ctx.textAlign='center'; ctx.textBaseline='top'; ctx.fillStyle=C.axis;
+  const st=Math.max(1,Math.ceil(n/6)); for(let i=0;i<n;i+=st) ctx.fillText(labels[i]||'', xAt(i), padT+ph+6);
+  ctx.beginPath(); ctx.moveTo(xAt(0),yAt(data[0])); for(let i=1;i<n;i++) ctx.lineTo(xAt(i),yAt(data[i]));
+  ctx.lineTo(xAt(n-1),padT+ph); ctx.lineTo(xAt(0),padT+ph); ctx.closePath(); ctx.fillStyle=hexA(color,0.13); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(xAt(0),yAt(data[0])); for(let i=1;i<n;i++) ctx.lineTo(xAt(i),yAt(data[i]));
+  ctx.lineJoin='round'; ctx.lineWidth=2; ctx.shadowColor=color; ctx.shadowBlur=6; ctx.strokeStyle=color; ctx.stroke(); ctx.shadowBlur=0;
+  ctx.beginPath(); ctx.arc(xAt(n-1),yAt(data[n-1]),3,0,7); ctx.fillStyle=color; ctx.fill();
+}
+
+function drawSpark(id,data,color){
+  const cv=document.getElementById(id); if(!cv) return;
+  const dpr=window.devicePixelRatio||1, r=cv.getBoundingClientRect(); const w=r.width,h=r.height; if(w<12||h<8) return;
+  cv.width=Math.round(w*dpr); cv.height=Math.round(h*dpr);
+  const ctx=cv.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0);
+  if(data.length<2) return;
+  let mn=Infinity,mx=-Infinity; for(const v of data){ if(v<mn)mn=v; if(v>mx)mx=v; } if(mx===mn) mx=mn+1;
+  const n=data.length, pad=2, xAt=i=>pad+(w-2*pad)*i/(n-1), yAt=v=>h-pad-(h-2*pad)*(v-mn)/(mx-mn);
+  ctx.beginPath(); ctx.moveTo(xAt(0),yAt(data[0])); for(let i=1;i<n;i++) ctx.lineTo(xAt(i),yAt(data[i]));
+  ctx.lineWidth=1.5; ctx.lineJoin='round'; ctx.strokeStyle=color; ctx.shadowColor=color; ctx.shadowBlur=4; ctx.stroke(); ctx.shadowBlur=0;
+  ctx.beginPath(); ctx.arc(xAt(n-1),yAt(data[n-1]),2.2,0,7); ctx.fillStyle=color; ctx.fill();
+}
+
+function drawBar(id,labels,counts){
+  const cv=document.getElementById(id); if(!cv) return;
+  const s=setupCanvas(cv); if(!s) return;
+  const {ctx,w,h}=s, padL=36,padR=8,padT=12,padB=42, pw=w-padL-padR, ph=h-padT-padB;
+  let yMax=0; for(const c of counts) if(c>yMax) yMax=c; yMax=niceMax(Math.max(yMax,1));
+  const n=counts.length, slot=pw/n, bw=Math.min(46,slot*0.68);
+  ctx.font='10px '+MONO;
+  for(let g=0;g<=4;g++){ const val=yMax*g/4, y=padT+ph-ph*g/4;
+    ctx.strokeStyle=C.grid; ctx.beginPath(); ctx.moveTo(padL,y); ctx.lineTo(padL+pw,y); ctx.stroke();
+    ctx.fillStyle=C.axis; ctx.textAlign='right'; ctx.textBaseline='middle'; ctx.fillText(fmtAxis(val), padL-5, y);
+  }
+  for(let i=0;i<n;i++){
+    const cx=padL+slot*i+slot/2, v=counts[i]||0, bh=v/yMax*ph, x=cx-bw/2, y=padT+ph-bh;
+    ctx.fillStyle=BARCOLS[i%BARCOLS.length];
+    if(bh>0){ const rr=Math.min(4,bw/2,bh); ctx.beginPath(); ctx.moveTo(x,y+bh); ctx.lineTo(x,y+rr); ctx.quadraticCurveTo(x,y,x+rr,y); ctx.lineTo(x+bw-rr,y); ctx.quadraticCurveTo(x+bw,y,x+bw,y+rr); ctx.lineTo(x+bw,y+bh); ctx.closePath(); ctx.fill(); }
+    ctx.fillStyle=C.axis; ctx.textAlign='center'; ctx.textBaseline='top';
+    ctx.save(); ctx.translate(cx,padT+ph+6); ctx.rotate(-0.32); ctx.fillText(labels[i]||'',0,0); ctx.restore();
+  }
+}
+
+// ===== 渲染 =====
+function renderPct(m,base,p50,p90,p99){
+  const b=getBuckets(m,base), c=sumMetric(m,base+'_count');
+  set(p50, formatLatency(computePercentile(b,c,0.5)));
+  set(p90, formatLatency(computePercentile(b,c,0.9)));
+  set(p99, formatLatency(computePercentile(b,c,0.99)));
+}
+function renderDistChart(id,tid,dist){
+  drawBar(id,dist.labels,dist.counts);
+  const el = document.getElementById(tid);
+  if (el) el.innerHTML = dist.labels.map((l,i)=>'<div><span><span class="dotc" style="background:'+BARCOLS[i%BARCOLS.length]+'"></span>'+l+'</span><b>'+dist.counts[i].toLocaleString()+'</b></div>').join('');
+}
+function renderAll(m){
+  const c=cur;
+  // 概览
+  set('kRunning', fmtInt(c.running));
+  set('kWaiting', fmtInt(c.waiting));
+  set('kKv', c.kvPerc===null?'—':(c.kvPerc*100).toFixed(1)+'%');
+  set('kMm', fmtPct(c.mmRate));
+  set('kPrompt', formatNumber(c.prompt));
+  set('kGen', formatNumber(c.gen));
+  drawSpark('sRunning',hist.running,C.good);
+  drawSpark('sWaiting',hist.waiting,C.warn);
+  drawSpark('sKv',hist.kv,C.cyan);
+  drawSpark('sMm',hist.mm,C.fly);
+  drawSpark('sPrompt',hist.prompt,C.fly);
+  drawSpark('sGen',hist.gen,C.good);
+  drawLine('tRunning',hist.running,hist.labels,C.good,null);
+  drawLine('tKv',hist.kv,hist.labels,C.cyan,100);
+  // 延迟
+  renderPct(m,'vllm:time_to_first_token_seconds','ltttft50','ltttft90','ltttft99');
+  renderPct(m,'vllm:inter_token_latency_seconds','litl50','litl90','litl99');
+  renderPct(m,'vllm:request_prefill_time_seconds','lpre50','lpre90','lpre99');
+  renderPct(m,'vllm:request_decode_time_seconds','ldec50','ldec90','ldec99');
+  renderPct(m,'vllm:request_inference_time_seconds','linf50','linf90','linf99');
+  renderPct(m,'vllm:request_queue_time_seconds','lque50','lque90','lque99');
+  // 缓存
+  const pcH=sumMetric(m,'vllm:prefix_cache_hits_total'), pcQ=sumMetric(m,'vllm:prefix_cache_queries_total');
+  const exH=sumMetric(m,'vllm:external_prefix_cache_hits_total'), exQ=sumMetric(m,'vllm:external_prefix_cache_queries_total');
+  set('cLocalPct', pcQ>0?(pcH/pcQ*100).toFixed(1)+'%':'—');
+  set('cExtPct', exQ>0?(exH/exQ*100).toFixed(1)+'%':'—');
+  set('cCached', formatNumber(sumMetric(m,'vllm:prompt_tokens_cached_total')||0));
+  set('mmQueries', formatNumber(c.mmQ||0));
+  set('mmHits', formatNumber(c.mmHits||0));
+  set('mmRate', fmtPct(c.mmRate));
+  // 分布
+  renderDistChart('barPrompt','tblPrompt',getPromptTokenBucketCounts(m));
+  renderDistChart('barGen','tblGen',getGenTokenBucketCounts(m));
+  // 状态
+  set('stPreempt', formatNumber(sumMetric(m,'vllm:num_preemptions_total')||0));
+  set('stWaitCap', getWaitingReason(m,'capacity')??'—');
+  set('stWaitDef', getWaitingReason(m,'deferred')??'—');
+  const sleep=getSleepState(m);
+  set('stSleep', sleep);
+  const sle=document.getElementById('stSleep'); if(sle) sle.className='sleepbig '+(sleep==='awake'?'good':'warn');
+}
+
+function setConn(online,err){
+  const cls = online?'dot green':'dot red';
+  setClass('statusDot', cls);
+  setClass('liveDot', cls);
+  set('statusText', online?'在线':'未连接');
+  set('liveText', online?'实时':'未连接');
+  set('connState', online?'正常':'断开'+(err?(' — '+err.message):''));
+  if(online){ const now=timeLabel(); set('connUpdate', now); set('updTime','更新于 '+now); }
+  else set('updTime', err?('连接失败: '+err.message):'等待数据…');
+}
+
+function markActive(name){
+  document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('active', b.dataset.tab===name));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active', p.dataset.panel===name));
+}
+let mainEl = document.querySelector('.main');
+function scrollSpy(){
+  const mTop = mainEl.getBoundingClientRect().top;
+  let section = 'overview';
+  document.querySelectorAll('.panel').forEach(p=>{
+    if (p.getBoundingClientRect().top - mTop <= 90) section = p.dataset.panel;
+  });
+  if (section !== marked) {
+    marked = section;
+    markActive(section);
+    if (cur.m) renderAll(cur.m);   // 刷新图表
+  }
+}
+let marked = 'overview';
+function goTo(name){
+  const el = document.getElementById('panel-'+name);
+  if (el) el.scrollIntoView({ behavior:'smooth', block:'start' });
+}
+
+function tick(){
+  fetch(METRICS_URL, { headers:{ Accept:'text/plain' } })
+    .then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status); return r.text(); })
+    .then(text=>{
+      const m=parsePrometheus(text);
+      const running=sumMetric(m,'vllm:num_requests_running')||0;
+      const waiting=sumMetric(m,'vllm:num_requests_waiting')||0;
+      const kvPerc = maxMetric(m,'vllm:kv_cache_usage_perc') ?? maxMetric(m,'vllm:gpu_cache_usage_perc');
+      const mmHits=sumMetric(m,'vllm:mm_cache_hits_total')||0;
+      const mmQ=sumMetric(m,'vllm:mm_cache_queries_total')||0;
+      const mmRate=(mmQ>0)?(mmHits/mmQ*100):null;
+      const prompt=sumMetric(m,'vllm:prompt_tokens_total')||0;
+      const gen=sumMetric(m,'vllm:generation_tokens_total')||0;
+      hist.labels.push(timeLabel());
+      hist.running.push(running); hist.waiting.push(waiting);
+      hist.kv.push(kvPerc===null?0:kvPerc*100);
+      hist.mm.push(mmRate===null?0:mmRate);
+      hist.prompt.push(prompt); hist.gen.push(gen);
+      if(hist.labels.length>MAXHIST) hist.labels.shift();
+      for(const k of ['running','waiting','kv','mm','prompt','gen']) if(hist[k].length>MAXHIST) hist[k].shift();
+      cur={ m, running, waiting, kvPerc, mmRate, mmHits, mmQ, prompt, gen };
+      renderAll(m);
+      setConn(true,null);
+    })
+    .catch(err=> setConn(false,err));
+}
+
+set('connUrl', METRICS_URL);
+set('connPoll', (POLL/1000)+'s');
+document.querySelectorAll('.nav button').forEach(b=> b.addEventListener('click', ()=>goTo(b.dataset.tab)));
+mainEl.addEventListener('scroll', scrollSpy, { passive:true });
+window.addEventListener('resize', ()=>{ if(cur.m) renderAll(cur.m); });
+scrollSpy();
+tick();
+setInterval(tick, POLL);
+</script>
+</body>
+</html>

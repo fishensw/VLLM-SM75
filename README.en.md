@@ -4,7 +4,21 @@
 
 SM75 compatibility and kernel optimizations, kept in sync with upstream [vLLM](https://github.com/vllm-project/vllm).
 
-vLLM-SM75 v0.1.3 is based on vLLM 0.28.0 and integrates MTP, DFlash2 and auto-sleep support.
+vLLM-SM75 v0.1.4 is based on vLLM 0.29.0 and integrates MTP, DFlash2 and auto-sleep support.
+
+## v0.1.4 Update Summary
+
+- **Firefly prefill**: INT8 IMMA acceleration for INT4 (W4A16/AWQ), improving prefill throughput. The hard-only path dequantizes from Marlin weights during prefill without retaining an additional full INT8 or clean INT4 weight copy. W8A8-FP8 prefill currently remains on Marlin.
+- **Firefly all-reduce**: custom FP8 quantized communication with SHM, P2P, multi-GPU butterfly and large-message chunking, reducing PCIe communication overhead for multi-GPU prefill. Supports power-of-two world sizes starting at two GPUs.
+- **Auto-sleep / deep-sleep**: adapts existing idle offload, transparent cold-start respawn and concurrent wake-up hardening to the new base, retaining GPU resource release, lower idle power and automatic wake-up.
+- **Single-file `/monitor` dashboard**: throughput, latency, concurrency, KV cache and sleep status without a separate deployment; enabled by default and controlled by `VLLM_MONITOR`.
+- **vLLM 0.29.0 base and v0.1.4 builds**: unified `vllm-sm75:v0.1.4` image with the official entrypoint and default UI presentation, plus a fast local build workflow for iterating on mounted source.
+
+### Compatibility fixes
+
+Adapts DFlash2 weight loading and KV layouts to the new APIs, corrects CPU KV group identification, adds DFlash input/sampling warmup, and completes Triton/extension cache mounts. DFlash2, CPU KV offload, persistent caches and low-power sleep already existed in v0.1.3 and remain available.
+
+See [release notes](docs/releases/v0.1.4.zh-CN.md), [FP8 measurements](docs/validation/v0.1.4.md), [AWQ measurements](docs/validation/v0.1.4-awq.md) and [AWQ configuration](docs/recommended-awq-dflash2.md). The throughput improvement concerns prefill, not a general decode speedup.
 
 ## v0.1.3 Update Summary
 
@@ -53,11 +67,7 @@ Real-world performance varies with hardware, models, request content and configu
 
 ### Persistent compilation caches
 
-The host persists `/root/.cache/vllm` and `/root/.cache/flashinfer`, including DFlash2 draft and candidate-selector artifacts. Keep these bind mounts when recreating containers.
-
-The corrected FP8 DFlash2 build on four T10 GPUs reused all three cache keys across startup, 60-second exit sleep/wake, and a restart configured for 30 minutes: **12 AOT loads and zero graph recompilations** per phase. Cache-loading phases were 3.81 / 0.76 / 0.06 seconds; complete wake-up took about 135.7 seconds. These are different measurements, not universal latency guarantees.
-
-Keep model files and compilation artifacts separate: `VLLM_SM75_MODEL_CACHE_ROOT` selects the model directory and `VLLM_SM75_CACHE_ROOT` selects the compilation-cache directory, as shown in the launch example below. Reuse existing model storage and migrate existing compilation caches when updating the launcher to avoid repeated downloads and compilation.
+The launcher persists vLLM, FlashInfer, Triton and PyTorch extension caches on the host, including matching DFlash2 draft and selector artifacts. Keep model and compilation directories separate and preserve mounts when recreating containers. First use and code/dependency/configuration changes can still require compilation; cache loading is only part of startup.
 
 ### 1. Clone
 
@@ -74,9 +84,13 @@ Requires Linux x86_64, Docker with BuildKit, Git and Bash. Inference additionall
 bash docker/build.sh
 ```
 
-Uses the digest-pinned official `vllm/vllm-openai:v0.28.0-cu129` image, installs the adaptations and compiles the SM75 extension to produce `vllm-sm75:v0.1.3`.
+Uses the digest-pinned official `vllm/vllm-openai:v0.29.0-cu129` image, installs the adaptations and compiles the SM75 extension to produce `vllm-sm75:v0.1.4`.
 
 ### 3. Run
+
+The image inherits the official `vllm serve` entrypoint and upstream startup/default UI presentation. Pass the model and options directly after the image name in `docker run`, without another `serve`. Commands executed inside a container still use `vllm serve ...`. Remove a leading `serve` from older container argument lists when migrating. `/monitor` remains an additional page.
+
+
 
 ```bash
 export VLLM_API_KEY='replace-with-your-api-key'
@@ -87,6 +101,8 @@ VARIANT=base FORMAT=fp8 bash docker/run.sh
 ```
 
 The default FP8 model is `Qwen/Qwen3.8-27B-FP8`, resolved through ModelScope. The script sets the API key, port, listening address and cache mounts. Stop the previous GPU service before selecting another mode; the script does not stop existing services.
+
+Firefly controls are forwarded by `docker/run.sh`; see the defaults and disable switches above.
 
 ```bash
 VARIANT=mtp FORMAT=fp8 bash docker/run.sh
@@ -105,7 +121,15 @@ curl --fail http://localhost:8000/v1/models \
   --header "Authorization: Bearer $VLLM_API_KEY"
 ```
 
-See [build and launch details](docker/BUILD-v0.1.3.md).
+See [build and launch details](docker/BUILD-v0.1.4.md).
+
+## Firefly
+
+INT4 uses the large-prefill path. FP8 linear computation stays on Marlin; the FP8 optimization tested here is quantized all-reduce. Small messages fall back to NCCL, with a default 1 MiB threshold and automatic backend selection. AWQ throughput has been measured at 1–128K; model quality and the final integrated fixes still require validation.
+
+## `/monitor` dashboard
+
+Open `http://HOST:PORT/monitor`. The self-contained page polls same-origin `/metrics`; no CDN or separate monitoring deployment is required. Set the container environment variable `VLLM_MONITOR=0` and recreate the container to disable it (`docker run -e VLLM_MONITOR=0`). The launcher does not separately forward this host variable. The dashboard and metrics currently do not require the model API key.
 
 ## Idle auto-sleep
 
@@ -129,7 +153,15 @@ Neither exit nor reload writes a runtime-memory snapshot to disk. Budget for nor
 
 FP8 DFlash2 exit was measured on T10 ×4 with the API online: P8 on all cards, 3 MiB per card, 9.97–15.31 W. Other GPU users and drivers can prevent P8. Validated topology is single API server, DP=1, TP4; cpu/reload GPU behavior and other topologies were not validated in this cache-fix run. Client/proxy timeouts must accommodate the full wake-up. Do not mix automatic sleep with development-only manual sleep/wake endpoints.
 
-See the [complete guide and resource requirements (Chinese)](docs/sleep-and-cache.md). This is a same-version fix: the image remains `vllm-sm75:v0.1.3`.
+See the [complete guide and resource requirements (Chinese)](docs/sleep-and-cache.md). This draft targets `vllm-sm75:v0.1.4`; historical sleep measurements are not combined-image acceptance.
+
+### Experimental disk snapshots
+
+The existing local `disk` backend saves model allocations and restores them in place. KV contents are invalidated and CUDA contexts remain alive; P8 is not guaranteed. It requires a writable real-disk mount and snapshot capacity. It is not part of the recommended v0.1.4 configuration or this GPU acceptance round.
+
+## Validation scope
+
+FP8/AWQ measurements belong to the compatibility-patched PR image. The combined image passed its build, AWQ startup and a single-request check. CPU KV recovery and a full sleep/P8 cycle were not repeated in this round. Historical v0.1.3 sleep results do not validate v0.1.4. Full data and conditions are linked above.
 
 ## License
 

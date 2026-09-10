@@ -40,6 +40,17 @@ def capture_config(config):
         cc.cudagraph_capture_sizes,cc.max_cudagraph_capture_size)
 
 
+def sync_attention_cache_layout(config):
+    """Propagate the engine's resolved layout into draft dtype config copies."""
+    from vllm.v1.attention.backends.utils import record_kv_cache_layout
+
+    layout = config.cache_config.get_resolved_kv_cache_layout().name
+    for layer in config.compilation_config.static_forward_context.values():
+        cache_config = getattr(getattr(layer, 'impl', None), 'cache_config', None)
+        if cache_config is not None and cache_config is not config.cache_config:
+            record_kv_cache_layout(cache_config, layout)
+
+
 def install():
     if os.environ.get('SM75_FA2_SMALLQ_GRAPH','0')!='1':return
     import vllm.v1.attention.backends.flashinfer as fi
@@ -113,7 +124,7 @@ def install():
             pages=batch*math.ceil(self.model_config.max_model_len/self.page_size)
             def buf(n):return torch.empty(n,dtype=torch.int32,device=self.device)
             self._sm75_graph_prefills[key]=fi.BatchPrefillWithPagedKVCacheWrapper(
-                self._get_workspace_buffer(),fi.get_kv_cache_layout(),backend='fa2',use_cuda_graph=True,
+                self._get_workspace_buffer(),fi.get_flashinfer_layout_string(self.kv_cache_layout),backend='fa2',use_cuda_graph=True,
                 qo_indptr_buf=buf(batch+1),paged_kv_indptr_buf=buf(batch+1),
                 paged_kv_indices_buf=buf(pages),paged_kv_last_page_len_buf=buf(batch))
             log.info('SM75 native FA2 Graph buffers: B=%d q=%d heads=%d/%d D=%d page=%d causal=%s',

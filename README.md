@@ -4,7 +4,23 @@
 
 持续同步官方 [vLLM](https://github.com/vllm-project/vllm)，完善 SM75 兼容支持与内核优化。
 
-vLLM-SM75 v0.1.3 基于 vLLM 0.28.0，集成 MTP、DFlash2 和自动休眠适配。
+vLLM-SM75 v0.1.4 基于 vLLM 0.29.0，集成 MTP、DFlash2 和自动休眠适配。
+
+## v0.1.4 更新简要
+
+- **Firefly prefill**：为 INT4（W4A16/AWQ）提供 INT8 IMMA 加速，提升 prefill 吞吐。采用 hard-only 路径，prefill 时从 Marlin 权重布局即时反量化，不额外常驻完整 INT8 或干净 INT4 权重副本。当前 W8A8-FP8 prefill 仍走 Marlin。
+- **Firefly all-reduce**：自定义 FP8 量化通信，支持 SHM、P2P 和多卡 butterfly，并对大消息分块，减少 PCIe 通信开销、改善多卡 prefill；支持2及更大的2次幂卡数。
+- **Auto-sleep / deep-sleep**：将已有自动 offload、`exit` 透明冷启动 respawn 和并发唤醒加固适配至新版底座，保留空闲释放GPU资源、降低待机功耗及新请求自动唤醒。
+- **`/monitor` 单文件监控看板**：直接查看吞吐、延迟、并发、KV缓存和休眠状态，无需额外部署；`VLLM_MONITOR` 控制开关，默认开启。
+- **升级 vLLM 底座与完善镜像构建流程**：基于 vLLM 0.29.0 构建 `vllm-sm75:v0.1.4`，保留官方启动入口和默认界面样式；提供完整镜像构建与本地快速构建两种方式，支持挂载源码、更新适配代码及按需编译扩展。
+
+### 兼容性修复
+
+- 修复 DFlash2 权重加载和主模型/草稿 KV 布局的新版接口兼容问题。
+- 修复 CPU KV 缓存组识别，避免将主模型组误判为草稿组；补充 DFlash2 输入准备和采样预热。
+- 完善 Triton 与扩展编译缓存挂载，保留 v0.1.3 已有的主模型、草稿和候选选择器缓存复用能力。
+
+DFlash2、CPU KV offload、持久化缓存和低功耗自动休眠均为已有功能，本次继续保留。详细变化与验证范围见[发布说明](docs/releases/v0.1.4.zh-CN.md)。
 
 ## v0.1.3 更新简要
 
@@ -22,6 +38,23 @@ vLLM-SM75 v0.1.3 基于 vLLM 0.28.0，集成 MTP、DFlash2 和自动休眠适配
 - 空闲自动睡眠支持 CPU、reload 和 exit；exit 模式释放引擎进程、CUDA context、worker 和显存，下一请求透明冷启动。
 
 ## 性能参考
+
+### v0.1.4 prefill 优化实测
+
+4 × Tesla T10 16 GiB，TP4，DFlash2 draft7。以下为PR兼容修补镜像的单轮合成测试，各输出512 tokens，无前缀命中；prefill按输入tokens/首字时间计算。
+
+| 配置 | 输入 | prefill（tok/s） | decode（tok/s） | 首字时间（秒） |
+| --- | ---: | ---: | ---: | ---: |
+| FP8 DFlash2 | 32K | 1205.85 | 179.12 | 27.17 |
+| FP8 DFlash2 | 128K | 978.19 | 166.39 | 133.99 |
+| AWQ DFlash2 | 32K | 1433.67 | 215.57 | 22.86 |
+| AWQ DFlash2 | 128K | 1124.88 | 198.40 | 116.52 |
+
+FP8 1–64K prefill相比已保存v0.1.3基线提升约3.8%–5.3%，8–64K decode基本持平；本次优化重点是 **prefill**。AWQ没有同口径旧版对照，不给出提升百分比。AWQ与FP8参数不同，表格不作为量化格式的同参数对照；重复文本的高草稿接受率也不代表日常聊天速度。
+
+[FP8完整数据](docs/validation/v0.1.4.md) · [AWQ完整数据](docs/validation/v0.1.4-awq.md) · [AWQ推荐配置](docs/recommended-awq-dflash2.md)
+
+### 历史基础性能（v0.1.2）
 
 测试环境：vLLM-SM75 v0.1.2，4 × Tesla T10 16 GiB、TP4、PCIe 3.0 ×8、CUDA 12.9、PyTorch 2.13.0、FlashInfer 0.6.18。
 
@@ -54,7 +87,7 @@ v0.1.2 的基础推理验收见[验证记录](docs/validation/v0.1.2.md)；v0.1.
 
 ### 编译缓存持久化
 
-启动脚本将 vLLM 和 FlashInfer 编译缓存保存在宿主机，包含 DFlash2 草稿模型及候选选择器的编译产物。重建容器时保留缓存挂载，可复用匹配缓存，避免重复编译。
+启动脚本将 vLLM、FlashInfer、Triton 和 PyTorch 扩展编译缓存持久化到宿主机，包含主模型、DFlash2 草稿和候选选择器的匹配产物。模型目录与编译目录分开，变量示例见下面启动命令；更新镜像或重建容器时保留挂载。首次运行及代码、依赖或计算配置变化仍可能需要编译，缓存加载时间不等于完整启动时间。
 
 ### 1. 克隆
 
@@ -71,9 +104,13 @@ Linux x86_64，需安装 Docker、Git 和 Bash。启动模型另需 NVIDIA 驱�
 bash docker/build.sh
 ```
 
-基于固定 digest 的官方 `vllm/vllm-openai:v0.28.0-cu129` 镜像，安装全部适配并编译 SM75 扩展，生成 `vllm-sm75:v0.1.3`。
+基于固定 digest 的官方 `vllm/vllm-openai:v0.29.0-cu129` 镜像，安装全部适配并编译 SM75 扩展，生成 `vllm-sm75:v0.1.4`。
 
 ### 3. 启动
+
+镜像继承官方 `vllm/vllm-openai:v0.29.0-cu129` 的 `vllm serve` 入口及默认启动画面/UI样式。直接 `docker run` 时镜像名后填写模型和参数，**不再添加 `serve`**；在容器内手动执行仍使用 `vllm serve ...`。从旧自定义入口迁移时删除容器参数开头多余的 `serve`，模型参数保持原值。`/monitor` 为独立附加页面。
+
+
 
 ```bash
 export VLLM_API_KEY='replace-with-your-api-key'
@@ -86,6 +123,8 @@ VARIANT=base FORMAT=fp8 bash docker/run.sh
 
 FP8 默认通过 ModelScope 加载 `Qwen/Qwen3.8-27B-FP8`。脚本配置监听地址、端口、API key 和持久化挂载。使用相同 GPU 的模式按需互斥启动，脚本不会停止现有服务。
 
+Firefly 控制变量可直接传给 `docker/run.sh`，配置与关闭方式见下文。
+
 ```bash
 # MTP5：使用同一个镜像
 VARIANT=mtp FORMAT=fp8 bash docker/run.sh
@@ -97,7 +136,7 @@ DRAFT_MODEL=/models/Qwen3.8-27B-DFlash2 VARIANT=dflash2 FORMAT=fp8 \
 ```
 
 DFlash draft 使用 `incoai/Qwen3.8-27B-DFlash2`，完整模型文件放入上述挂载目录。
-AWQ 使用 `philbert440/Qwen3.8-27B-W4A16-AWQ`，下载后设置 `MODEL=/models/Qwen3.8-27B-W4A16-AWQ FORMAT=awq`。其余配置见[构建与启动说明](docker/BUILD-v0.1.3.md)。
+AWQ 使用 `philbert440/Qwen3.8-27B-W4A16-AWQ`，下载后设置 `MODEL=/models/Qwen3.8-27B-W4A16-AWQ FORMAT=awq`。其余配置见[构建与启动说明](docker/BUILD-v0.1.4.md)。
 
 ```bash
 curl --fail http://localhost:8000/health
@@ -106,6 +145,27 @@ curl --fail http://localhost:8000/v1/models \
 ```
 
 已完成本地 GPU 验证的配置、可复制的完整命令与实测效果见[FP8 DFlash2 推荐配置](docs/recommended-fp8-dflash2.md)。
+
+## Firefly
+
+INT4 路径用于大批量 prefill；本版本 FP8 线性计算仍使用 Marlin，FP8 测试启用的是 Firefly all-reduce。不能把未启用的 FP8 线性内核或其他模型数据作为当前27B的加速结果。
+
+脚本默认 `VLLM_FIREFLY=1`、`VLLM_FIREFLY_AR=auto`，通信后端自动选择，阈值为1MiB；小消息回退 NCCL。为匹配已测路径，独立的官方 FlashInfer all-reduce 默认设为0。
+
+```bash
+# 关闭 Firefly 计算和通信优化，其他推理参数不变
+VLLM_FIREFLY=0 VLLM_FIREFLY_AR=0 bash docker/run.sh
+# 只关闭 Firefly all-reduce
+VLLM_FIREFLY_AR=0 bash docker/run.sh
+```
+
+`--disable-custom-all-reduce` 不会关闭 Firefly。AWQ 路径已完成1–128K吞吐测试；量化通信对模型质量的影响未完成本轮验收。
+
+## `/monitor` 监控看板
+
+启动后访问 `http://主机IP:端口/monitor`。单文件HTML页面自动读取同源 `/metrics`，显示吞吐、并发、KV缓存、延迟分位、抢占与休眠状态，无CDN或额外监控服务依赖。
+
+默认开启；关闭时在 Docker/Unraid 容器环境变量中设置 `VLLM_MONITOR=0`，重新创建容器后生效。`docker run` 对应参数为 `-e VLLM_MONITOR=0`；当前启动脚本不单独透传宿主机的该变量。看板和 `/metrics` 当前无需模型API key即可访问。
 
 ## 空闲自动休眠
 
@@ -156,7 +216,7 @@ AUTO_SLEEP_IDLE_TIMEOUT=0 bash docker/run.sh
 
 exit 只在退出前提示预热主模型文件页，没有后台预热进程。预热是 OS 提示，不能保证唤醒必定命中内存中的文件页。客户端及反向代理超时应覆盖完整唤醒时间。
 
-### 已验证的推荐配置与效果
+### 已验证的推荐配置与效果（v0.1.3）
 
 **FP8 DFlash2 + 30 分钟 exit**：4 × Tesla T10 16 GiB、TP4、约 31 GiB 主机 RAM，CPU 使用 ondemand。主模型 `Qwen/Qwen3.8-27B-FP8`，草稿 `incoai/Qwen3.8-27B-DFlash2`。
 
@@ -178,6 +238,14 @@ nvidia-smi --query-gpu=index,pstate,memory.used,power.draw --format=csv
 ```
 
 P8 还取决于其他 GPU 进程、硬件和驱动，显存不要求绝对归零。当前 exit 验证环境为单 API server、DP=1、TP4；上述结果不代表其他模式、所有模型或 262K 长上下文都完成了本轮验收。CPU/reload 本轮只有状态机与参数测试，没有 GPU 唤醒性能保证。
+
+### 实验性磁盘快照
+
+本地保留 `disk` 快照休眠开发代码：保存模型分配并原位恢复，KV按休眠协议失效，CUDA上下文仍保留，不保证P8。需要真实磁盘挂载及足够快照空间，尚不作为v0.1.4日常推荐；配置见[完整休眠说明](docs/sleep-and-cache.md)。
+
+## 验证范围
+
+FP8/AWQ性能数据来自PR兼容修补镜像；整合镜像已完成构建、AWQ启动和单请求检查，CPU KV实际恢复及完整休眠/P8回归未在本轮重测。历史v0.1.3休眠数据不等于v0.1.4验收，范围与证据分别保留在详细报告中。
 
 ## License
 

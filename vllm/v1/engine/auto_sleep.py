@@ -62,7 +62,7 @@ OFFLOAD_TARGET_ENV = "VLLM_AUTO_SLEEP_OFFLOAD_TARGET"
 RELOAD_PATH_ENV = "VLLM_AUTO_SLEEP_RELOAD_PATH"
 PAGE_CACHE_KEEP_INTERVAL_ENV = "VLLM_AUTO_SLEEP_PAGE_CACHE_KEEP_INTERVAL"
 
-_OFFLOAD_TARGETS = ("cpu", "reload", "exit")
+_OFFLOAD_TARGETS = ("cpu", "reload", "exit", "disk")
 
 # Default interval (seconds) between page-cache re-warm ticks while the
 # engine sleeps in reload mode.  0 disables the background keeper (the
@@ -114,7 +114,7 @@ class AutoSleepConfig:
 
     @property
     def sleep_level(self) -> int:
-        return 1 if self.offload_target == "cpu" else 2
+        return 1 if self.offload_target in ("cpu", "disk") else 2
 
     @property
     def is_exit(self) -> bool:
@@ -265,6 +265,24 @@ class PageCacheKeeper:
             warm_safetensors_page_cache(self._model_path)
 
 
+def _prepare_disk_worker(worker: Any) -> dict:
+    # Return errors as data so collective_rpc drains every TP response.
+    # Raising on the first rank could leave replies queued on other ranks.
+    try:
+        worker._get_sleep_mode_backend().prepare()
+        return {"ok": True}
+    except Exception as exc:
+        return {"ok": False, "error": str(exc)}
+
+
+def _cancel_disk_worker(worker: Any) -> dict:
+    try:
+        worker._get_sleep_mode_backend().cancel_preparation()
+        return {"ok": True}
+    except Exception as exc:
+        return {"ok": False, "error": str(exc)}
+
+
 class AutoSleepController:
     """Idle auto-sleep state machine driven by EngineCore hooks.
 
@@ -323,6 +341,9 @@ class AutoSleepController:
         if not self.enabled:
             return
         engine_core._idle_state_callbacks.append(self.on_idle)
+        if self._state is AutoSleepState.SLEEPING and not self._engine.is_sleeping():
+            self._stop_keeper()
+            self._set_state(AutoSleepState.ACTIVE)
         if self._state is not AutoSleepState.ACTIVE:
             return
         if self._timer is not None:
@@ -352,6 +373,7 @@ class AutoSleepController:
             # controller thought it was asleep): stop any lingering keeper so
             # it is only ever running while actually sleeping.
             self._stop_keeper()
+            self._set_state(AutoSleepState.ACTIVE)
 
     def on_wakeup_poke(self) -> None:
         """Hook for the EngineCore WAKEUP input branch (main thread).
@@ -365,7 +387,14 @@ class AutoSleepController:
             return
         if self._engine.scheduler.has_requests():
             return
-        if time.monotonic() - self._last_activity < self._config.timeout_seconds:
+        remaining = self._config.timeout_seconds - (time.monotonic() - self._last_activity)
+        if remaining > 0:
+            # Timers may fire slightly early. Dropping this poke would leave
+            # an idle engine awake forever because there is no further input.
+            self._cancel_timer()
+            self._timer = threading.Timer(remaining + 0.001, self._poke)
+            self._timer.daemon = True
+            self._timer.start()
             return
         if self._config.is_exit:
             self._deep_sleep_exit()
@@ -430,15 +459,41 @@ class AutoSleepController:
             self._state = state
 
     def _sleep(self) -> None:
+        if self._config.offload_target == "disk":
+            # Two phases: save/check every rank before pausing scheduling or
+            # unmapping any allocation. A disk I/O failure leaves all models
+            # resident and all RPC response queues aligned.
+            results = self._engine.model_executor.collective_rpc(_prepare_disk_worker)
+            if not results or not all(result["ok"] for result in results):
+                cleanup = self._engine.model_executor.collective_rpc(_cancel_disk_worker)
+                logger.error("disk-sleep: preparation failed; models stay active: %s; "
+                             "cleanup=%s", results, cleanup)
+                self._set_state(AutoSleepState.ACTIVE)
+                return
         self._set_state(AutoSleepState.SLEEPING)
         level = self._config.sleep_level
         try:
             self._engine.sleep(level)
         except Exception:
             logger.exception(
-                "auto-sleep: sleep(level=%d) failed; engine stays active",
+                "auto-sleep: sleep(level=%d) failed; restoring all workers",
                 level,
             )
+            # EngineCore pauses the scheduler before worker RPCs. An RPC
+            # failure may leave only some TP ranks asleep, while the executor
+            # has not yet set is_sleeping. Its regular wake_up would then
+            # return early. Restore every rank explicitly before unpausing.
+            try:
+                executor = self._engine.model_executor
+                executor.collective_rpc("wake_up", kwargs={"tags": None})
+                executor.is_sleeping = False
+                if hasattr(executor, "sleeping_tags"):
+                    executor.sleeping_tags.clear()
+                self._engine.resume_scheduler()
+            except Exception:
+                self._set_state(AutoSleepState.SLEEPING)
+                logger.exception("auto-sleep: rollback failed; scheduler stays paused")
+                raise
             self._set_state(AutoSleepState.ACTIVE)
             return
         self._start_keeper()
@@ -499,7 +554,7 @@ class AutoSleepController:
                 )
         except Exception:
             logger.exception("auto-sleep: wake_up failed")
-            self._set_state(AutoSleepState.ACTIVE)
+            self._set_state(AutoSleepState.SLEEPING)
             raise
         elapsed = time.monotonic() - start
         self._set_state(AutoSleepState.ACTIVE)

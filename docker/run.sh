@@ -15,18 +15,21 @@ CACHE_ROOT="${VLLM_SM75_CACHE_ROOT:?Set VLLM_SM75_CACHE_ROOT to an absolute host
 [[ "$CACHE_ROOT" == /* ]] || { echo 'Cache path must be absolute' >&2; exit 2; }
 MODEL_CACHE_ROOT="${VLLM_SM75_MODEL_CACHE_ROOT:-$CACHE_ROOT/models}"
 [[ "$MODEL_CACHE_ROOT" == /* ]] || { echo 'Model cache path must be absolute' >&2; exit 2; }
-mkdir -p "$MODEL_CACHE_ROOT" "$CACHE_ROOT/$FORMAT/vllm" "$CACHE_ROOT/shared/flashinfer"
+mkdir -p "$MODEL_CACHE_ROOT" "$CACHE_ROOT/$FORMAT/vllm" "$CACHE_ROOT/shared/flashinfer" \
+  "$CACHE_ROOT/$FORMAT/triton" "$CACHE_ROOT/shared/torch_extensions"
 mounts=(--volume "$MODEL_CACHE_ROOT:/root/.cache/modelscope"
   --volume "$MODEL_CACHE_ROOT:/root/.cache/huggingface"
   --volume "$CACHE_ROOT/$FORMAT/vllm:/root/.cache/vllm"
-  --volume "$CACHE_ROOT/shared/flashinfer:/root/.cache/flashinfer")
+  --volume "$CACHE_ROOT/shared/flashinfer:/root/.cache/flashinfer"
+  --volume "$CACHE_ROOT/$FORMAT/triton:/root/.triton/cache"
+  --volume "$CACHE_ROOT/shared/torch_extensions:/root/.cache/torch_extensions")
 if [[ -n "${MODEL_ROOT:-}" ]]; then
   [[ "$MODEL_ROOT" == /* && -d "$MODEL_ROOT" ]] || { echo 'MODEL_ROOT must be an existing absolute directory' >&2; exit 2; }
   mounts+=(--volume "$MODEL_ROOT:/models:ro")
 fi
 seq=4; batch=8192; util=0.87; length=auto
 [[ "$FORMAT" != awq ]] || { seq=8; batch=16384; }
-image=vllm-sm75:v0.1.3
+image=vllm-sm75:v0.1.4
 graph='{"cudagraph_mode":"FULL_AND_PIECEWISE"}'
 extra=()
 AUTO_SLEEP_IDLE_TIMEOUT="${AUTO_SLEEP_IDLE_TIMEOUT:-30}"
@@ -35,10 +38,15 @@ if [[ "$AUTO_SLEEP_IDLE_TIMEOUT" != 0 ]]; then
   extra+=(--auto-sleep-idle-timeout "$AUTO_SLEEP_IDLE_TIMEOUT"
     --auto-sleep-offload-target "$AUTO_SLEEP_OFFLOAD_TARGET")
   case "$AUTO_SLEEP_OFFLOAD_TARGET" in
+    cpu|reload|disk) extra+=(--enable-sleep-mode) ;;
     exit) ;;
-    cpu|reload) extra+=(--enable-sleep-mode) ;;
-    *) echo 'AUTO_SLEEP_OFFLOAD_TARGET must be cpu, reload, or exit' >&2; exit 2 ;;
+    *) echo 'AUTO_SLEEP_OFFLOAD_TARGET must be cpu, reload, exit, or disk' >&2; exit 2 ;;
   esac
+  if [[ "$AUTO_SLEEP_OFFLOAD_TARGET" == disk ]]; then
+    mkdir -p "$CACHE_ROOT/sleep/$VARIANT-$FORMAT"
+    mounts+=(--volume "$CACHE_ROOT/sleep/$VARIANT-$FORMAT:/sleep-state")
+    extra+=(--auto-sleep-disk-path /sleep-state)
+  fi
   if [[ -n "${AUTO_SLEEP_RELOAD_PATH:-}" ]]; then
     extra+=(--auto-sleep-reload-path "$AUTO_SLEEP_RELOAD_PATH")
   fi
@@ -62,8 +70,13 @@ docker run --detach --name "${CONTAINER_NAME:-vllm-sm75-$VARIANT-$FORMAT}" \
   --env VLLM_USE_MODELSCOPE=true --env MODELSCOPE_CACHE=/root/.cache/modelscope/hub \
   --env VLLM_GDN_DECODE_KERNEL=triton --env VLLM_USE_FLASHINFER_SAMPLER=0 \
   --env VLLM_USE_NCCL_SYMM_MEM=0 --env VLLM_ALLREDUCE_USE_SYMM_MEM=0 \
+  --env TRITON_CACHE_DIR=/root/.triton/cache --env TORCH_EXTENSIONS_DIR=/root/.cache/torch_extensions \
+  --env VLLM_ALLREDUCE_USE_FLASHINFER="${VLLM_ALLREDUCE_USE_FLASHINFER:-0}" \
+  --env VLLM_FIREFLY="${VLLM_FIREFLY:-1}" --env VLLM_FIREFLY_AR="${VLLM_FIREFLY_AR:-auto}" \
+  --env VLLM_FIREFLY_AR_BACKEND="${VLLM_FIREFLY_AR_BACKEND:-auto}" \
+  --env VLLM_FIREFLY_AR_MIN_SIZE="${VLLM_FIREFLY_AR_MIN_SIZE:-1048576}" \
   --env OMP_NUM_THREADS=2 --env MAX_JOBS=1 --env TORCHINDUCTOR_COMPILE_THREADS=1 \
-  "$image" serve "$MODEL" --served-model-name "$SERVE_NAME" \
+  "$image" "$MODEL" --served-model-name "$SERVE_NAME" \
   --host 0.0.0.0 --port 8000 --api-key "$VLLM_API_KEY" \
   --tensor-parallel-size 4 --disable-custom-all-reduce \
   --max-num-seqs "$seq" --max-num-batched-tokens "$batch" \

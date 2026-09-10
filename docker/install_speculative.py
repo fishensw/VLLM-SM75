@@ -15,8 +15,8 @@ def install(source, package, evidence):
         records[rel.as_posix()] = hashlib.sha256(dest.read_bytes()).hexdigest()
         if not compileall.compile_file(str(dest), quiet=1):
             raise RuntimeError(f'Syntax check failed: {rel}')
-    if len(records) != 6:
-        raise RuntimeError('Expected six reviewed speculative source files')
+    if len(records) != 8:
+        raise RuntimeError('Expected eight reviewed speculative source files')
     runner = (package / 'v1/worker/gpu/model_runner.py').read_text(encoding='utf-8')
     for hook in ('_sm75_fa2_graph.install()', '_sm75_gdn_meta.install()'):
         if hook not in runner:

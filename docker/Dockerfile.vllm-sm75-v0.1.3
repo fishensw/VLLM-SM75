@@ -52,7 +52,6 @@ LABEL org.opencontainers.image.created="${BUILD_DATE}" \
 
 COPY vllm/envs.py /tmp/sm75-overlay/envs.py
 COPY vllm/config/model.py /tmp/sm75-overlay/config/model.py
-COPY vllm/config/compilation.py /tmp/sm75-overlay/config/compilation.py
 COPY vllm/engine/arg_utils.py /tmp/sm75-overlay/engine/arg_utils.py
 COPY vllm/entrypoints/serve/utils/api_utils.py \
     /tmp/sm75-overlay/entrypoints/serve/utils/api_utils.py
@@ -70,6 +69,10 @@ COPY vllm/v1/attention/backends/gdn_attn.py \
     /tmp/sm75-overlay/v1/attention/backends/gdn_attn.py
 COPY vllm/v1/engine/auto_sleep.py \
     /tmp/sm75-overlay/v1/engine/auto_sleep.py
+COPY vllm/device_allocator/disk_snapshot.py \
+    /tmp/sm75-overlay/device_allocator/disk_snapshot.py
+COPY vllm/device_allocator/disk_sleep.py \
+    /tmp/sm75-overlay/device_allocator/disk_sleep.py
 COPY vllm/v1/engine/core.py \
     /tmp/sm75-overlay/v1/engine/core.py
 COPY vllm/v1/engine/async_llm.py \
@@ -101,6 +104,10 @@ COPY tests/config/test_model_dtype_override.py \
     /opt/vllm-sm75/source/v0.1.3/tests/config/test_model_dtype_override.py
 COPY tests/v1/engine/test_auto_sleep.py \
     /opt/vllm-sm75/source/v0.1.3/tests/v1/engine/test_auto_sleep.py
+COPY tests/v1/engine/test_disk_snapshot.py \
+    /opt/vllm-sm75/source/v0.1.3/tests/v1/engine/test_disk_snapshot.py
+COPY tests/v1/engine/disk_sleep_gpu_check.py \
+    /opt/vllm-sm75/source/v0.1.3/tests/v1/engine/disk_sleep_gpu_check.py
 
 COPY --from=flashqla-builder /opt/flashqla-build/flash_qla_sm75_gdn.so \
     /opt/vllm-sm75/extensions/flash_qla_sm75_gdn.so
@@ -129,6 +136,7 @@ RUN uv pip install --system pytest==9.1.0 && \
         /opt/vllm-sm75/source/v0.1.3/tests/entrypoints/serve/utils/test_api_utils.py::test_sensitive_args_are_redacted_without_mutating_input \
         /opt/vllm-sm75/source/v0.1.3/tests/config/test_model_dtype_override.py \
         /opt/vllm-sm75/source/v0.1.3/tests/v1/engine/test_auto_sleep.py \
+        /opt/vllm-sm75/source/v0.1.3/tests/v1/engine/test_disk_snapshot.py \
         -v > /tmp/selector-pytest.log 2>&1
 
 FROM runtime AS verified-runtime

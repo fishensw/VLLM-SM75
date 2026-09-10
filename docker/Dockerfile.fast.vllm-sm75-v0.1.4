@@ -1,0 +1,66 @@
+# syntax=docker/dockerfile:1.7
+# fast 基础镜像: 只做"稳定基建 + 预编译 flash_qla"。overlay .py 不在这里,
+# 由容器内 /opt/vllm-sm75/fast_compile.sh 从挂载项目目录软编译(见 build_fast.sh)。
+# 目的: 避开反复 docker build 撞 containerd snapshotter 抖动, 迭代时只重启容器。
+
+ARG BASE_IMAGE=vllm/vllm-openai:v0.29.0-cu129@sha256:7ef5a35d1ef8ce2cf9d671dd91eec6e367c5849262e0362b4d3d4a26be0d87d2
+
+# 1) flashinfer 0.6.18 + 去 jit-cache(无 SM75 AOT cubin, 会挂 CUDA graph warmup)
+FROM ${BASE_IMAGE} AS sm75-base
+RUN uv pip uninstall --system flashinfer-jit-cache && \
+    uv pip install --system --no-cache --no-deps flashinfer-python==0.6.18 flashinfer-cubin==0.6.18 \
+        --extra-index-url https://flashinfer.ai/whl/
+
+# 2) 预编译 flash_qla GDN prefill .so(稳定内核, nvcc 慢, 编一次进 base 免每次启动等)
+FROM sm75-base AS flashqla-builder
+ENV TORCH_CUDA_ARCH_LIST=7.5
+ARG MAX_JOBS=1
+ENV MAX_JOBS=${MAX_JOBS}
+WORKDIR /opt/flashqla-build
+COPY vllm/third_party/flash_qla_sm75 /opt/flashqla-build/source
+RUN python3 /opt/flashqla-build/source/build_extension.py \
+    --build-directory /opt/flashqla-build/work \
+    --output /opt/flashqla-build/flash_qla_sm75_gdn.so \
+    --verbose && \
+    cuobjdump --list-elf /opt/flashqla-build/flash_qla_sm75_gdn.so \
+        > /opt/flashqla-build/cuobjdump.txt && \
+    test "$(grep -Eo 'sm_[0-9]+' /opt/flashqla-build/cuobjdump.txt | sort -u)" = "sm_75"
+
+# 3) runtime base: transformers + patch + 预编译 flashqla .so + 软编译工具
+#    overlay .py 留到容器内 fast_compile.sh
+FROM sm75-base AS runtime
+RUN uv pip install --system transformers==5.15.1
+ARG VLLM_SM75_RELEASE=vllm-sm75-fast-v0.1.4
+ARG UPSTREAM_VLLM_COMMIT=98dff2a81d747d1dba01a47f939f48c3526d4206
+LABEL org.opencontainers.image.title="VLLM-SM75 fast v0.1.4" \
+      org.opencontainers.image.version="${VLLM_SM75_RELEASE}" \
+      ai.vllm.upstream.commit="${UPSTREAM_VLLM_COMMIT}" \
+      ai.vllm.upstream.version="v0.29.0"
+RUN mkdir -p /opt/vllm-sm75/extensions /opt/vllm-sm75/work /opt/vllm-sm75/evidence
+# patch 必须和 transformers 5.15.1 同层之后; 工具放 /opt 供 fast_compile 调用
+COPY docker/patch_transformers_startup.py /tmp/patch_transformers_startup.py
+COPY docker/install_sm75_overlay.py /opt/vllm-sm75/install_sm75_overlay.py
+COPY docker/install_speculative.py /opt/vllm-sm75/install_speculative.py
+COPY docker/verify_sm75_image.py /opt/vllm-sm75/verify_sm75_image.py
+COPY docker/fast_compile.sh /opt/vllm-sm75/fast_compile.sh
+RUN python3 /tmp/patch_transformers_startup.py && rm /tmp/patch_transformers_startup.py && \
+    chmod +x /opt/vllm-sm75/fast_compile.sh
+# 预编译 flashqla 进 base
+COPY --from=flashqla-builder /opt/flashqla-build/flash_qla_sm75_gdn.so \
+    /opt/vllm-sm75/extensions/flash_qla_sm75_gdn.so
+COPY --from=flashqla-builder /opt/flashqla-build/cuobjdump.txt \
+    /opt/vllm-sm75/evidence/flashqla_cuobjdump.txt
+# firefly 默认开(int4 走 int8 prefill, fp8 走 marlin); flashqla 用 base 预编译(禁 JIT)
+ENV FLASH_QLA_SM75_PREBUILT_EXTENSION_PATH=/opt/vllm-sm75/extensions/flash_qla_sm75_gdn.so \
+    FLASH_QLA_SM75_ALLOW_JIT=0 \
+    PYTHONWARNINGS=ignore::FutureWarning \
+    TRANSFORMERS_VERBOSITY=error \
+    VLLM_FIREFLY=auto \
+    VLLM_USE_MODELSCOPE=true \
+    MODELSCOPE_CACHE=/root/.cache/modelscope/hub \
+    SM75_FA2_SMALLQ_GRAPH=1 \
+    SM75_GDN_B1_METADATA=1
+
+FROM runtime AS final
+# Inherit the official ENTRYPOINT ["vllm", "serve"] and unset CMD.
+# Keep upstream CLI startup presentation and default UI assets.

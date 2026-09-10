@@ -21,13 +21,25 @@ def main() -> None:
     files = [
         "envs.py",
         "config/model.py",
+        "device_allocator/disk_snapshot.py",
+        "device_allocator/disk_sleep.py",
         "config/compilation.py",
         "engine/arg_utils.py",
         "entrypoints/serve/utils/api_utils.py",
+        "entrypoints/serve/instrumentator/metrics.py",
+        "entrypoints/serve/instrumentator/monitor.py",
+        "entrypoints/serve/instrumentator/dashboard.html",
         "distributed/kv_transfer/kv_connector/v1/base.py",
+        "model_executor/kernels/linear/mixed_precision/marlin.py",
+        "model_executor/kernels/linear/scaled_mm/marlin.py",
         "model_executor/layers/mamba/gdn/qwen_gdn_linear_attn.py",
         "model_executor/layers/quantization/kv_cache.py",
         "model_executor/layers/quantization/utils/marlin_utils_fp8.py",
+        "model_executor/layers/quantization/utils/firefly.py",
+        "model_executor/layers/quantization/utils/firefly.cu",
+        "distributed/device_communicators/firefly_allreduce.py",
+        "distributed/device_communicators/firefly_allreduce.cu",
+        "distributed/device_communicators/cuda_communicator.py",
         "v1/attention/backends/flashinfer.py",
         "v1/attention/backends/gdn_attn.py",
         "v1/engine/async_llm.py",
@@ -42,6 +54,12 @@ def main() -> None:
             raise FileNotFoundError(source)
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source, destination)
+
+    backend_file = package_root / "device_allocator/sleep_mode_backend.py"
+    registration = '\nSleepModeBackendFactory.register_backend(\n    "disk", "vllm.device_allocator.disk_sleep", "DiskSleepBackend",\n)\n'
+    backend_text = backend_file.read_text()
+    if '"vllm.device_allocator.disk_sleep"' not in backend_text:
+        backend_file.write_text(backend_text + registration)
 
     third_party_source = source_root / "third_party/flash_qla_sm75"
     third_party_destination = package_root / "third_party/flash_qla_sm75"
