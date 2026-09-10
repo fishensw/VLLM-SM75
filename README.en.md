@@ -88,7 +88,7 @@ Uses the digest-pinned official `vllm/vllm-openai:v0.29.0-cu129` image, installs
 
 ### 3. Run
 
-When starting with `docker run`, place the model path and options directly after the image name; do not add `serve`.
+Start the container with `docker run`, placing the model path and startup options after the image name.
 
 
 

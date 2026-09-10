@@ -108,7 +108,7 @@ bash docker/build.sh
 
 ### 3. 启动
 
-使用 `docker run` 启动时，在镜像名后直接填写模型路径和启动参数，无需添加 `serve`。
+使用 `docker run` 启动容器，在镜像名后填写模型路径和启动参数。
 
 
 
