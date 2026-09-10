@@ -113,7 +113,7 @@ def install():
             pages=batch*math.ceil(self.model_config.max_model_len/self.page_size)
             def buf(n):return torch.empty(n,dtype=torch.int32,device=self.device)
             self._sm75_graph_prefills[key]=fi.BatchPrefillWithPagedKVCacheWrapper(
-                self._get_workspace_buffer(),fi.get_kv_cache_layout(),backend='fa2',use_cuda_graph=True,
+                self._get_workspace_buffer(),fi.get_flashinfer_layout_string(self.kv_cache_layout),backend='fa2',use_cuda_graph=True,
                 qo_indptr_buf=buf(batch+1),paged_kv_indptr_buf=buf(batch+1),
                 paged_kv_indices_buf=buf(pages),paged_kv_last_page_len_buf=buf(batch))
             log.info('SM75 native FA2 Graph buffers: B=%d q=%d heads=%d/%d D=%d page=%d causal=%s',
