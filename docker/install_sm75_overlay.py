@@ -42,6 +42,7 @@ def main() -> None:
         "distributed/device_communicators/cuda_communicator.py",
         "v1/attention/backends/flashinfer.py",
         "v1/attention/backends/gdn_attn.py",
+        "v1/core/sched/scheduler_sm75.py",
         "v1/engine/async_llm.py",
         "v1/engine/auto_sleep.py",
         "v1/engine/core.py",

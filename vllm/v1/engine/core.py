@@ -906,6 +906,19 @@ class EngineCore:
         """Return whether the scheduler is in any pause state."""
         return self.scheduler.pause_state != PauseState.UNPAUSED
 
+    # vllm-sm75 overlay: runtime speculative-decoding on/off. Reached from the
+    # frontend via the generic UTILITY channel (no dedicated core_client method).
+    # Toggling only changes whether drafting runs on subsequent steps; the draft
+    # model, CUDA graphs and draft KV cache stay resident.
+    def set_speculative_decoding(self, enabled: bool) -> None:
+        self.scheduler.set_spec_decode_enabled(enabled)
+
+    def is_speculative_decoding_enabled(self) -> bool:
+        return self.scheduler.is_spec_decode_enabled()
+
+    def is_speculative_decoding_configured(self) -> bool:
+        return self.scheduler.is_spec_decode_configured()
+
     def sleep(self, level: int = 1, mode: PauseMode = "abort") -> None | Future:
         """Put the engine to sleep at the specified level.
 

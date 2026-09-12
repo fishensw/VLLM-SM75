@@ -981,6 +981,24 @@ class AsyncLLM(EngineClient):
         """Return whether the engine is currently paused."""
         return await self.engine_core.is_scheduler_paused_async()
 
+    # vllm-sm75 overlay: runtime speculative-decoding on/off. Uses the generic
+    # UTILITY channel (no dedicated core_client method needed); the engine-core
+    # methods are looked up by name on the other side.
+    async def set_speculative_decoding(self, enabled: bool) -> None:
+        await self.engine_core.call_utility_async(
+            "set_speculative_decoding", enabled
+        )
+
+    async def is_speculative_decoding_enabled(self) -> bool:
+        return await self.engine_core.call_utility_async(
+            "is_speculative_decoding_enabled"
+        )
+
+    async def is_speculative_decoding_configured(self) -> bool:
+        return await self.engine_core.call_utility_async(
+            "is_speculative_decoding_configured"
+        )
+
     async def encode(
         self,
         prompt: PromptType | EngineInput,
