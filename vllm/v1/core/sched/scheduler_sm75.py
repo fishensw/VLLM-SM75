@@ -14,7 +14,22 @@
 # 运行时基类就是 AsyncScheduler;继承它可保住 async 调度,不被 get_scheduler_cls
 # 的 warning 降级。
 
+import os
+
 from vllm.v1.core.sched.async_scheduler import AsyncScheduler
+
+# 关值集合: VLLM_SPEC_DECODE 命中即"启动时关闭投机", 否则默认开。
+# 与 monitor.py 的 VLLM_MONITOR 同款风格(直读环境变量, 不依赖 vllm.envs)。
+_OFF_VALUES = ("0", "off", "false", "no")
+
+
+def _initial_spec_decode_enabled() -> bool:
+    """启动时的初始投机状态, 由 VLLM_SPEC_DECODE 决定。
+
+    默认开(未设 = 启动即开); 显式设 0/off/false/no = 启动即关(先跑纯 target
+    decode, 运行中经 /monitor 按钮开启)。运行中仍可经 API 随时切换, 覆盖 env 值。
+    """
+    return os.environ.get("VLLM_SPEC_DECODE", "1").strip().lower() not in _OFF_VALUES
 
 
 class SM75Scheduler(AsyncScheduler):
@@ -33,7 +48,8 @@ class SM75Scheduler(AsyncScheduler):
     def __init__(self, *args, **kwargs) -> None:
         # 必须在 super().__init__ 之前: 父类 __init__ 执行期间就会读
         # self.num_spec_tokens(触发 getter, 读这个 flag)。
-        self._spec_decode_enabled = True
+        # 初始值由 VLLM_SPEC_DECODE 决定, 默认开(未设 = 启动即开)。
+        self._spec_decode_enabled = _initial_spec_decode_enabled()
         super().__init__(*args, **kwargs)
 
     def set_spec_decode_enabled(self, enabled: bool) -> None:
