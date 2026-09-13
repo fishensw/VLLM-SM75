@@ -910,13 +910,24 @@ class EngineCore:
     # frontend via the generic UTILITY channel (no dedicated core_client method).
     # Toggling only changes whether drafting runs on subsequent steps; the draft
     # model, CUDA graphs and draft KV cache stay resident.
+    def _spec_decode_toggle_supported(self) -> bool:
+        # 未传 --scheduler-cls(上游默认 scheduler)时这些方法不存在, 功能不可用;
+        # 此时降级为"未配置"(按钮置灰), 而不是让 /monitor 路由抛 AttributeError。
+        return hasattr(self.scheduler, "is_spec_decode_configured")
+
     def set_speculative_decoding(self, enabled: bool) -> None:
+        if not self._spec_decode_toggle_supported():
+            return
         self.scheduler.set_spec_decode_enabled(enabled)
 
     def is_speculative_decoding_enabled(self) -> bool:
+        if not self._spec_decode_toggle_supported():
+            return False
         return self.scheduler.is_spec_decode_enabled()
 
     def is_speculative_decoding_configured(self) -> bool:
+        if not self._spec_decode_toggle_supported():
+            return False
         return self.scheduler.is_spec_decode_configured()
 
     def sleep(self, level: int = 1, mode: PauseMode = "abort") -> None | Future:
