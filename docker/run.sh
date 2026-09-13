@@ -52,8 +52,10 @@ if [[ "$AUTO_SLEEP_IDLE_TIMEOUT" != 0 ]]; then
   fi
   extra+=(--auto-sleep-page-cache-keep-interval "${AUTO_SLEEP_PAGE_CACHE_KEEP_INTERVAL:-600}")
 fi
+# 投机 variant 用 SM75Scheduler 子类(支持运行中开/关投机, 见 /monitor 按钮)。
+SCHED_CLS="vllm.v1.core.sched.scheduler_sm75.SM75Scheduler"
 if [[ "$VARIANT" == mtp ]]; then
-  extra+=(--speculative-config '{"method":"mtp","num_speculative_tokens":5}')
+  extra+=(--speculative-config '{"method":"mtp","num_speculative_tokens":5}' --scheduler-cls "$SCHED_CLS")
   graph='{"cudagraph_mode":"FULL_AND_PIECEWISE","cudagraph_capture_sizes":[6]}'
 elif [[ "$VARIANT" == dflash2 ]]; then
   : "${DRAFT_MODEL:?Set DRAFT_MODEL to the matching DFlash draft directory under /models}"
@@ -61,7 +63,7 @@ elif [[ "$VARIANT" == dflash2 ]]; then
   [[ "$DRAFT_MODEL" != *'"'* && "$DRAFT_MODEL" != *'\'* ]] || exit 2
   kv=3288334336; util=0.92; length=262144
   [[ "$FORMAT" != awq ]] || { kv=4294967296; util=0.87; length=auto; }
-  extra+=(--kv-cache-memory-bytes "$kv" --speculative-config "{\"method\":\"dflash\",\"model\":\"$DRAFT_MODEL\",\"num_speculative_tokens\":7,\"draft_tensor_parallel_size\":4,\"max_model_len\":262144,\"kv_cache_dtype\":\"auto\",\"attention_backend\":\"FLASHINFER\",\"draft_sample_method\":\"probabilistic\"}")
+  extra+=(--kv-cache-memory-bytes "$kv" --speculative-config "{\"method\":\"dflash\",\"model\":\"$DRAFT_MODEL\",\"num_speculative_tokens\":7,\"draft_tensor_parallel_size\":4,\"max_model_len\":262144,\"kv_cache_dtype\":\"auto\",\"attention_backend\":\"FLASHINFER\",\"draft_sample_method\":\"probabilistic\"}" --scheduler-cls "$SCHED_CLS")
   graph='{"cudagraph_mode":"FULL_AND_PIECEWISE","cudagraph_capture_sizes":[8]}'
 fi
 docker run --detach --name "${CONTAINER_NAME:-vllm-sm75-$VARIANT-$FORMAT}" \
