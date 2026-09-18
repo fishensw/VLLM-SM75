@@ -12,6 +12,7 @@
 bash docker/build.sh
 EDITION=ultra bash docker/build.sh
 ULTRA_DATA_ROOT=/path/to/ultra MODEL_ROOT=/path/to/models \
+  PSTATE_NVAPI_LIB=/usr/lib64/libnvidia-api.so.1 \
   EDITION=ultra bash docker/run.sh
 ```
 
@@ -20,6 +21,8 @@ ULTRA_DATA_ROOT=/path/to/ultra MODEL_ROOT=/path/to/models \
 首次安装使用新数据目录；已有部署不能套用新目录丢弃原配置。启动脚本只创建管理服务，登录后登记 `/models` 下已有模型并选择配置。默认常驻 P-State（空闲 P8 / 负载回 16），自动休眠 exit 保留为可选配置。P-State 需要设置 `PSTATE_NVAPI_LIB`；未挂载时选择 sleep 电源模式。
 
 Node 22.18.0 固定 amd64 镜像 digest，DSH 0.1.5-rc.1 和传递依赖由 `harness/package-lock.json` 锁定，使用 `npm ci`。完整构建不再复制宿主 Node 或私有 Harness 镜像。标准版基础环境、FlashQLA 编译和 sm_75 检查沿用 `docker/Dockerfile`。
+
+上面的 `PSTATE_NVAPI_LIB` 要替换为宿主机实际路径。Linux 需要匹配宿主驱动的 `libnvidia-api.so.1` 和 `libnvidia-ml.so.1`；ultra 显式挂载前者，后者由 NVIDIA 容器运行时提供。发行版软件包、路径查找和容器内检查命令见 [Linux 驱动库准备](../docker/BUILD.md#linux-驱动库准备)。
 
 `Dockerfile.candidate` 仅供快速验证：从已部署镜像复制控制台覆盖层，必须通过 `BASE_IMAGE` 指定已核对完整 image ID 的本地独立标签。它不构成完整源码构建证明。`tools/package-ultra-candidate.py` 生成源码包和 SHA256 清单。
 

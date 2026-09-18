@@ -85,6 +85,58 @@ curl --fail http://localhost:8000/v1/models \
 
 ## 省电模式：sleep / pstate（POWER_MODE）
 
+### Linux 驱动库准备
+
+在 **Docker 宿主机**安装适用于 GPU 的 NVIDIA 专有驱动，并配置 NVIDIA Container Toolkit。先确认宿主机 `nvidia-smi` 正常。P-State 需要以下两项驱动库，版本应与宿主驱动匹配；镜像内的管理程序不能替代宿主驱动。
+
+| 驱动库 | 用途 | 容器内提供方式 |
+|---|---|---|
+| `libnvidia-api.so.1`（NVAPI） | P-State 控制 | 本项目从宿主只读挂载，可通过 `PSTATE_NVAPI_LIB` 指定 |
+| `libnvidia-ml.so.1`（NVML） | GPU 状态、负载等查询 | NVIDIA Container Toolkit 的 `utility` 能力注入 |
+
+软件包名称随发行版、驱动分支变化：Arch Linux 通常由 `nvidia-utils` 提供；Debian 的 NVAPI 包为 `libnvidia-api1` 或 `libnvidia-tesla-api1`，按已安装的驱动分支选择，NVML 包需另外核对。Ubuntu 等衍生版可能使用带驱动版本号的包名，不要混装其他分支的驱动库。来源见 [nvidia-pstated Linux 依赖](https://github.com/sasha0552/nvidia-pstated#prerequirements)。
+
+Debian / Ubuntu 可先搜索可用包，再安装与当前驱动匹配的包：
+
+```bash
+apt search libnvidia-api
+apt search libnvidia-ml
+# 按文件名定位软件包（apt search 不负责检索包内文件）
+sudo apt install apt-file
+sudo apt-file update
+apt-file search -x '/libnvidia-(api|ml)\.so\.1$'
+# 确认包名和驱动分支后安装，例如 Debian 对应分支二选一：
+# sudo apt install libnvidia-api1
+# sudo apt install libnvidia-tesla-api1
+```
+
+Arch Linux 使用与当前驱动匹配的 `nvidia-utils` 包；Unraid 使用宿主 NVIDIA 驱动插件提供的匹配库，不执行上述 apt 命令。若驱动包未提供 NVAPI，需从同版本 NVIDIA 驱动发行包获取该库。
+
+在宿主机检查库路径：
+
+```bash
+nvidia-smi
+ldconfig -p | grep -E 'libnvidia-(api|ml)\.so\.1'
+# 若 NVAPI 没有出现在链接器缓存，检查常见路径：
+ls -l /usr/lib64/libnvidia-api.so.1 \
+  /usr/lib/x86_64-linux-gnu/libnvidia-api.so.1 /usr/lib/libnvidia-api.so.1
+```
+
+`ls` 中部分路径不存在是正常的，取实际存在且可读的绝对路径设置 `PSTATE_NVAPI_LIB`。标准版自动检查上述三个路径；ultra 必须显式指定。两者均挂载到容器 `/usr/local/nvidia/lib64/libnvidia-api.so.1`。
+
+NVML 通常不需要手动挂载。自定义 Docker / Compose 配置若限制了 `NVIDIA_DRIVER_CAPABILITIES`，应包含 `compute,utility`；其中 `utility` 用于 `nvidia-smi` 和 NVML，详见 [NVIDIA 容器驱动能力说明](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/docker-specialized.html#driver-capabilities)。该配置需传入容器，仅在宿主 shell 设置无效。
+
+容器启动后，在宿主机执行以下只读检查（标准版将容器名替换成实际名称）：
+
+```bash
+docker exec vllm-sm75-ultra nvidia-smi
+docker exec vllm-sm75-ultra python3 -c 'import ctypes; ctypes.CDLL("libnvidia-api.so.1"); ctypes.CDLL("libnvidia-ml.so.1"); print("NVAPI / NVML load OK")'
+```
+
+NVAPI 找不到时检查宿主路径和只读挂载；NVML 缺失或 `nvidia-smi` 失败时检查宿主驱动、GPU 容器运行时及 `utility` 能力。库加载成功后，还需实际确认空闲进入 P8、负载恢复 16（驱动自动）。上游文档要求在宿主运行管理器；本项目提供容器内包装和宿主库挂载，属于本项目的集成方式，不能据此认定任意容器环境均受上游支持。同一 GPU 只运行一个电源管理实例。
+
+### 模式与参数
+
 | 模式 | 行为 | 显存 | 空闲功耗（4×T10 实测） | 唤醒 |
 |---|---|---|---:|---|
 | `sleep`（可选） | vLLM 空闲 30 分钟 exit 休眠（`AUTO_SLEEP_*` 可调） | 释放 | 10–15 W/卡 | 重建约 2 分钟 |
@@ -97,7 +149,7 @@ PSTATE_NVAPI_LIB=/usr/lib64/libnvidia-api.so.1 POWER_MODE=pstate bash docker/run
 ```
 
 - 监管器在容器内读取同容器 `/metrics`（API 请求）与 `nvidia-smi`（GPU 负载），不感知 docker/宿主状态。
-- 容器运行时不会挂载 `libnvidia-api.so.1`，脚本自动探测宿主路径并只读挂载；找不到则退出 2。
+- 本项目显式挂载 `libnvidia-api.so.1`；标准版脚本自动探测宿主路径，找不到则退出 2。ultra 的指定方法见下方首次启动示例。
 - 可调参数（透传容器）：`PSTATE_IDLE_TIMEOUT`（默认 1800 秒）、`PSTATE_UTIL`（默认 5%）、`PSTATE_CONFIRM`（默认 60 秒）、`PSTATE_GPUS`、`PSTATE_LOW/PSTATE_HIGH`（默认 8/16，禁止 0/0）、`PSTATE_POLL`。
 - 同一时间只保留一个 P-State 管理实例；宿主若已有 nvidia-pstated 会提示冲突。
 - `pstate` 模式下 `AUTO_SLEEP_*` 会被忽略并提示。
@@ -111,6 +163,7 @@ PSTATE_NVAPI_LIB=/usr/lib64/libnvidia-api.so.1 POWER_MODE=pstate bash docker/run
 
 ```bash
 ULTRA_DATA_ROOT=/path/to/ultra MODEL_ROOT=/path/to/models \
+  PSTATE_NVAPI_LIB=/usr/lib64/libnvidia-api.so.1 \
   EDITION=ultra bash docker/run.sh
 # 读取首次生成的 Web token，不需要预先配置 VLLM_API_KEY
 docker exec vllm-sm75-ultra node /opt/sm75-workbench/console/auth-cli.mjs show

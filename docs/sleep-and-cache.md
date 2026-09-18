@@ -2,6 +2,8 @@
 
 # 自动休眠与持久化缓存（v0.1.4）
 
+v0.1.5 默认使用模型常驻的 P-State，本文保留 exit 等可选休眠方式的历史说明。P-State 的 Linux 驱动库安装、NVAPI 挂载和 NVML 检查见 [统一构建运行：Linux 驱动库准备](../docker/BUILD.md#linux-驱动库准备)。
+
 目标是让长时间闲置的推理服务释放 GPU 资源并降低功耗，新请求到达后自动恢复。本稿目标镜像为 `vllm-sm75:v0.1.4`。
 
 已完成本地 GPU 验证的配置、可复制的完整命令与实测效果见[FP8 DFlash2 推荐配置](recommended-fp8-dflash2.md)。
