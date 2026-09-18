@@ -16,7 +16,7 @@ This update adds runtime speculative-decoding control, default resident P-State 
 
 - **Toggle speculative decoding at runtime** through `/monitor` without restarting the model. A draft model and SM75Scheduler must already be configured; disabling drafting does not unload the draft or release its VRAM.
 - **Resident P-State power mode**: `POWER_MODE=pstate` enters P8 when idle and restores driver-managed performance on requests or load, keeping the model loaded. A matching NVAPI driver library is required.
-- **Dashboard cache fix**: enabling monitoring no longer invalidates inference compilation caches; existing cache compatibility is preserved.
+- **Dashboard cache fix**: enabling monitoring no longer invalidates inference compilation caches.
 - **New optional ultra edition**: adds Web administration, quick chat and a workbench to the standard inference service.
 
 [Edition guide and release notes (Chinese)](docs/releases/v0.1.5.zh-CN.md) · [Version validation record (Chinese)](docs/validation/v0.1.5.md)
