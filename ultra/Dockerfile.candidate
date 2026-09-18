@@ -10,5 +10,7 @@ LABEL org.opencontainers.image.title="VLLM-SM75 ultra release candidate" \
       io.sm75.release.channel="candidate"
 COPY source/console /opt/sm75-workbench/console
 COPY overlay/dsh-layout/ /opt/harness/node_modules/@deepseek-ai/dsh-client-ui-layout/lib/
+COPY overlay/dsh-preview/ /opt/harness/node_modules/@deepseek-ai/dsh-client-ui-sidebar-documentpreview/lib/
 RUN node /opt/sm75-workbench/console/install-native-plugins.mjs \
-    && node --check /opt/sm75-workbench/console/server.mjs
+    && node --check /opt/sm75-workbench/console/server.mjs \
+    && node /opt/sm75-workbench/console/verify-client-bundles.mjs

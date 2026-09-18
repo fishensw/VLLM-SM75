@@ -19,7 +19,8 @@ COPY overlay/dsh-preview/ /opt/harness/node_modules/@deepseek-ai/dsh-client-ui-s
 COPY overlay/dsh-deliverables/ /opt/harness/node_modules/@deepseek-ai/dsh-client-ui-deliverables/lib/
 COPY overlay/font-scale.py /opt/vllm-sm75/font-scale.py
 RUN python3 /opt/vllm-sm75/font-scale.py \
-    && /usr/local/bin/node /opt/sm75-workbench/console/install-native-plugins.mjs
+    && /usr/local/bin/node /opt/sm75-workbench/console/install-native-plugins.mjs \
+    && /usr/local/bin/node /opt/sm75-workbench/console/verify-client-bundles.mjs
 COPY overlay/monitor.py /usr/local/lib/python3.12/dist-packages/vllm/entrypoints/serve/instrumentator/monitor.py
 COPY overlay/pstate-supervisor.sh /opt/vllm-sm75/pstate-supervisor.sh
 RUN chmod +x /opt/vllm-sm75/pstate-supervisor.sh
