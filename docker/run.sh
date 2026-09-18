@@ -1,5 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+case "${EDITION:-standard}" in
+  ultra) exec bash "$SCRIPT_DIR/helpers/run-ultra.sh" "$@" ;;
+  standard) ;;
+  *) echo 'EDITION must be standard or ultra' >&2; exit 2 ;;
+esac
 : "${VLLM_API_KEY:?Set VLLM_API_KEY to your own API key}"
 VARIANT="${VARIANT:-base}"
 FORMAT="${FORMAT:-fp8}"
@@ -29,31 +35,65 @@ if [[ -n "${MODEL_ROOT:-}" ]]; then
 fi
 seq=4; batch=8192; util=0.87; length=auto
 [[ "$FORMAT" != awq ]] || { seq=8; batch=16384; }
-image=vllm-sm75:v0.1.4
+VERSION="$(tr -d ' \r\n' < "$SCRIPT_DIR/VERSION")"
+image="vllm-sm75:v${VERSION}"
+image="${IMAGE:-$image}"
 graph='{"cudagraph_mode":"FULL_AND_PIECEWISE"}'
 extra=()
-AUTO_SLEEP_IDLE_TIMEOUT="${AUTO_SLEEP_IDLE_TIMEOUT:-30}"
-AUTO_SLEEP_OFFLOAD_TARGET="${AUTO_SLEEP_OFFLOAD_TARGET:-exit}"
-if [[ "$AUTO_SLEEP_IDLE_TIMEOUT" != 0 ]]; then
-  extra+=(--auto-sleep-idle-timeout "$AUTO_SLEEP_IDLE_TIMEOUT"
-    --auto-sleep-offload-target "$AUTO_SLEEP_OFFLOAD_TARGET")
-  case "$AUTO_SLEEP_OFFLOAD_TARGET" in
-    cpu|reload|disk) extra+=(--enable-sleep-mode) ;;
-    exit) ;;
-    *) echo 'AUTO_SLEEP_OFFLOAD_TARGET must be cpu, reload, exit, or disk' >&2; exit 2 ;;
-  esac
-  if [[ "$AUTO_SLEEP_OFFLOAD_TARGET" == disk ]]; then
-    mkdir -p "$CACHE_ROOT/sleep/$VARIANT-$FORMAT"
-    mounts+=(--volume "$CACHE_ROOT/sleep/$VARIANT-$FORMAT:/sleep-state")
-    extra+=(--auto-sleep-disk-path /sleep-state)
+POWER_MODE="${POWER_MODE:-pstate}"
+case "$POWER_MODE" in sleep|pstate) ;; *) echo 'POWER_MODE must be sleep or pstate' >&2; exit 2;; esac
+entrypoint=()
+pstate_env=()
+if [[ "$POWER_MODE" == pstate ]]; then
+  pstate_env=(--env PSTATE_IDLE_TIMEOUT="${PSTATE_IDLE_TIMEOUT:-1800}" \
+    --env PSTATE_UTIL="${PSTATE_UTIL:-5}" --env PSTATE_CONFIRM="${PSTATE_CONFIRM:-60}" \
+    --env PSTATE_LOW="${PSTATE_LOW:-8}" --env PSTATE_HIGH="${PSTATE_HIGH:-16}" \
+    --env PSTATE_POLL="${PSTATE_POLL:-5}" --env PSTATE_GPUS="${PSTATE_GPUS:-0,1,2,3}")
+  # pstate: 关闭 vLLM 休眠; 镜像内置 nvidia-pstated 在容器内管理 P8/16(高位必须 16)
+  extra+=(--auto-sleep-idle-timeout 0)
+  if [[ "${AUTO_SLEEP_IDLE_TIMEOUT:-0}" != 0 ]]; then
+    echo 'note: POWER_MODE=pstate ignores AUTO_SLEEP_* settings' >&2
   fi
-  if [[ -n "${AUTO_SLEEP_RELOAD_PATH:-}" ]]; then
-    extra+=(--auto-sleep-reload-path "$AUTO_SLEEP_RELOAD_PATH")
+  pstate_lib="${PSTATE_NVAPI_LIB:-}"
+  if [[ -z "$pstate_lib" ]]; then
+    for c in /usr/lib64/libnvidia-api.so.1 /usr/lib/x86_64-linux-gnu/libnvidia-api.so.1 /usr/lib/libnvidia-api.so.1; do
+      [[ -f "$c" ]] && { pstate_lib="$c"; break; }
+    done
   fi
-  extra+=(--auto-sleep-page-cache-keep-interval "${AUTO_SLEEP_PAGE_CACHE_KEEP_INTERVAL:-600}")
+  if [[ -z "$pstate_lib" || ! -f "$pstate_lib" ]]; then
+    echo 'POWER_MODE=pstate requires host libnvidia-api.so.1; set PSTATE_NVAPI_LIB' >&2; exit 2
+  fi
+  mounts+=(--volume "$pstate_lib:/usr/local/nvidia/lib64/libnvidia-api.so.1:ro")
+  entrypoint=(--entrypoint /opt/vllm-sm75/pstate-entrypoint.sh)
+  if pgrep -f "[n]vidia-pstated" >/dev/null 2>&1; then
+    echo 'warning: host nvidia-pstated detected; stop it to avoid fighting the in-container one' >&2
+  fi
+else
+  AUTO_SLEEP_IDLE_TIMEOUT="${AUTO_SLEEP_IDLE_TIMEOUT:-30}"
+  AUTO_SLEEP_OFFLOAD_TARGET="${AUTO_SLEEP_OFFLOAD_TARGET:-exit}"
+  if [[ "$AUTO_SLEEP_IDLE_TIMEOUT" != 0 ]]; then
+    extra+=(--auto-sleep-idle-timeout "$AUTO_SLEEP_IDLE_TIMEOUT"
+      --auto-sleep-offload-target "$AUTO_SLEEP_OFFLOAD_TARGET")
+    case "$AUTO_SLEEP_OFFLOAD_TARGET" in
+      cpu|reload|disk) extra+=(--enable-sleep-mode) ;;
+      exit) ;;
+      *) echo 'AUTO_SLEEP_OFFLOAD_TARGET must be cpu, reload, exit, or disk' >&2; exit 2 ;;
+    esac
+    if [[ "$AUTO_SLEEP_OFFLOAD_TARGET" == disk ]]; then
+      mkdir -p "$CACHE_ROOT/sleep/$VARIANT-$FORMAT"
+      mounts+=(--volume "$CACHE_ROOT/sleep/$VARIANT-$FORMAT:/sleep-state")
+      extra+=(--auto-sleep-disk-path /sleep-state)
+    fi
+    if [[ -n "${AUTO_SLEEP_RELOAD_PATH:-}" ]]; then
+      extra+=(--auto-sleep-reload-path "$AUTO_SLEEP_RELOAD_PATH")
+    fi
+    extra+=(--auto-sleep-page-cache-keep-interval "${AUTO_SLEEP_PAGE_CACHE_KEEP_INTERVAL:-600}")
+  fi
 fi
+# 投机 variant 用 SM75Scheduler 子类(支持运行中开/关投机, 见 /monitor 按钮)。
+SCHED_CLS="vllm.v1.core.sched.scheduler_sm75.SM75Scheduler"
 if [[ "$VARIANT" == mtp ]]; then
-  extra+=(--speculative-config '{"method":"mtp","num_speculative_tokens":5}')
+  extra+=(--speculative-config '{"method":"mtp","num_speculative_tokens":5}' --scheduler-cls "$SCHED_CLS")
   graph='{"cudagraph_mode":"FULL_AND_PIECEWISE","cudagraph_capture_sizes":[6]}'
 elif [[ "$VARIANT" == dflash2 ]]; then
   : "${DRAFT_MODEL:?Set DRAFT_MODEL to the matching DFlash draft directory under /models}"
@@ -61,7 +101,7 @@ elif [[ "$VARIANT" == dflash2 ]]; then
   [[ "$DRAFT_MODEL" != *'"'* && "$DRAFT_MODEL" != *'\'* ]] || exit 2
   kv=3288334336; util=0.92; length=262144
   [[ "$FORMAT" != awq ]] || { kv=4294967296; util=0.87; length=auto; }
-  extra+=(--kv-cache-memory-bytes "$kv" --speculative-config "{\"method\":\"dflash\",\"model\":\"$DRAFT_MODEL\",\"num_speculative_tokens\":7,\"draft_tensor_parallel_size\":4,\"max_model_len\":262144,\"kv_cache_dtype\":\"auto\",\"attention_backend\":\"FLASHINFER\",\"draft_sample_method\":\"probabilistic\"}")
+  extra+=(--kv-cache-memory-bytes "$kv" --speculative-config "{\"method\":\"dflash\",\"model\":\"$DRAFT_MODEL\",\"num_speculative_tokens\":7,\"draft_tensor_parallel_size\":4,\"max_model_len\":262144,\"kv_cache_dtype\":\"auto\",\"attention_backend\":\"FLASHINFER\",\"draft_sample_method\":\"probabilistic\"}" --scheduler-cls "$SCHED_CLS")
   graph='{"cudagraph_mode":"FULL_AND_PIECEWISE","cudagraph_capture_sizes":[8]}'
 fi
 docker run --detach --name "${CONTAINER_NAME:-vllm-sm75-$VARIANT-$FORMAT}" \
@@ -75,8 +115,8 @@ docker run --detach --name "${CONTAINER_NAME:-vllm-sm75-$VARIANT-$FORMAT}" \
   --env VLLM_FIREFLY="${VLLM_FIREFLY:-1}" --env VLLM_FIREFLY_AR="${VLLM_FIREFLY_AR:-auto}" \
   --env VLLM_FIREFLY_AR_BACKEND="${VLLM_FIREFLY_AR_BACKEND:-auto}" \
   --env VLLM_FIREFLY_AR_MIN_SIZE="${VLLM_FIREFLY_AR_MIN_SIZE:-1048576}" \
-  --env OMP_NUM_THREADS=2 --env MAX_JOBS=1 --env TORCHINDUCTOR_COMPILE_THREADS=1 \
-  "$image" "$MODEL" --served-model-name "$SERVE_NAME" \
+  --env OMP_NUM_THREADS=2 --env MAX_JOBS=1 --env NVCC_THREADS="${NVCC_THREADS:-1}" --env TORCHINDUCTOR_COMPILE_THREADS=1 \
+  "${pstate_env[@]}" "${entrypoint[@]}" "$image" "$MODEL" --served-model-name "$SERVE_NAME" \
   --host 0.0.0.0 --port 8000 --api-key "$VLLM_API_KEY" \
   --tensor-parallel-size 4 --disable-custom-all-reduce \
   --max-num-seqs "$seq" --max-num-batched-tokens "$batch" \
@@ -85,5 +125,5 @@ docker run --detach --name "${CONTAINER_NAME:-vllm-sm75-$VARIANT-$FORMAT}" \
   --kv-cache-dtype fp8_e4m3 --block-size 32 --dtype float16 \
   --hf-overrides '{"dtype":"float16"}' --generation-config vllm \
   --enable-prefix-caching --async-scheduling --compilation-config "$graph" \
-  --kv-transfer-config '{"kv_connector":"OffloadingConnector","kv_connector_extra_config":{"cpu_bytes_to_use":8589934592}}' \
+  --kv-transfer-config '{"kv_connector":"OffloadingConnector","kv_role":"kv_both","kv_connector_extra_config":{"cpu_bytes_to_use":8589934592}}' \
   "${extra[@]}"

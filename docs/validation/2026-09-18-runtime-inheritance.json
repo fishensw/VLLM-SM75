@@ -1,0 +1,270 @@
+{
+  "scope": "read-only installed source audit; not performance certification",
+  "baselineImage": "sha256:9ea6136cc49c57f0da1502bf524e54c65d65e361d26bb52724b24fafe197f90c",
+  "standardImage": "sha256:f5683926f8dbb8bd8a54d5e61fb7c54ddd2fb58d8026ae95d7f002869ab28ab0",
+  "ultraImage": "sha256:bf9be0a77d47a4473f1ece7baa597b93dc65aa0d109ae5acd587af2c7c3e6348",
+  "reviewedFiles": 43,
+  "baselineIdentical": 37,
+  "standardCurrentSourceMatches": 43,
+  "ultraCurrentSourceMatches": 43,
+  "rows": [
+    {
+      "path": "vllm/config/model.py",
+      "v014": "fbea4236e78b8725ab1c185b9b999088ee60d926d4a3b7e9f5608bce0311e303",
+      "v015": "fbea4236e78b8725ab1c185b9b999088ee60d926d4a3b7e9f5608bce0311e303",
+      "ultra": "fbea4236e78b8725ab1c185b9b999088ee60d926d4a3b7e9f5608bce0311e303"
+    },
+    {
+      "path": "vllm/device_allocator/disk_snapshot.py",
+      "v014": "d929905f96c9656769097c5b72c024631451508873e7c9ed0659db93738064c9",
+      "v015": "d929905f96c9656769097c5b72c024631451508873e7c9ed0659db93738064c9",
+      "ultra": "d929905f96c9656769097c5b72c024631451508873e7c9ed0659db93738064c9"
+    },
+    {
+      "path": "vllm/device_allocator/disk_sleep.py",
+      "v014": "647e2918b38107b8f715137eac190fa32c989cfcb14ef57ea2a5bd8f918b916c",
+      "v015": "647e2918b38107b8f715137eac190fa32c989cfcb14ef57ea2a5bd8f918b916c",
+      "ultra": "647e2918b38107b8f715137eac190fa32c989cfcb14ef57ea2a5bd8f918b916c"
+    },
+    {
+      "path": "vllm/config/compilation.py",
+      "v014": "c843832b0922530b6982f54cd8b4a857bdd9a8b1334888f43dd1f1ab0458b7fb",
+      "v015": "c843832b0922530b6982f54cd8b4a857bdd9a8b1334888f43dd1f1ab0458b7fb",
+      "ultra": "c843832b0922530b6982f54cd8b4a857bdd9a8b1334888f43dd1f1ab0458b7fb"
+    },
+    {
+      "path": "vllm/engine/arg_utils.py",
+      "v014": "b26b9c4f6ef3adeaa34a8fab0e5287282bb006a24058c379f0a6b78f972d4003",
+      "v015": "b26b9c4f6ef3adeaa34a8fab0e5287282bb006a24058c379f0a6b78f972d4003",
+      "ultra": "b26b9c4f6ef3adeaa34a8fab0e5287282bb006a24058c379f0a6b78f972d4003"
+    },
+    {
+      "path": "vllm/entrypoints/serve/utils/api_utils.py",
+      "v014": "2a489ca888e0ab1803f5561e29fb8c1f0c30149b56f0ae5f10917ae570596ee0",
+      "v015": "2a489ca888e0ab1803f5561e29fb8c1f0c30149b56f0ae5f10917ae570596ee0",
+      "ultra": "2a489ca888e0ab1803f5561e29fb8c1f0c30149b56f0ae5f10917ae570596ee0"
+    },
+    {
+      "path": "vllm/entrypoints/serve/instrumentator/metrics.py",
+      "v014": "f6f7616ddb592b54697926729542f1e196923617d8637d7ba96bab84b2a44bac",
+      "v015": "f6f7616ddb592b54697926729542f1e196923617d8637d7ba96bab84b2a44bac",
+      "ultra": "f6f7616ddb592b54697926729542f1e196923617d8637d7ba96bab84b2a44bac"
+    },
+    {
+      "path": "vllm/entrypoints/serve/instrumentator/monitor.py",
+      "v014": "c46b81fca4c3b76e701217c14a45e979cb1479445dd6ec92886234ae34fd4864",
+      "v015": "79d3c471789df0f6f0fe1d51cb64d11c2fce60bb44bcf05c6265aba09cdf757f",
+      "ultra": "0b21f84d0ae8bb4a357c2f886f4068b6365cba19e37de02c1efd116d0ce98dca"
+    },
+    {
+      "path": "vllm/entrypoints/serve/instrumentator/dashboard.html",
+      "v014": "86ac1e77ba160a1c160538bc05ace012fb004dba8f8c80d63bdb6d15498891e2",
+      "v015": "b0ea506fa0e869d4387493a1c64fb34473a1380414e87de8deb8fb67fcbcb37c",
+      "ultra": "b0ea506fa0e869d4387493a1c64fb34473a1380414e87de8deb8fb67fcbcb37c"
+    },
+    {
+      "path": "vllm/envs_sm75.py",
+      "v014": null,
+      "v015": "27e8a2c203afa4dbc1ef16984d8d710318777eb249427d039d3488fd71e4bb4d",
+      "ultra": "27e8a2c203afa4dbc1ef16984d8d710318777eb249427d039d3488fd71e4bb4d"
+    },
+    {
+      "path": "vllm/distributed/kv_transfer/kv_connector/v1/base.py",
+      "v014": "3962177e0ef6d6b39fc999f8acb03ede59cb8fd1bee985fd0632f2350c7e89f5",
+      "v015": "3962177e0ef6d6b39fc999f8acb03ede59cb8fd1bee985fd0632f2350c7e89f5",
+      "ultra": "3962177e0ef6d6b39fc999f8acb03ede59cb8fd1bee985fd0632f2350c7e89f5"
+    },
+    {
+      "path": "vllm/model_executor/kernels/linear/mixed_precision/marlin.py",
+      "v014": "d3c7098d930a0285b5fac3003e90f8a7e03d43e89e5494e8c8ae76beb81ffa5a",
+      "v015": "d3c7098d930a0285b5fac3003e90f8a7e03d43e89e5494e8c8ae76beb81ffa5a",
+      "ultra": "d3c7098d930a0285b5fac3003e90f8a7e03d43e89e5494e8c8ae76beb81ffa5a"
+    },
+    {
+      "path": "vllm/model_executor/kernels/linear/scaled_mm/marlin.py",
+      "v014": "809caa77a0d12c75584101dfda7f9be3147a81a355b8e85fd3b8762b6d4bba5c",
+      "v015": "809caa77a0d12c75584101dfda7f9be3147a81a355b8e85fd3b8762b6d4bba5c",
+      "ultra": "809caa77a0d12c75584101dfda7f9be3147a81a355b8e85fd3b8762b6d4bba5c"
+    },
+    {
+      "path": "vllm/model_executor/layers/mamba/gdn/qwen_gdn_linear_attn.py",
+      "v014": "24b8be68689f0a49875e88a1601a09a87de4f92eac2a8ee64973fcd93417cf9b",
+      "v015": "24b8be68689f0a49875e88a1601a09a87de4f92eac2a8ee64973fcd93417cf9b",
+      "ultra": "24b8be68689f0a49875e88a1601a09a87de4f92eac2a8ee64973fcd93417cf9b"
+    },
+    {
+      "path": "vllm/model_executor/layers/quantization/kv_cache.py",
+      "v014": "0c5859a5cd56239dc24509dc963c6b43bd02dfd9505f222f89ae1559706bcbb4",
+      "v015": "0c5859a5cd56239dc24509dc963c6b43bd02dfd9505f222f89ae1559706bcbb4",
+      "ultra": "0c5859a5cd56239dc24509dc963c6b43bd02dfd9505f222f89ae1559706bcbb4"
+    },
+    {
+      "path": "vllm/model_executor/layers/quantization/utils/marlin_utils_fp8.py",
+      "v014": "4f7e039c8b2a73aba82083a69e47fb8d552aea20dbcc178d0ef618bd37d7617d",
+      "v015": "4f7e039c8b2a73aba82083a69e47fb8d552aea20dbcc178d0ef618bd37d7617d",
+      "ultra": "4f7e039c8b2a73aba82083a69e47fb8d552aea20dbcc178d0ef618bd37d7617d"
+    },
+    {
+      "path": "vllm/model_executor/layers/quantization/utils/firefly.py",
+      "v014": "d2e87b82fcadeea8c6c5762429fc74550c71c9320cd347d431026d7a68597def",
+      "v015": "d2e87b82fcadeea8c6c5762429fc74550c71c9320cd347d431026d7a68597def",
+      "ultra": "d2e87b82fcadeea8c6c5762429fc74550c71c9320cd347d431026d7a68597def"
+    },
+    {
+      "path": "vllm/model_executor/layers/quantization/utils/firefly.cu",
+      "v014": "3ae2c8d804a1e73469609fe13b78cdb9f25291c577f48ed7708420215676a2af",
+      "v015": "3ae2c8d804a1e73469609fe13b78cdb9f25291c577f48ed7708420215676a2af",
+      "ultra": "3ae2c8d804a1e73469609fe13b78cdb9f25291c577f48ed7708420215676a2af"
+    },
+    {
+      "path": "vllm/distributed/device_communicators/firefly_allreduce.py",
+      "v014": "c7d21ad3dd134583e75298b9cc21e590c5dcbb169cbe9efac0cc49897bdddd6d",
+      "v015": "c7d21ad3dd134583e75298b9cc21e590c5dcbb169cbe9efac0cc49897bdddd6d",
+      "ultra": "c7d21ad3dd134583e75298b9cc21e590c5dcbb169cbe9efac0cc49897bdddd6d"
+    },
+    {
+      "path": "vllm/distributed/device_communicators/firefly_allreduce.cu",
+      "v014": "11d88f11ac4b0e9575426b23ee7087fe50d87bb7c54a2de8cd002577ce1b05c1",
+      "v015": "11d88f11ac4b0e9575426b23ee7087fe50d87bb7c54a2de8cd002577ce1b05c1",
+      "ultra": "11d88f11ac4b0e9575426b23ee7087fe50d87bb7c54a2de8cd002577ce1b05c1"
+    },
+    {
+      "path": "vllm/distributed/device_communicators/cuda_communicator.py",
+      "v014": "6cc3c47151f700632924faf4790f4737d55d681d8772b362c1ea026e8258dc49",
+      "v015": "6cc3c47151f700632924faf4790f4737d55d681d8772b362c1ea026e8258dc49",
+      "ultra": "6cc3c47151f700632924faf4790f4737d55d681d8772b362c1ea026e8258dc49"
+    },
+    {
+      "path": "vllm/v1/attention/backends/flashinfer.py",
+      "v014": "b1cee4549a8b05076a8dd62e276792bf68609a7b36c1eb2a658f7383b067b738",
+      "v015": "b1cee4549a8b05076a8dd62e276792bf68609a7b36c1eb2a658f7383b067b738",
+      "ultra": "b1cee4549a8b05076a8dd62e276792bf68609a7b36c1eb2a658f7383b067b738"
+    },
+    {
+      "path": "vllm/v1/attention/backends/gdn_attn.py",
+      "v014": "0b61f540c5df00ca16457232ba82127ea7187c6a6d4d88a09962b2d631f46851",
+      "v015": "0b61f540c5df00ca16457232ba82127ea7187c6a6d4d88a09962b2d631f46851",
+      "ultra": "0b61f540c5df00ca16457232ba82127ea7187c6a6d4d88a09962b2d631f46851"
+    },
+    {
+      "path": "vllm/v1/core/sched/scheduler_sm75.py",
+      "v014": null,
+      "v015": "d0af3707b7ff0cee4683d5450b26e104c7458f07b6fb3a2f7b7cc4f4834274a7",
+      "ultra": "d0af3707b7ff0cee4683d5450b26e104c7458f07b6fb3a2f7b7cc4f4834274a7"
+    },
+    {
+      "path": "vllm/v1/engine/async_llm.py",
+      "v014": "cad6da59bb3135eb62a9b18723a29828bcffb234be88734aeaa9ee669f6e216c",
+      "v015": "b554d4f01cc97e592b51189ec45b69a5cf142a6ba9de42514f3e42a3305649fc",
+      "ultra": "b554d4f01cc97e592b51189ec45b69a5cf142a6ba9de42514f3e42a3305649fc"
+    },
+    {
+      "path": "vllm/v1/engine/auto_sleep.py",
+      "v014": "934f463819521888335f06f16ed925668949531531b93ab01bef231787ee565b",
+      "v015": "934f463819521888335f06f16ed925668949531531b93ab01bef231787ee565b",
+      "ultra": "934f463819521888335f06f16ed925668949531531b93ab01bef231787ee565b"
+    },
+    {
+      "path": "vllm/v1/engine/core.py",
+      "v014": "fb6b291cb310de91fa43a1f2eff9cf0608212609a22ac377ca6c468aad0a5101",
+      "v015": "7b3cc196064a8861f3e6aae0b93958c8207ab6ed4f43826fa1cb6cd9e74ae5df",
+      "ultra": "7b3cc196064a8861f3e6aae0b93958c8207ab6ed4f43826fa1cb6cd9e74ae5df"
+    },
+    {
+      "path": "vllm/v1/engine/core_client.py",
+      "v014": "5ade439fcc897b6834a57b0462c7dbdae62905c6739c40c254811fe6a6dabac9",
+      "v015": "5ade439fcc897b6834a57b0462c7dbdae62905c6739c40c254811fe6a6dabac9",
+      "ultra": "5ade439fcc897b6834a57b0462c7dbdae62905c6739c40c254811fe6a6dabac9"
+    },
+    {
+      "path": "vllm/third_party/flash_qla_sm75/__init__.py",
+      "v014": "5034bbb8a88a741abdcdfb858e49125171fcade1dfe4f93751f68b52138c8ff5",
+      "v015": "5034bbb8a88a741abdcdfb858e49125171fcade1dfe4f93751f68b52138c8ff5",
+      "ultra": "5034bbb8a88a741abdcdfb858e49125171fcade1dfe4f93751f68b52138c8ff5"
+    },
+    {
+      "path": "vllm/third_party/flash_qla_sm75/build_extension.py",
+      "v014": "69739b845f1b1fe4351eb1bf5c78b7dc708b659d3dddf53d901409159a993152",
+      "v015": "69739b845f1b1fe4351eb1bf5c78b7dc708b659d3dddf53d901409159a993152",
+      "ultra": "69739b845f1b1fe4351eb1bf5c78b7dc708b659d3dddf53d901409159a993152"
+    },
+    {
+      "path": "vllm/third_party/flash_qla_sm75/csrc/gdn_forward.cu",
+      "v014": "4192f5af83614b70ea65546787970b4be9f80e33998961ac736a63215614a256",
+      "v015": "4192f5af83614b70ea65546787970b4be9f80e33998961ac736a63215614a256",
+      "ultra": "4192f5af83614b70ea65546787970b4be9f80e33998961ac736a63215614a256"
+    },
+    {
+      "path": "vllm/third_party/flash_qla_sm75/fused_fwd.py",
+      "v014": "63be8bacd8e87082f6d40740395c3f423c01f285f72ff7994f642d3d41eeebaf",
+      "v015": "63be8bacd8e87082f6d40740395c3f423c01f285f72ff7994f642d3d41eeebaf",
+      "ultra": "63be8bacd8e87082f6d40740395c3f423c01f285f72ff7994f642d3d41eeebaf"
+    },
+    {
+      "path": "vllm/third_party/flash_qla_sm75/LICENSE",
+      "v014": "d0b7a111f48dc0207c7e057c810ae0e2fdbc807ba654eb669ade998b2cdc3438",
+      "v015": "d0b7a111f48dc0207c7e057c810ae0e2fdbc807ba654eb669ade998b2cdc3438",
+      "ultra": "d0b7a111f48dc0207c7e057c810ae0e2fdbc807ba654eb669ade998b2cdc3438"
+    },
+    {
+      "path": "vllm/third_party/flash_qla_sm75/selftest.py",
+      "v014": "a8c1264a2a6b93a9b004a50bd5d3cede995bd78cd49286f5507da7c6760640b2",
+      "v015": "a8c1264a2a6b93a9b004a50bd5d3cede995bd78cd49286f5507da7c6760640b2",
+      "ultra": "a8c1264a2a6b93a9b004a50bd5d3cede995bd78cd49286f5507da7c6760640b2"
+    },
+    {
+      "path": "vllm/third_party/flash_qla_sm75/SOURCE.md",
+      "v014": "500bb7df4ef2119831f83d16a03c5c6cd42159767b0a3e02cac7767b31e8950b",
+      "v015": "500bb7df4ef2119831f83d16a03c5c6cd42159767b0a3e02cac7767b31e8950b",
+      "ultra": "500bb7df4ef2119831f83d16a03c5c6cd42159767b0a3e02cac7767b31e8950b"
+    },
+    {
+      "path": "sm75_fa2_graph.py",
+      "v014": "7856a625048b1dce042dfb05567debc61643552c3fb4756d7cc043cbad7b68e2",
+      "v015": "7856a625048b1dce042dfb05567debc61643552c3fb4756d7cc043cbad7b68e2",
+      "ultra": "7856a625048b1dce042dfb05567debc61643552c3fb4756d7cc043cbad7b68e2"
+    },
+    {
+      "path": "sm75_gdn_metadata.py",
+      "v014": "dfab2c5f49bf8704484596f3cfbe9d82ed82e920b56d491dd835700766957da0",
+      "v015": "dfab2c5f49bf8704484596f3cfbe9d82ed82e920b56d491dd835700766957da0",
+      "ultra": "dfab2c5f49bf8704484596f3cfbe9d82ed82e920b56d491dd835700766957da0"
+    },
+    {
+      "path": "vllm/model_executor/models/dflash_sm70.py",
+      "v014": "786692a996098ded193791c2fafea2f49c100279d55a29cf9aae2b9978bfed8b",
+      "v015": "786692a996098ded193791c2fafea2f49c100279d55a29cf9aae2b9978bfed8b",
+      "ultra": "786692a996098ded193791c2fafea2f49c100279d55a29cf9aae2b9978bfed8b"
+    },
+    {
+      "path": "vllm/model_executor/models/qwen3_dflash.py",
+      "v014": "df666dec20b3190125cba586e9cb5f713967a852eb5d66268199fb82c5dd5517",
+      "v015": "df666dec20b3190125cba586e9cb5f713967a852eb5d66268199fb82c5dd5517",
+      "ultra": "df666dec20b3190125cba586e9cb5f713967a852eb5d66268199fb82c5dd5517"
+    },
+    {
+      "path": "vllm/model_executor/models/qwen3_dflash2.py",
+      "v014": "a0d484c2614df7003a8605eaca8f71f2baff59ff1af29ffd00de9fe8072aa4d4",
+      "v015": "a0d484c2614df7003a8605eaca8f71f2baff59ff1af29ffd00de9fe8072aa4d4",
+      "ultra": "a0d484c2614df7003a8605eaca8f71f2baff59ff1af29ffd00de9fe8072aa4d4"
+    },
+    {
+      "path": "vllm/v1/worker/gpu/model_runner.py",
+      "v014": "7a86b32f7cc714f1c0df1f026d1d92d3e22bdc083008876e455ca61d3ddfe3ed",
+      "v015": "7a86b32f7cc714f1c0df1f026d1d92d3e22bdc083008876e455ca61d3ddfe3ed",
+      "ultra": "7a86b32f7cc714f1c0df1f026d1d92d3e22bdc083008876e455ca61d3ddfe3ed"
+    },
+    {
+      "path": "vllm/v1/worker/gpu/spec_decode/dflash/speculator.py",
+      "v014": "4e666774c607316ab503c0326ea39511c5814e5762969f2febaeb02d9d78bdcd",
+      "v015": "4e666774c607316ab503c0326ea39511c5814e5762969f2febaeb02d9d78bdcd",
+      "ultra": "4e666774c607316ab503c0326ea39511c5814e5762969f2febaeb02d9d78bdcd"
+    },
+    {
+      "path": "vllm/v1/worker/gpu_worker.py",
+      "v014": "b324a014f22ba301515b4ec4127cdd61f6a85afe2bab3c9b8ec5731da02ead19",
+      "v015": "b324a014f22ba301515b4ec4127cdd61f6a85afe2bab3c9b8ec5731da02ead19",
+      "ultra": "b324a014f22ba301515b4ec4127cdd61f6a85afe2bab3c9b8ec5731da02ead19"
+    }
+  ]
+}

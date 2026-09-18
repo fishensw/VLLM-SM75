@@ -1,160 +1,117 @@
 # vLLM-SM75
 
+![VLLM-SM75](ultra/source/console/branding/icon-64.png)
+
 [简体中文](README.md) | [English](README.en.md)
 
-SM75 compatibility and kernel optimizations, kept in sync with upstream [vLLM](https://github.com/vllm-project/vllm).
+Turing SM75 adaptation of vLLM 0.29.0, retaining FlashQLA GDN prefill, Triton decode, FlashInfer 0.6.18, Marlin FP8, Firefly AWQ prefill, FP8 all-reduce, MTP/DFlash2, CPU KV offload and persistent compilation caches.
 
-vLLM-SM75 v0.1.4 is based on vLLM 0.29.0 and integrates MTP, DFlash2 and auto-sleep support.
+The current source is **v0.1.5**; source and release notes are available in the [GitHub Release](https://github.com/fishensw/VLLM-SM75/releases/tag/v0.1.5). Build Docker images locally using the instructions below; public container images are not provided. Standard provides the inference API and `/monitor`. Ultra adds the Web console, workbench, random-token login, model/configuration management and monitoring on the same inference base. FlashNext TP8 AWQ experiments remain in the separate `vllm-sm75-next` branch.
 
-## v0.1.4 Update Summary
+QQ community group: **878924874**
 
-- **Firefly prefill acceleration**: improves AWQ INT4 throughput for long inputs.
-- **FP8 all-reduce optimization**: reduces multi-GPU communication overhead and improves prefill performance.
-- **Auto-sleep compatibility**: retains low-power idle and automatic wake-up, with stronger concurrency handling.
-- **New `/monitor` dashboard**: displays runtime status and performance metrics.
-- **Compatibility with upstream vLLM 0.29.0**.
+## v0.1.5 updates
 
-### Compatibility fixes
+This update adds runtime speculative-decoding control, default resident P-State power management, and the ultra edition. The following engine updates are included in both editions.
 
-Adapts DFlash2 weight loading and KV layouts to the new APIs, corrects CPU KV group identification, adds DFlash input/sampling warmup, and completes Triton/extension cache mounts.
+- **Toggle speculative decoding at runtime** through `/monitor` without restarting the model. A draft model and SM75Scheduler must already be configured; disabling drafting does not unload the draft or release its VRAM.
+- **Resident P-State power mode**: `POWER_MODE=pstate` enters P8 when idle and restores driver-managed performance on requests or load, keeping the model loaded. A matching NVAPI driver library is required.
+- **Dashboard cache fix**: enabling monitoring no longer invalidates inference compilation caches; existing cache compatibility is preserved.
 
-See [release notes](docs/releases/v0.1.4.zh-CN.md), [FP8 measurements](docs/validation/v0.1.4.md), [AWQ measurements](docs/validation/v0.1.4-awq.md) and [AWQ configuration](docs/recommended-awq-dflash2.md). The throughput improvement concerns prefill, not a general decode speedup.
+[Edition guide and release notes (Chinese)](docs/releases/v0.1.5.zh-CN.md) · [Version validation record (Chinese)](docs/validation/v0.1.5.md)
 
-## v0.1.3 Update Summary
+### New ultra edition
 
-- Adds idle auto-sleep with transparent wake-up; the launch script defaults to deep sleep after 30 minutes.
-- Starts the idle timer when a request completes and the engine becomes idle.
+Ultra includes the standard inference service and adds the following features:
 
-## Features
+- Integrated Web administration, quick chat and DSH workbench.
+- Random initial token, persistent Web sessions, and fixes for login flashes during navigation and refresh.
+- Shared, immediately rendered quick-chat/workbench header: engine/P-State, GPU temperature, power, core utilization, VRAM, P/D, KV and cache hits. The performance page avoids a duplicate metric bar.
+- Unified layout and branding, with the vLLM mark and a small translucent lightning accent at the lower left.
+- Configuration drafts, process cleanup and DSH privilege dropping. Account login and client-network allowlists remain future work.
 
-- FlashQLA-SM75 GDN prefill, Triton decode, FlashInfer 0.6.18, Marlin FP8 and FP8 KV.
-- SM75 CUDA Graph, fused GDN metadata preparation, and the native MTP5 verification path.
-- DFlash2 SM75 numerical compatibility, AWQ dtype and TP4 handling.
-- ModelScope support and persistent model, vLLM and FlashInfer compilation caches.
-- One image supports ordinary inference, MTP5 and DFlash2, selected by launch parameters.
-- Idle auto-sleep supports CPU, reload and exit; exit releases the engine process, CUDA context, workers and GPU memory, then transparently cold-starts on the next request.
+[Ultra release notes (Chinese)](docs/releases/v0.1.5-ultra.zh-CN.md) · [Login, upgrade and rollback](ultra/README.md)
 
-## Performance
+## Choose an edition
 
-Environment: vLLM-SM75 v0.1.2, four Tesla T10 16 GiB GPUs, TP4, PCIe 3.0 x8, CUDA 12.9, PyTorch 2.13.0 and FlashInfer 0.6.18.
+**Choose standard for an inference API or an existing chat client/management platform. Choose ultra to manage models, chat and use the workbench in a browser.**
 
-Qwen3.8-27B FP8 / W4A16-AWQ: repeated instruction text followed by a Python tool generation request; one request at a time, 1024 output tokens, temperature=0, thinking disabled, no prefix cache hits. Input counts include the chat template. Each row is one acceptance-test measurement.
+| Item | Standard v0.1.5 | v0.1.5-ultra |
+|---|---|---|
+| Purpose | Inference service | Inference + integrated Web management and workbench |
+| SM75 inference, FP8/AWQ, MTP/DFlash2, CPU KV | Supported | Same inference base |
+| Runtime speculative toggle, P-State / optional sleep | Supported | Supported |
+| Configuration | Scripts, environment variables and CLI arguments | Web model library and runtime configuration |
+| Monitoring | Engine `/monitor` | Engine monitoring + live management status |
+| Web token login and session recovery | Not included | Included |
+| Quick chat and DSH workbench | Not included | Included |
+| Default ports | API / monitor: 8000 | Management / chat / workbench: 1615; API: 8000 |
+| Local image tag | `vllm-sm75:v0.1.5` | `vllm-sm75:v0.1.5-ultra` |
 
-| Configuration | Input tokens | TTFT (s) | Decode (tok/s) | Total time (s) |
-| :------------ | -----------: | -------: | -------------: | -------------: |
-| FP8 ordinary  |         1173 |    1.823 |          37.51 |         29.094 |
-| FP8 ordinary  |        36885 |   35.434 |          35.62 |         64.152 |
-| FP8 MTP5      |         1173 |    3.035 |          83.76 |         15.248 |
-| FP8 MTP5      |        36885 |   36.400 |          76.41 |         49.789 |
-| FP8 DFlash2   |         1173 |    1.154 |          98.12 |         11.581 |
-| FP8 DFlash2   |        36885 |   35.002 |         113.81 |         43.990 |
-| AWQ ordinary  |         1173 |    1.903 |          52.16 |         21.515 |
-| AWQ ordinary  |        36885 |   34.337 |          48.55 |         55.410 |
-| AWQ MTP5      |         1173 |    2.856 |          97.27 |         13.373 |
-| AWQ MTP5      |        36885 |   34.988 |          99.80 |         45.239 |
-| AWQ DFlash2   |         1173 |    1.156 |         122.51 |          9.507 |
-| AWQ DFlash2   |        36885 |   34.106 |         140.84 |         41.369 |
+Ultra adds management and interaction, not a faster inference kernel. Choose one edition for your deployment; standard does not require ultra to serve the inference API.
 
-TTFT measures time to the first text output; decode excludes prefill. Memory budgets and launch parameters are listed in the [test configurations](docs/validation/v0.1.2.md#测试配置).
+## Performance reference
 
-Historical FP8 DFlash7 repetitive-text stress test, seq4/batch8192, 1024 output tokens: 32K median **147.70 tok/s**, highest run **151.28 tok/s**, near-100% acceptance. See the [release notes](docs/releases/v0.1.2.zh-CN.md) for those test conditions.
+These are **historical v0.1.4 measurements**, not new v0.1.5/ultra results. Hardware: PCIe 3.0 ×8, 4× Tesla T10 16 GiB, TP4, DFlash2 draft7; one run per entry, 512 output tokens, no prefix hits.
 
-Real-world performance varies with hardware, models, request content and configuration; results below these test figures are normal.
+Additional reference: community members report measured peak Prefill throughput of approximately **1800 tok/s** over PCIe 3.0 ×16.
+
+| Configuration | Input | Prefill tok/s | Decode tok/s | TTFT seconds |
+|---|---:|---:|---:|---:|
+| FP8 DFlash2 | 32K | 1205.85 | 179.12 | 27.17 |
+| FP8 DFlash2 | 128K | 978.19 | 166.39 | 133.99 |
+| AWQ DFlash2 | 32K | 1433.67 | 215.57 | 22.86 |
+| AWQ DFlash2 | 128K | 1124.88 | 198.40 | 116.52 |
+
+High acceptance on repetitive text is not representative of everyday chat; FP8 and AWQ settings differ. See [historical FP8](docs/validation/v0.1.4.md), [historical AWQ](docs/validation/v0.1.4-awq.md), and [current validation](docs/validation/v0.1.5.md).
 
 ## Quick reproduction
 
-[Build and inference validation](docs/validation/v0.1.2.md) passed for 7 configurations and 14 requests.
-
-### Persistent compilation caches
-
-The launcher persists vLLM, FlashInfer, Triton and PyTorch extension caches on the host, including matching DFlash2 draft and selector artifacts. Keep model and compilation directories separate and preserve mounts when recreating containers. First use and code/dependency/configuration changes can still require compilation; cache loading is only part of startup.
-
-### 1. Clone
+`docker/VERSION` is the only version source. The public entry points are `docker/build.sh` and `docker/run.sh`. Build on Linux x86_64 with Docker and Bash; inference also requires NVIDIA drivers and Container Toolkit.
 
 ```bash
-git clone https://github.com/fishensw/VLLM-SM75.git
-cd VLLM-SM75
-```
-
-### 2. Build
-
-Requires Linux x86_64, Docker with BuildKit, Git and Bash. Inference additionally requires an NVIDIA driver and NVIDIA Container Toolkit.
-
-```bash
+# Complete build on a separate build host
 bash docker/build.sh
-```
+EDITION=ultra bash docker/build.sh
 
-Uses the digest-pinned official `vllm/vllm-openai:v0.29.0-cu129` image, installs the adaptations and compiles the SM75 extension to produce `vllm-sm75:v0.1.4`.
-
-### 3. Run
-
-Start the container with `docker run`, placing the model path and startup options after the image name.
-
-
-
-```bash
 export VLLM_API_KEY='replace-with-your-api-key'
-# Use actual absolute host paths; keep model downloads separate.
-export VLLM_SM75_CACHE_ROOT=/path/to/vllm-sm75/cache
-export VLLM_SM75_MODEL_CACHE_ROOT=/path/to/model-cache
+export VLLM_SM75_CACHE_ROOT=/path/to/cache
 VARIANT=base FORMAT=fp8 bash docker/run.sh
+
+# Fresh ultra installation; never replaces an existing production container
+ULTRA_DATA_ROOT=/path/to/ultra MODEL_ROOT=/path/to/models \
+  EDITION=ultra bash docker/run.sh
 ```
 
-The default FP8 model is `Qwen/Qwen3.8-27B-FP8`, resolved through ModelScope. The script sets the API key, port, listening address and cache mounts. Stop the previous GPU service before selecting another mode; the script does not stop existing services.
-
-Firefly controls are forwarded by `docker/run.sh`; see the defaults and disable switches above.
+**First ultra login:** run this command in the Docker host terminal, copy the entire output line, and paste it into the login form at `http://<LAN-IP>:1615`:
 
 ```bash
-VARIANT=mtp FORMAT=fp8 bash docker/run.sh
-# Download the matching draft into your chosen host model directory first.
-export MODEL_ROOT=/path/to/downloaded-models
-DRAFT_MODEL=/models/Qwen3.8-27B-DFlash2 VARIANT=dflash2 FORMAT=fp8 \
-  bash docker/run.sh
+docker exec vllm-sm75-ultra node /opt/sm75-workbench/console/auth-cli.mjs show
 ```
 
-MTP requires compatible MTP weights. Use `incoai/Qwen3.8-27B-DFlash2` as the matching draft.
-For `philbert440/Qwen3.8-27B-W4A16-AWQ`, download the model and set `MODEL=/models/Qwen3.8-27B-W4A16-AWQ FORMAT=awq`.
+Replace `vllm-sm75-ultra` if you set a custom container name. The automatically generated Web token is stored at `/data/key` inside the container, mapped to `<ULTRA_DATA_ROOT>/console/key` on the host. It is separate from the engine API key and persists when the data directory is retained. In Unraid's container Console, run `node /opt/sm75-workbench/console/auth-cli.mjs show` without `docker exec`.
 
-```bash
-curl --fail http://localhost:8000/health
-curl --fail http://localhost:8000/v1/models \
-  --header "Authorization: Bearer $VLLM_API_KEY"
-```
+Local image tags are `vllm-sm75:v$(cat docker/VERSION)` and `vllm-sm75:v$(cat docker/VERSION)-ultra`. Override `IMAGE` for independent candidate tags. Ultra uses console port 1615 and engine port 8000. It generates its login token in persistent storage; see the [ultra guide](ultra/README.md).
 
-See [build and launch details](docker/BUILD-v0.1.4.md).
+- [Unified build/run guide](docker/BUILD.md): inference modes, caches, power settings, fast/UI iteration.
+- [Directory contract](docker/README.md): unversioned script names; historical implementations remain in Git.
+- [Current release status and gates](docs/releases/v0.1.5.md).
+- [Machine-readable manifest](docs/releases/v0.1.5-release-manifest.json).
 
 ## Firefly
 
-INT4 uses the large-prefill path. FP8 linear computation stays on Marlin; the FP8 optimization tested here is quantized all-reduce. Small messages fall back to NCCL, with a default 1 MiB threshold and automatic backend selection. AWQ throughput has been measured at 1–128K; model quality and the final integrated fixes still require validation.
+AWQ INT4 prefill and FP8 all-reduce are retained; FP8 linear computation still uses Marlin. Configuration and disable switches are in the [build/run guide](docker/BUILD.md); historical AWQ settings are in the [AWQ guide](docs/recommended-awq-dflash2.md). No new AWQ speedup is claimed here.
 
 ## `/monitor` dashboard
 
-Open `http://HOST:PORT/monitor`. The self-contained page polls same-origin `/metrics`; no CDN or separate monitoring deployment is required. Set the container environment variable `VLLM_MONITOR=0` and recreate the container to disable it (`docker run -e VLLM_MONITOR=0`). The launcher does not separately forward this host variable. The dashboard and metrics currently do not require the model API key.
+The engine dashboard is at `http://<host>:8000/monitor`; ultra additionally provides performance monitoring through its management UI on port 1615. Web login and engine endpoint access controls have different scopes; Web login does not protect the entire inference port.
 
-## Idle auto-sleep
+## Automatic idle sleep
 
-For low idle GPU power and DFlash2, use `exit`. The API stays online while the engine and workers exit; the next inference request transparently rebuilds them. The launcher defaults to 30 minutes and exit, whereas direct `vllm serve` defaults to disabled auto-sleep and target cpu. Add to your existing serve arguments:
+Resident P-State is the default: idle P8 and high-state 16 under load (driver-managed performance). Exit sleep remains optional via `POWER_MODE=sleep`; its default idle timeout is 30 minutes. Exit rebuilds the engine on the next request using compatible compilation caches, without saving conversation KV or runtime memory snapshots. See [sleep/cache requirements](docs/sleep-and-cache.md) and the [build/run guide](docker/BUILD.md).
 
-```bash
---auto-sleep-idle-timeout 30 --auto-sleep-offload-target exit
-```
+## History and licensing
 
-The timeout is in **minutes**: use `1` for a 60-second test, `30` for daily use, and `0` to disable. Idle timing begins after requests finish.
+[v0.1.4 notes](docs/releases/v0.1.4.zh-CN.md) · [v0.1.3](docs/releases/v0.1.3.zh-CN.md) · [v0.1.2](docs/releases/v0.1.2.zh-CN.md) · [Development history](docs/releases/v0.1.5-ultra-rc.md)
 
-| Mode | Required resources and flags | Behavior |
-| --- | --- | --- |
-| `exit` | Readable main/draft model files and persistent compilation caches; no `--enable-sleep-mode` required | Releases engine CUDA contexts; full rebuild is paid by the first request |
-| `cpu` | Extra pinned host RAM for actual weight allocations, including draft weights; `--enable-sleep-mode` | Restores weights from RAM; keeps processes/contexts, so P8 is not guaranteed |
-| `reload` | Readable checkpoint; `--enable-sleep-mode`; currently do not use with DFlash2 | Discards weights and reloads the main model; processes, buffers and other CPU allocations remain |
-
-The launcher supplies `--enable-sleep-mode` for cpu/reload. Optional variables are `AUTO_SLEEP_RELOAD_PATH` (container path) and `AUTO_SLEEP_PAGE_CACHE_KEEP_INTERVAL` (seconds, default 600). Setting the latter to 0 disables reload's sleep-entry and background file-page warm-up; the one-shot hint before wake-up remains. OS cache residency is not guaranteed. Exit issues a one-shot main-model hint before exiting.
-
-Neither exit nor reload writes a runtime-memory snapshot to disk. Budget for normal loading memory and the launcher's existing 8 GiB CPU KV offload separately from pinned weight backups. Keep full main/draft weights and leave disk space for compilation artifacts. A migrated host path is safe only when the container-side path and matching artifacts remain available; model/code/TP/dtype changes can still invalidate caches.
-
-FP8 DFlash2 exit was measured on T10 ×4 with the API online: P8 on all cards, 3 MiB per card, 9.97–15.31 W. Other GPU users and drivers can prevent P8. Validated topology is single API server, DP=1, TP4; cpu/reload GPU behavior and other topologies were not validated in this cache-fix run. Client/proxy timeouts must accommodate the full wake-up. Do not mix automatic sleep with development-only manual sleep/wake endpoints.
-
-See the [complete guide and resource requirements (Chinese)](docs/sleep-and-cache.md). This draft targets `vllm-sm75:v0.1.4`; historical sleep measurements are not combined-image acceptance.
-
-## License
-
-vLLM changes retain Apache-2.0. FlashQLA-SM75 retains its MIT license and [source attribution](vllm/third_party/flash_qla_sm75/SOURCE.md).
+[LICENSE](LICENSE) and third-party notices are retained. The vLLM-based mark with a lightning accent identifies this acceleration adaptation, not an upstream endorsement.

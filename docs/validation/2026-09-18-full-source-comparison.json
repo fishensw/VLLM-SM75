@@ -1,0 +1,15 @@
+{
+  "oldAudit": "runtime-ultra.json (RC4 engine base preserved by RC5)",
+  "newImage": "sha256:3bdad12bfe5b855ddb637cbb2fcf754ecaa7ad54eb2f9f4638b297bc2aabbcb9",
+  "filesCompared": 8298,
+  "different": 0,
+  "missing": 0,
+  "scope": "File types selected by tools/audit-runtime.py in installed vllm and flashinfer; not complete binary or other-dependency reproducibility",
+  "oldImage": "sha256:7f5dd0f41785f4199f82aa594009c72b35e69aa0949f51fc18320f45ed190ade",
+  "flashQlaBinary": {
+    "baselineImage": "sha256:f1f0a00b24d44d5c5505c4e78ac4a0025de86bd014957955d19a0273d64ff420",
+    "path": "/opt/vllm-sm75/extensions/flash_qla_sm75_gdn.so",
+    "oldAndRebuiltSha256": "35b217137a7c4fc341e22574a45fbc71b991e0a2b5698d87a2b38deb3dc9baec",
+    "byteIdentical": true
+  }
+}

@@ -1,0 +1,811 @@
+{
+  "baseline": "regression-v014",
+  "throughputTolerancePercent": 5.0,
+  "passed": true,
+  "errors": [],
+  "results": {
+    "regression-v014": {
+      "8192": {
+        "samples": 5,
+        "tokenHashMatches": true,
+        "metrics": {
+          "prefillTokensPerSecond": {
+            "median": 1268.727693039479,
+            "baselineChangePercent": 0.0
+          },
+          "decodeTokensPerSecond": {
+            "median": 63.65450276769884,
+            "baselineChangePercent": 0.0
+          },
+          "ttftSeconds": {
+            "median": 6.4568622919978225,
+            "baselineChangePercent": 0.0
+          },
+          "tpotSeconds": {
+            "median": 0.015709807735823603,
+            "baselineChangePercent": 0.0
+          }
+        }
+      },
+      "32768": {
+        "samples": 5,
+        "tokenHashMatches": true,
+        "metrics": {
+          "prefillTokensPerSecond": {
+            "median": 1203.4709061712908,
+            "baselineChangePercent": 0.0
+          },
+          "decodeTokensPerSecond": {
+            "median": 60.108512078356675,
+            "baselineChangePercent": 0.0
+          },
+          "ttftSeconds": {
+            "median": 27.227912059999653,
+            "baselineChangePercent": 0.0
+          },
+          "tpotSeconds": {
+            "median": 0.01663657883755986,
+            "baselineChangePercent": 0.0
+          }
+        }
+      }
+    },
+    "regression-v015": {
+      "8192": {
+        "samples": 5,
+        "tokenHashMatches": true,
+        "metrics": {
+          "prefillTokensPerSecond": {
+            "median": 1267.0895810991228,
+            "baselineChangePercent": -0.12911454123237798
+          },
+          "decodeTokensPerSecond": {
+            "median": 63.59587252453142,
+            "baselineChangePercent": -0.09210698476647128
+          },
+          "ttftSeconds": {
+            "median": 6.465209817994037,
+            "baselineChangePercent": 0.12928146239945537
+          },
+          "tpotSeconds": {
+            "median": 0.015724290906053075,
+            "baselineChangePercent": 0.09219189994569277
+          }
+        }
+      },
+      "32768": {
+        "samples": 5,
+        "tokenHashMatches": true,
+        "metrics": {
+          "prefillTokensPerSecond": {
+            "median": 1202.1914643865314,
+            "baselineChangePercent": -0.10631264770910587
+          },
+          "decodeTokensPerSecond": {
+            "median": 60.096116536263395,
+            "baselineChangePercent": -0.02062194132691486
+          },
+          "ttftSeconds": {
+            "median": 27.256889580996358,
+            "baselineChangePercent": 0.10642579178619105
+          },
+          "tpotSeconds": {
+            "median": 0.016640010330727057,
+            "baselineChangePercent": 0.02062619484872741
+          }
+        }
+      }
+    },
+    "regression-ultra": {
+      "8192": {
+        "samples": 5,
+        "tokenHashMatches": true,
+        "metrics": {
+          "prefillTokensPerSecond": {
+            "median": 1271.2300431440813,
+            "baselineChangePercent": 0.19723303261454106
+          },
+          "decodeTokensPerSecond": {
+            "median": 63.43042044086029,
+            "baselineChangePercent": -0.3520290271629589
+          },
+          "ttftSeconds": {
+            "median": 6.4441522950000945,
+            "baselineChangePercent": -0.19684478966633945
+          },
+          "tpotSeconds": {
+            "median": 0.01576530618983293,
+            "baselineChangePercent": 0.35327264943396663
+          }
+        }
+      },
+      "32768": {
+        "samples": 5,
+        "tokenHashMatches": true,
+        "metrics": {
+          "prefillTokensPerSecond": {
+            "median": 1203.5620950807313,
+            "baselineChangePercent": 0.007577159445482096
+          },
+          "decodeTokensPerSecond": {
+            "median": 59.951949139273026,
+            "baselineChangePercent": -0.2604671679105164
+          },
+          "ttftSeconds": {
+            "median": 27.225849114001903,
+            "baselineChangePercent": -0.00757658535551764
+          },
+          "tpotSeconds": {
+            "median": 0.016680024825830475,
+            "baselineChangePercent": 0.2611473710720347
+          }
+        }
+      }
+    }
+  },
+  "scope": "27B FP8+DFlash2 TP4, 8192/32768 input and 512 output, five repeats each; preserved images, not newly built consolidated-source images. Hardware/cache caveats in companion markdown.",
+  "samples": {
+    "v014": [
+      {
+        "contract": "sm75-regression-v1",
+        "label": "v014",
+        "model": "VLLM-Qwen3.5-27B",
+        "inputTokens": 8192,
+        "outputTokens": 512,
+        "repeat": 1,
+        "promptTokenHash": "2caff004d213fc3f79b05c2f90940d156e80fdda4b8cdb4d9183dfa8b61442aa",
+        "tokenHash": "e6c1240a97a0fbfed9a74cd34025ee18fbc7582cdd4f55665960ffd312843988",
+        "ttftSeconds": 6.456236202997388,
+        "prefillTokensPerSecond": 1268.850727022156,
+        "decodeTokensPerSecond": 63.089869117694256,
+        "tpotSeconds": 0.01585040536594708,
+        "elapsedSeconds": 14.555655948999629,
+        "cachedTokens": 0,
+        "preemptions": 0.0,
+        "retrievalPassed": true,
+        "complete": true,
+        "hostMinimumAvailableBytes": 6179540992,
+        "valid": true
+      },
+      {
+        "contract": "sm75-regression-v1",
+        "label": "v014",
+        "model": "VLLM-Qwen3.5-27B",
+        "inputTokens": 8192,
+        "outputTokens": 512,
+        "repeat": 2,
+        "promptTokenHash": "2caff004d213fc3f79b05c2f90940d156e80fdda4b8cdb4d9183dfa8b61442aa",
+        "tokenHash": "e6c1240a97a0fbfed9a74cd34025ee18fbc7582cdd4f55665960ffd312843988",
+        "ttftSeconds": 6.4568622919978225,
+        "prefillTokensPerSecond": 1268.727693039479,
+        "decodeTokensPerSecond": 63.65450276769884,
+        "tpotSeconds": 0.015709807735823603,
+        "elapsedSeconds": 14.484410892000597,
+        "cachedTokens": 0,
+        "preemptions": 0.0,
+        "retrievalPassed": true,
+        "complete": true,
+        "hostMinimumAvailableBytes": 6170820608,
+        "valid": true
+      },
+      {
+        "contract": "sm75-regression-v1",
+        "label": "v014",
+        "model": "VLLM-Qwen3.5-27B",
+        "inputTokens": 8192,
+        "outputTokens": 512,
+        "repeat": 3,
+        "promptTokenHash": "2caff004d213fc3f79b05c2f90940d156e80fdda4b8cdb4d9183dfa8b61442aa",
+        "tokenHash": "e6c1240a97a0fbfed9a74cd34025ee18fbc7582cdd4f55665960ffd312843988",
+        "ttftSeconds": 6.460129113998846,
+        "prefillTokensPerSecond": 1268.086110268022,
+        "decodeTokensPerSecond": 63.36912195480414,
+        "tpotSeconds": 0.015780556352243853,
+        "elapsedSeconds": 14.523655564000364,
+        "cachedTokens": 0,
+        "preemptions": 0.0,
+        "retrievalPassed": true,
+        "complete": true,
+        "hostMinimumAvailableBytes": 6163181568,
+        "valid": true
+      },
+      {
+        "contract": "sm75-regression-v1",
+        "label": "v014",
+        "model": "VLLM-Qwen3.5-27B",
+        "inputTokens": 8192,
+        "outputTokens": 512,
+        "repeat": 4,
+        "promptTokenHash": "2caff004d213fc3f79b05c2f90940d156e80fdda4b8cdb4d9183dfa8b61442aa",
+        "tokenHash": "e6c1240a97a0fbfed9a74cd34025ee18fbc7582cdd4f55665960ffd312843988",
+        "ttftSeconds": 6.454598999996961,
+        "prefillTokensPerSecond": 1269.1725698225184,
+        "decodeTokensPerSecond": 63.662386845999976,
+        "tpotSeconds": 0.01570786220156984,
+        "elapsedSeconds": 14.481087551997916,
+        "cachedTokens": 0,
+        "preemptions": 0.0,
+        "retrievalPassed": true,
+        "complete": true,
+        "hostMinimumAvailableBytes": 6168010752,
+        "valid": true
+      },
+      {
+        "contract": "sm75-regression-v1",
+        "label": "v014",
+        "model": "VLLM-Qwen3.5-27B",
+        "inputTokens": 8192,
+        "outputTokens": 512,
+        "repeat": 5,
+        "promptTokenHash": "2caff004d213fc3f79b05c2f90940d156e80fdda4b8cdb4d9183dfa8b61442aa",
+        "tokenHash": "e6c1240a97a0fbfed9a74cd34025ee18fbc7582cdd4f55665960ffd312843988",
+        "ttftSeconds": 6.4586242840014165,
+        "prefillTokensPerSecond": 1268.381568547393,
+        "decodeTokensPerSecond": 63.70370774526533,
+        "tpotSeconds": 0.015697673422695294,
+        "elapsedSeconds": 14.479971758999454,
+        "cachedTokens": 0,
+        "preemptions": 0.0,
+        "retrievalPassed": true,
+        "complete": true,
+        "hostMinimumAvailableBytes": 6162817024,
+        "valid": true
+      },
+      {
+        "contract": "sm75-regression-v1",
+        "label": "v014",
+        "model": "VLLM-Qwen3.5-27B",
+        "inputTokens": 32768,
+        "outputTokens": 512,
+        "repeat": 1,
+        "promptTokenHash": "9d1b42d051ab68b01bd92ffcc11bc0221571e1504e5dd6c39d17e0e814f67a01",
+        "tokenHash": "5f30df74f4fe842b9355d7c12b2561bea75ccd44ff5763e0d6bb8678597b5290",
+        "ttftSeconds": 27.22995757699391,
+        "prefillTokensPerSecond": 1203.3805013227445,
+        "decodeTokensPerSecond": 60.01525678024089,
+        "tpotSeconds": 0.016662429749517208,
+        "elapsedSeconds": 35.74425085699477,
+        "cachedTokens": 0,
+        "preemptions": 0.0,
+        "retrievalPassed": true,
+        "complete": true,
+        "hostMinimumAvailableBytes": 6140342272,
+        "valid": true
+      },
+      {
+        "contract": "sm75-regression-v1",
+        "label": "v014",
+        "model": "VLLM-Qwen3.5-27B",
+        "inputTokens": 32768,
+        "outputTokens": 512,
+        "repeat": 2,
+        "promptTokenHash": "9d1b42d051ab68b01bd92ffcc11bc0221571e1504e5dd6c39d17e0e814f67a01",
+        "tokenHash": "5f30df74f4fe842b9355d7c12b2561bea75ccd44ff5763e0d6bb8678597b5290",
+        "ttftSeconds": 27.204479605003144,
+        "prefillTokensPerSecond": 1204.5075103724344,
+        "decodeTokensPerSecond": 60.108512078356675,
+        "tpotSeconds": 0.01663657883755986,
+        "elapsedSeconds": 35.70558757700201,
+        "cachedTokens": 0,
+        "preemptions": 0.0,
+        "retrievalPassed": true,
+        "complete": true,
+        "hostMinimumAvailableBytes": 6155157504,
+        "valid": true
+      },
+      {
+        "contract": "sm75-regression-v1",
+        "label": "v014",
+        "model": "VLLM-Qwen3.5-27B",
+        "inputTokens": 32768,
+        "outputTokens": 512,
+        "repeat": 3,
+        "promptTokenHash": "9d1b42d051ab68b01bd92ffcc11bc0221571e1504e5dd6c39d17e0e814f67a01",
+        "tokenHash": "5f30df74f4fe842b9355d7c12b2561bea75ccd44ff5763e0d6bb8678597b5290",
+        "ttftSeconds": 27.244067790998088,
+        "prefillTokensPerSecond": 1202.7572479770115,
+        "decodeTokensPerSecond": 60.192970382078514,
+        "tpotSeconds": 0.016613235626227442,
+        "elapsedSeconds": 35.73308870299661,
+        "cachedTokens": 0,
+        "preemptions": 0.0,
+        "retrievalPassed": true,
+        "complete": true,
+        "hostMinimumAvailableBytes": 6151032832,
+        "valid": true
+      },
+      {
+        "contract": "sm75-regression-v1",
+        "label": "v014",
+        "model": "VLLM-Qwen3.5-27B",
+        "inputTokens": 32768,
+        "outputTokens": 512,
+        "repeat": 4,
+        "promptTokenHash": "9d1b42d051ab68b01bd92ffcc11bc0221571e1504e5dd6c39d17e0e814f67a01",
+        "tokenHash": "5f30df74f4fe842b9355d7c12b2561bea75ccd44ff5763e0d6bb8678597b5290",
+        "ttftSeconds": 27.21862063800654,
+        "prefillTokensPerSecond": 1203.8817262563489,
+        "decodeTokensPerSecond": 60.14907582137911,
+        "tpotSeconds": 0.01662535934832376,
+        "elapsedSeconds": 35.713974969003175,
+        "cachedTokens": 0,
+        "preemptions": 0.0,
+        "retrievalPassed": true,
+        "complete": true,
+        "hostMinimumAvailableBytes": 6152658944,
+        "valid": true
+      },
+      {
+        "contract": "sm75-regression-v1",
+        "label": "v014",
+        "model": "VLLM-Qwen3.5-27B",
+        "inputTokens": 32768,
+        "outputTokens": 512,
+        "repeat": 5,
+        "promptTokenHash": "9d1b42d051ab68b01bd92ffcc11bc0221571e1504e5dd6c39d17e0e814f67a01",
+        "tokenHash": "5f30df74f4fe842b9355d7c12b2561bea75ccd44ff5763e0d6bb8678597b5290",
+        "ttftSeconds": 27.227912059999653,
+        "prefillTokensPerSecond": 1203.4709061712908,
+        "decodeTokensPerSecond": 60.086023226352005,
+        "tpotSeconds": 0.01664280553620378,
+        "elapsedSeconds": 35.73222844600241,
+        "cachedTokens": 0,
+        "preemptions": 0.0,
+        "retrievalPassed": true,
+        "complete": true,
+        "hostMinimumAvailableBytes": 6146629632,
+        "valid": true
+      }
+    ],
+    "v015": [
+      {
+        "contract": "sm75-regression-v1",
+        "label": "v015",
+        "model": "VLLM-Qwen3.5-27B",
+        "inputTokens": 8192,
+        "outputTokens": 512,
+        "repeat": 1,
+        "promptTokenHash": "2caff004d213fc3f79b05c2f90940d156e80fdda4b8cdb4d9183dfa8b61442aa",
+        "tokenHash": "e6c1240a97a0fbfed9a74cd34025ee18fbc7582cdd4f55665960ffd312843988",
+        "ttftSeconds": 6.467170931995497,
+        "prefillTokensPerSecond": 1266.705347073963,
+        "decodeTokensPerSecond": 62.936638943960894,
+        "tpotSeconds": 0.015888995929547574,
+        "elapsedSeconds": 14.586297957997886,
+        "cachedTokens": 0,
+        "preemptions": 0.0,
+        "retrievalPassed": true,
+        "complete": true,
+        "hostMinimumAvailableBytes": 6127742976,
+        "valid": true
+      },
+      {
+        "contract": "sm75-regression-v1",
+        "label": "v015",
+        "model": "VLLM-Qwen3.5-27B",
+        "inputTokens": 8192,
+        "outputTokens": 512,
+        "repeat": 2,
+        "promptTokenHash": "2caff004d213fc3f79b05c2f90940d156e80fdda4b8cdb4d9183dfa8b61442aa",
+        "tokenHash": "e6c1240a97a0fbfed9a74cd34025ee18fbc7582cdd4f55665960ffd312843988",
+        "ttftSeconds": 6.461205797997536,
+        "prefillTokensPerSecond": 1267.8747986233273,
+        "decodeTokensPerSecond": 63.746081200289495,
+        "tpotSeconds": 0.015687238825834813,
+        "elapsedSeconds": 14.477172746999713,
+        "cachedTokens": 0,
+        "preemptions": 0.0,
+        "retrievalPassed": true,
+        "complete": true,
+        "hostMinimumAvailableBytes": 6117543936,
+        "valid": true
+      },
+      {
+        "contract": "sm75-regression-v1",
+        "label": "v015",
+        "model": "VLLM-Qwen3.5-27B",
+        "inputTokens": 8192,
+        "outputTokens": 512,
+        "repeat": 3,
+        "promptTokenHash": "2caff004d213fc3f79b05c2f90940d156e80fdda4b8cdb4d9183dfa8b61442aa",
+        "tokenHash": "e6c1240a97a0fbfed9a74cd34025ee18fbc7582cdd4f55665960ffd312843988",
+        "ttftSeconds": 6.450612682005158,
+        "prefillTokensPerSecond": 1269.9568868632703,
+        "decodeTokensPerSecond": 63.59587252453142,
+        "tpotSeconds": 0.015724290906053075,
+        "elapsedSeconds": 14.485534460000054,
+        "cachedTokens": 0,
+        "preemptions": 0.0,
+        "retrievalPassed": true,
+        "complete": true,
+        "hostMinimumAvailableBytes": 6109175808,
+        "valid": true
+      },
+      {
+        "contract": "sm75-regression-v1",
+        "label": "v015",
+        "model": "VLLM-Qwen3.5-27B",
+        "inputTokens": 8192,
+        "outputTokens": 512,
+        "repeat": 4,
+        "promptTokenHash": "2caff004d213fc3f79b05c2f90940d156e80fdda4b8cdb4d9183dfa8b61442aa",
+        "tokenHash": "e6c1240a97a0fbfed9a74cd34025ee18fbc7582cdd4f55665960ffd312843988",
+        "ttftSeconds": 6.466080776001036,
+        "prefillTokensPerSecond": 1266.9189086540246,
+        "decodeTokensPerSecond": 63.63397963647009,
+        "tpotSeconds": 0.01571487443835553,
+        "elapsedSeconds": 14.496218089007016,
+        "cachedTokens": 0,
+        "preemptions": 0.0,
+        "retrievalPassed": true,
+        "complete": true,
+        "hostMinimumAvailableBytes": 6119387136,
+        "valid": true
+      },
+      {
+        "contract": "sm75-regression-v1",
+        "label": "v015",
+        "model": "VLLM-Qwen3.5-27B",
+        "inputTokens": 8192,
+        "outputTokens": 512,
+        "repeat": 5,
+        "promptTokenHash": "2caff004d213fc3f79b05c2f90940d156e80fdda4b8cdb4d9183dfa8b61442aa",
+        "tokenHash": "e6c1240a97a0fbfed9a74cd34025ee18fbc7582cdd4f55665960ffd312843988",
+        "ttftSeconds": 6.465209817994037,
+        "prefillTokensPerSecond": 1267.0895810991228,
+        "decodeTokensPerSecond": 63.595002602922634,
+        "tpotSeconds": 0.015724506000005148,
+        "elapsedSeconds": 14.50027444299485,
+        "cachedTokens": 0,
+        "preemptions": 0.0,
+        "retrievalPassed": true,
+        "complete": true,
+        "hostMinimumAvailableBytes": 6103011328,
+        "valid": true
+      },
+      {
+        "contract": "sm75-regression-v1",
+        "label": "v015",
+        "model": "VLLM-Qwen3.5-27B",
+        "inputTokens": 32768,
+        "outputTokens": 512,
+        "repeat": 1,
+        "promptTokenHash": "9d1b42d051ab68b01bd92ffcc11bc0221571e1504e5dd6c39d17e0e814f67a01",
+        "tokenHash": "5f30df74f4fe842b9355d7c12b2561bea75ccd44ff5763e0d6bb8678597b5290",
+        "ttftSeconds": 27.260839522001334,
+        "prefillTokensPerSecond": 1202.017273662978,
+        "decodeTokensPerSecond": 60.093856968399145,
+        "tpotSeconds": 0.016640636005870922,
+        "elapsedSeconds": 35.76404552599706,
+        "cachedTokens": 0,
+        "preemptions": 0.0,
+        "retrievalPassed": true,
+        "complete": true,
+        "hostMinimumAvailableBytes": 6085410816,
+        "valid": true
+      },
+      {
+        "contract": "sm75-regression-v1",
+        "label": "v015",
+        "model": "VLLM-Qwen3.5-27B",
+        "inputTokens": 32768,
+        "outputTokens": 512,
+        "repeat": 2,
+        "promptTokenHash": "9d1b42d051ab68b01bd92ffcc11bc0221571e1504e5dd6c39d17e0e814f67a01",
+        "tokenHash": "5f30df74f4fe842b9355d7c12b2561bea75ccd44ff5763e0d6bb8678597b5290",
+        "ttftSeconds": 27.231547816001694,
+        "prefillTokensPerSecond": 1203.3102275862923,
+        "decodeTokensPerSecond": 60.053675312135,
+        "tpotSeconds": 0.016651770183962925,
+        "elapsedSeconds": 35.7404533709996,
+        "cachedTokens": 0,
+        "preemptions": 0.0,
+        "retrievalPassed": true,
+        "complete": true,
+        "hostMinimumAvailableBytes": 6093352960,
+        "valid": true
+      },
+      {
+        "contract": "sm75-regression-v1",
+        "label": "v015",
+        "model": "VLLM-Qwen3.5-27B",
+        "inputTokens": 32768,
+        "outputTokens": 512,
+        "repeat": 3,
+        "promptTokenHash": "9d1b42d051ab68b01bd92ffcc11bc0221571e1504e5dd6c39d17e0e814f67a01",
+        "tokenHash": "5f30df74f4fe842b9355d7c12b2561bea75ccd44ff5763e0d6bb8678597b5290",
+        "ttftSeconds": 27.24428142599936,
+        "prefillTokensPerSecond": 1202.7478166015906,
+        "decodeTokensPerSecond": 60.10835493650426,
+        "tpotSeconds": 0.016636622330728476,
+        "elapsedSeconds": 35.745442172003095,
+        "cachedTokens": 0,
+        "preemptions": 0.0,
+        "retrievalPassed": true,
+        "complete": true,
+        "hostMinimumAvailableBytes": 6080921600,
+        "valid": true
+      },
+      {
+        "contract": "sm75-regression-v1",
+        "label": "v015",
+        "model": "VLLM-Qwen3.5-27B",
+        "inputTokens": 32768,
+        "outputTokens": 512,
+        "repeat": 4,
+        "promptTokenHash": "9d1b42d051ab68b01bd92ffcc11bc0221571e1504e5dd6c39d17e0e814f67a01",
+        "tokenHash": "5f30df74f4fe842b9355d7c12b2561bea75ccd44ff5763e0d6bb8678597b5290",
+        "ttftSeconds": 27.259624113998143,
+        "prefillTokensPerSecond": 1202.0708672638389,
+        "decodeTokensPerSecond": 60.1010382783071,
+        "tpotSeconds": 0.016638647661448812,
+        "elapsedSeconds": 35.761801362998085,
+        "cachedTokens": 0,
+        "preemptions": 0.0,
+        "retrievalPassed": true,
+        "complete": true,
+        "hostMinimumAvailableBytes": 6099267584,
+        "valid": true
+      },
+      {
+        "contract": "sm75-regression-v1",
+        "label": "v015",
+        "model": "VLLM-Qwen3.5-27B",
+        "inputTokens": 32768,
+        "outputTokens": 512,
+        "repeat": 5,
+        "promptTokenHash": "9d1b42d051ab68b01bd92ffcc11bc0221571e1504e5dd6c39d17e0e814f67a01",
+        "tokenHash": "5f30df74f4fe842b9355d7c12b2561bea75ccd44ff5763e0d6bb8678597b5290",
+        "ttftSeconds": 27.256889580996358,
+        "prefillTokensPerSecond": 1202.1914643865314,
+        "decodeTokensPerSecond": 60.096116536263395,
+        "tpotSeconds": 0.016640010330727057,
+        "elapsedSeconds": 35.75978814900009,
+        "cachedTokens": 0,
+        "preemptions": 0.0,
+        "retrievalPassed": true,
+        "complete": true,
+        "hostMinimumAvailableBytes": 6092652544,
+        "valid": true
+      }
+    ],
+    "ultra": [
+      {
+        "contract": "sm75-regression-v1",
+        "label": "ultra-current",
+        "model": "VLLM-Qwen3.5-27B",
+        "inputTokens": 8192,
+        "outputTokens": 512,
+        "repeat": 1,
+        "promptTokenHash": "2caff004d213fc3f79b05c2f90940d156e80fdda4b8cdb4d9183dfa8b61442aa",
+        "tokenHash": "e6c1240a97a0fbfed9a74cd34025ee18fbc7582cdd4f55665960ffd312843988",
+        "ttftSeconds": 6.432231557002524,
+        "prefillTokensPerSecond": 1273.5859907098156,
+        "decodeTokensPerSecond": 63.1371829757911,
+        "tpotSeconds": 0.01583852736007296,
+        "elapsedSeconds": 14.52557108700421,
+        "cachedTokens": 0,
+        "preemptions": 0.0,
+        "retrievalPassed": true,
+        "complete": true,
+        "hostMinimumAvailableBytes": 5648588800,
+        "valid": true
+      },
+      {
+        "contract": "sm75-regression-v1",
+        "label": "ultra-current",
+        "model": "VLLM-Qwen3.5-27B",
+        "inputTokens": 8192,
+        "outputTokens": 512,
+        "repeat": 2,
+        "promptTokenHash": "2caff004d213fc3f79b05c2f90940d156e80fdda4b8cdb4d9183dfa8b61442aa",
+        "tokenHash": "e6c1240a97a0fbfed9a74cd34025ee18fbc7582cdd4f55665960ffd312843988",
+        "ttftSeconds": 6.4393178559985245,
+        "prefillTokensPerSecond": 1272.184443010337,
+        "decodeTokensPerSecond": 63.57130341068371,
+        "tpotSeconds": 0.015730368048926007,
+        "elapsedSeconds": 14.477237277998938,
+        "cachedTokens": 0,
+        "preemptions": 0.0,
+        "retrievalPassed": true,
+        "complete": true,
+        "hostMinimumAvailableBytes": 5646217216,
+        "valid": true
+      },
+      {
+        "contract": "sm75-regression-v1",
+        "label": "ultra-current",
+        "model": "VLLM-Qwen3.5-27B",
+        "inputTokens": 8192,
+        "outputTokens": 512,
+        "repeat": 3,
+        "promptTokenHash": "2caff004d213fc3f79b05c2f90940d156e80fdda4b8cdb4d9183dfa8b61442aa",
+        "tokenHash": "e6c1240a97a0fbfed9a74cd34025ee18fbc7582cdd4f55665960ffd312843988",
+        "ttftSeconds": 6.453395937998721,
+        "prefillTokensPerSecond": 1269.4091728920698,
+        "decodeTokensPerSecond": 63.43042044086029,
+        "tpotSeconds": 0.01576530618983293,
+        "elapsedSeconds": 14.509280678001232,
+        "cachedTokens": 0,
+        "preemptions": 0.0,
+        "retrievalPassed": true,
+        "complete": true,
+        "hostMinimumAvailableBytes": 5653880832,
+        "valid": true
+      },
+      {
+        "contract": "sm75-regression-v1",
+        "label": "ultra-current",
+        "model": "VLLM-Qwen3.5-27B",
+        "inputTokens": 8192,
+        "outputTokens": 512,
+        "repeat": 4,
+        "promptTokenHash": "2caff004d213fc3f79b05c2f90940d156e80fdda4b8cdb4d9183dfa8b61442aa",
+        "tokenHash": "e6c1240a97a0fbfed9a74cd34025ee18fbc7582cdd4f55665960ffd312843988",
+        "ttftSeconds": 6.451091773997177,
+        "prefillTokensPerSecond": 1269.8625731880006,
+        "decodeTokensPerSecond": 63.59613238247931,
+        "tpotSeconds": 0.015724226655574096,
+        "elapsedSeconds": 14.485998580996238,
+        "cachedTokens": 0,
+        "preemptions": 0.0,
+        "retrievalPassed": true,
+        "complete": true,
+        "hostMinimumAvailableBytes": 5665906688,
+        "valid": true
+      },
+      {
+        "contract": "sm75-regression-v1",
+        "label": "ultra-current",
+        "model": "VLLM-Qwen3.5-27B",
+        "inputTokens": 8192,
+        "outputTokens": 512,
+        "repeat": 5,
+        "promptTokenHash": "2caff004d213fc3f79b05c2f90940d156e80fdda4b8cdb4d9183dfa8b61442aa",
+        "tokenHash": "e6c1240a97a0fbfed9a74cd34025ee18fbc7582cdd4f55665960ffd312843988",
+        "ttftSeconds": 6.4441522950000945,
+        "prefillTokensPerSecond": 1271.2300431440813,
+        "decodeTokensPerSecond": 63.33850334466896,
+        "tpotSeconds": 0.015788184866925303,
+        "elapsedSeconds": 14.511766809999244,
+        "cachedTokens": 0,
+        "preemptions": 0.0,
+        "retrievalPassed": true,
+        "complete": true,
+        "hostMinimumAvailableBytes": 5642698752,
+        "valid": true
+      },
+      {
+        "contract": "sm75-regression-v1",
+        "label": "ultra-current",
+        "model": "VLLM-Qwen3.5-27B",
+        "inputTokens": 32768,
+        "outputTokens": 512,
+        "repeat": 1,
+        "promptTokenHash": "9d1b42d051ab68b01bd92ffcc11bc0221571e1504e5dd6c39d17e0e814f67a01",
+        "tokenHash": "5f30df74f4fe842b9355d7c12b2561bea75ccd44ff5763e0d6bb8678597b5290",
+        "ttftSeconds": 27.21678364699619,
+        "prefillTokensPerSecond": 1203.9629819968266,
+        "decodeTokensPerSecond": 59.99818329961595,
+        "tpotSeconds": 0.01666717132094233,
+        "elapsedSeconds": 35.73355953999999,
+        "cachedTokens": 0,
+        "preemptions": 0.0,
+        "retrievalPassed": true,
+        "complete": true,
+        "hostMinimumAvailableBytes": 5617315840,
+        "valid": true
+      },
+      {
+        "contract": "sm75-regression-v1",
+        "label": "ultra-current",
+        "model": "VLLM-Qwen3.5-27B",
+        "inputTokens": 32768,
+        "outputTokens": 512,
+        "repeat": 2,
+        "promptTokenHash": "9d1b42d051ab68b01bd92ffcc11bc0221571e1504e5dd6c39d17e0e814f67a01",
+        "tokenHash": "5f30df74f4fe842b9355d7c12b2561bea75ccd44ff5763e0d6bb8678597b5290",
+        "ttftSeconds": 27.225849114001903,
+        "prefillTokensPerSecond": 1203.5620950807313,
+        "decodeTokensPerSecond": 59.951949139273026,
+        "tpotSeconds": 0.016680024825830475,
+        "elapsedSeconds": 35.74918860300386,
+        "cachedTokens": 0,
+        "preemptions": 0.0,
+        "retrievalPassed": true,
+        "complete": true,
+        "hostMinimumAvailableBytes": 5623181312,
+        "valid": true
+      },
+      {
+        "contract": "sm75-regression-v1",
+        "label": "ultra-current",
+        "model": "VLLM-Qwen3.5-27B",
+        "inputTokens": 32768,
+        "outputTokens": 512,
+        "repeat": 3,
+        "promptTokenHash": "9d1b42d051ab68b01bd92ffcc11bc0221571e1504e5dd6c39d17e0e814f67a01",
+        "tokenHash": "5f30df74f4fe842b9355d7c12b2561bea75ccd44ff5763e0d6bb8678597b5290",
+        "ttftSeconds": 27.243205220001983,
+        "prefillTokensPerSecond": 1202.7953295283226,
+        "decodeTokensPerSecond": 60.02823748499873,
+        "tpotSeconds": 0.01665882661055813,
+        "elapsedSeconds": 35.7556094659958,
+        "cachedTokens": 0,
+        "preemptions": 0.0,
+        "retrievalPassed": true,
+        "complete": true,
+        "hostMinimumAvailableBytes": 5631254528,
+        "valid": true
+      },
+      {
+        "contract": "sm75-regression-v1",
+        "label": "ultra-current",
+        "model": "VLLM-Qwen3.5-27B",
+        "inputTokens": 32768,
+        "outputTokens": 512,
+        "repeat": 4,
+        "promptTokenHash": "9d1b42d051ab68b01bd92ffcc11bc0221571e1504e5dd6c39d17e0e814f67a01",
+        "tokenHash": "5f30df74f4fe842b9355d7c12b2561bea75ccd44ff5763e0d6bb8678597b5290",
+        "ttftSeconds": 27.213336927001365,
+        "prefillTokensPerSecond": 1204.1154705833683,
+        "decodeTokensPerSecond": 59.68439154447107,
+        "tpotSeconds": 0.016754799272015636,
+        "elapsedSeconds": 35.77488324400474,
+        "cachedTokens": 0,
+        "preemptions": 0.0,
+        "retrievalPassed": true,
+        "complete": true,
+        "hostMinimumAvailableBytes": 5600022528,
+        "valid": true
+      },
+      {
+        "contract": "sm75-regression-v1",
+        "label": "ultra-current",
+        "model": "VLLM-Qwen3.5-27B",
+        "inputTokens": 32768,
+        "outputTokens": 512,
+        "repeat": 5,
+        "promptTokenHash": "9d1b42d051ab68b01bd92ffcc11bc0221571e1504e5dd6c39d17e0e814f67a01",
+        "tokenHash": "5f30df74f4fe842b9355d7c12b2561bea75ccd44ff5763e0d6bb8678597b5290",
+        "ttftSeconds": 27.257413412997266,
+        "prefillTokensPerSecond": 1202.1683607137534,
+        "decodeTokensPerSecond": 59.61558544262102,
+        "tpotSeconds": 0.016774137041101155,
+        "elapsedSeconds": 35.82877755100344,
+        "cachedTokens": 0,
+        "preemptions": 0.0,
+        "retrievalPassed": true,
+        "complete": true,
+        "hostMinimumAvailableBytes": 5591904256,
+        "valid": true
+      }
+    ]
+  },
+  "imageIds": {
+    "v014": "sha256:9ea6136cc49c57f0da1502bf524e54c65d65e361d26bb52724b24fafe197f90c",
+    "v015": "sha256:f5683926f8dbb8bd8a54d5e61fb7c54ddd2fb58d8026ae95d7f002869ab28ab0",
+    "ultra": "sha256:bf9be0a77d47a4473f1ece7baa597b93dc65aa0d109ae5acd587af2c7c3e6348"
+  },
+  "ultraStaticHotfixSource": "37587d3",
+  "resources": {
+    "v014": {
+      "minimumHostAvailableKiB": 5739464,
+      "pstates": [
+        "P0",
+        "P8"
+      ],
+      "peakPerGpuUsedMiB": 15277.0,
+      "scope": "startup through measurements; five-second samples, not exact per-request peaks"
+    },
+    "v015": {
+      "minimumHostAvailableKiB": 4781732,
+      "pstates": [
+        "P0",
+        "P8"
+      ],
+      "peakPerGpuUsedMiB": 15277.0,
+      "scope": "startup through measurements; five-second samples, not exact per-request peaks"
+    }
+  }
+}

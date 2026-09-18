@@ -1,0 +1,8 @@
+import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import vm from 'node:vm';
+const html=fs.readFileSync(new URL('../../vllm/entrypoints/serve/instrumentator/dashboard.html',import.meta.url),'utf8');
+const source=html.slice(html.indexOf('function lineChart('),html.indexOf('function ',html.indexOf('function lineChart(')+10));
+function chart(points,series,id='throughput'){const draws=[];let color;const ctx={beginPath(){},moveTo(x,y){draws.push({color,x,y,kind:'move'});},lineTo(x,y){draws.push({color,x,y,kind:'line'});},arc(x,y){draws.push({color,x,y,kind:'point'});},stroke(){},fill(){},fillText(){},set strokeStyle(v){color=v;}};const scope={canvas:()=>({ctx,cv:{},w:800,h:240}),colors:{grid:'grid',text:'text'},short:String,empty(){},tooltip(){},num:String};vm.createContext(scope);vm.runInContext(source,scope);scope.lineChart(id,points,series,true,1);return draws;}
+const series=[{color:'blue',get:p=>p.p,label:'Prefill'},{color:'green',get:p=>p.d,label:'Decode'}];
+test('decode uses right scale independently of 10x higher prefill',()=>{const d=chart([{t:0,p:1500,d:150},{t:1000,p:1000,d:100}],series);const last=c=>d.filter(p=>p.color===c&&p.kind==='line').at(-1);assert(Math.abs(last('blue').y-last('green').y)<.01);});
+test('isolated prefill remains visible without connecting empty intervals',()=>{const d=chart([{t:0,p:null,d:1},{t:1000,p:1000,d:2},{t:2000,p:null,d:1}],series);assert(d.some(p=>p.color==='blue'&&p.kind==='point'));assert(!d.some(p=>p.color==='blue'&&p.kind==='line'));});
+test('KV 50 percent is at mid-height regardless of queue depth',()=>{const d=chart([{t:0,p:50,d:20},{t:1000,p:50,d:10}],series,'resources');assert.equal(d.filter(p=>p.color==='blue'&&p.kind==='line').at(-1).y,112);});

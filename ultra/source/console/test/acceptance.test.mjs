@@ -1,0 +1,9 @@
+import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import vm from 'node:vm';
+const html=fs.readFileSync(new URL('../../vllm/entrypoints/serve/instrumentator/dashboard.html',import.meta.url),'utf8');const scope={};vm.createContext(scope);vm.runInContext(html.match(/<script>([\s\S]*?)<\/script>/)[1],scope);const core=scope.MonitorCore;
+function m(a,p,n){return core.parsePrometheus(`vllm:spec_decode_num_accepted_tokens_total ${a}\nvllm:spec_decode_num_draft_tokens_total ${p}\nvllm:spec_decode_num_drafts_total ${n}`);}
+test('MTP5: 60% acceptance and four output tokens per verification',()=>{const s=core.specStats(m(30,50,10));assert.equal(s.rate,60);assert.equal(s.length,4);});
+test('DFlash7: accepted count excludes bonus token',()=>{const s=core.specStats(m(70,70,10));assert.equal(s.rate,100);assert.equal(s.length,8);});
+test('idle/missing leaves gap but genuine zero acceptance is zero',()=>{assert.equal(core.specStats(m(0,0,0)).rate,null);assert.equal(core.specStats({}).available,false);assert.equal(core.specStats(m(0,50,10)).rate,0);assert.equal(core.specStats(m(0,50,10)).length,1);});
+test('recent window uses count deltas rather than average percentages',()=>{const s=core.specStats(core.delta(m(101,110,20),m(100,100,10)));assert.equal(s.rate,10);assert.equal(s.length,1.1);});
+test('reset and inconsistent counts never show misleading rates',()=>{assert(core.counterReset(m(1,2,1),m(8,10,2)));assert.equal(core.specStats(core.delta(m(1,2,1),m(8,10,2))).rate,null);assert.equal(core.specStats(m(11,10,1)).rate,null);});
+test('positions are zero-based counters with per-round denominator',()=>{const data=m(15,30,10);data['vllm:spec_decode_num_accepted_tokens_per_pos_total']=[{labels:{position:'0'},value:10},{labels:{position:'1'},value:5}];const s=core.specStats(data);assert.equal(s.positions[0].rate,100);assert.equal(s.positions[1].rate,50);});

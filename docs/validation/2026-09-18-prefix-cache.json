@@ -1,0 +1,21 @@
+{
+  "purpose": "cache-functional-smoke-not-performance-benchmark",
+  "results": [
+    {
+      "run": 1,
+      "elapsedSeconds": 7.868824142,
+      "promptTokens": 9630,
+      "cachedTokens": 0,
+      "content": "OK",
+      "finishReason": "stop"
+    },
+    {
+      "run": 2,
+      "elapsedSeconds": 1.1897819229999995,
+      "promptTokens": 9630,
+      "cachedTokens": 8320,
+      "content": "OK",
+      "finishReason": "stop"
+    }
+  ]
+}

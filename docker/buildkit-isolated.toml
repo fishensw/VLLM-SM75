@@ -1,0 +1,10 @@
+# Dedicated build worker only. Never install this as host daemon configuration.
+[worker.oci]
+  max-parallelism = 1
+  gc = true
+  reservedSpace = "40GB"
+  maxUsedSpace = "180GB"
+  minFreeSpace = "80GB"
+
+[worker.containerd]
+  enabled = false

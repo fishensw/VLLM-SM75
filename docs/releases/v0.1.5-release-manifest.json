@@ -1,0 +1,290 @@
+{
+  "schemaVersion": 1,
+  "release": "0.1.5",
+  "status": "source-release-v0.1.5",
+  "publicBaselineCommit": "95d3bcd168d14f1a0246878f80472e16826ea731",
+  "standard": {
+    "sourceBaselineCommit": "a1095d3dddf59433f593e4423d497482bb658f03",
+    "existingImage": "vllm-sm75:v0.1.5",
+    "existingImageId": "sha256:f5683926f8dbb8bd8a54d5e61fb7c54ddd2fb58d8026ae95d7f002869ab28ab0",
+    "freshFullBuild": "completed-isolated-worker-and-independent-canary-validated",
+    "buildContractTests": {
+      "passed": 10
+    },
+    "existingImageSourceFullyVerified": false,
+    "patchAudit": {
+      "matched": 43,
+      "total": 43,
+      "hooksPresent": true,
+      "inventory": "patch-inventory-standard.csv",
+      "scope": "reviewed overlay sources only; not complete upstream or binary reproducibility"
+    },
+    "historicalFullBuildCandidate": {
+      "sourceCommit": "42626f015626c25eb5fe1310c78e5d2ed59b8d99",
+      "image": "local/vllm-sm75:v0.1.5-full-rc1",
+      "imageId": "sha256:3dafd53886552108ddb3e446b299ad748d841f2d37c3b4cb82c7167f8ea5af58",
+      "portableOciSha256": "11414e8de07463c7b2a40aa4db6d32c59c1c28dcb2a6ebb4cfe176d2b5921f2f",
+      "portableOciBytes": 10629060608,
+      "location": "/path/to/sm75-artifacts/full-build-20260918/portable-oci/v0.1.5-full-rc1.oci.tar",
+      "published": false,
+      "productionReplacement": false,
+      "reviewedPatchFilesMatched": 43,
+      "engineSelectorTestsPassed": 48,
+      "gpuAcceptanceProfile": "27B-FP8-DFlash2-TP4",
+      "gpuAcceptanceCasesPassed": 6,
+      "baselinePromptAndOutputTokenHashMatch": true,
+      "maximumTotalContextTokens": 262144,
+      "continuousOutputTokens": 512,
+      "firstBoundaryRequestPreemptions": 2,
+      "pairedPerformanceCertified": false,
+      "record": "../validation/2026-09-18-isolated-full-build.md",
+      "longContextRecord": "../validation/2026-09-18-full-long-context.json",
+      "acceptanceCondition": "NVCC_THREADS=1 and same compiled cache as ultra canary",
+      "earlier128kTokenHashMismatch": "recorded; aligned-environment-repeat-passed",
+      "crossColdCompileTokenStabilityCertified": false
+    },
+    "fullBuildCandidate": {
+      "sourceCommit": "cd3eef636c7a1e2e099700011e3cd685625af731",
+      "image": "local/vllm-sm75:v0.1.5-review-cd3eef6",
+      "imageId": "sha256:4de4fdc2c3285cb314942923639cb499561116d42eff81c29b8eaaea564b83e2",
+      "portableOciSha256": "b56afa3fa776d42086a721d5e4a4c189b2bf2bc00ef4fda5e15cf4b5e45d0fc7",
+      "archiveFile": "v0.1.5-review-cd3eef6.oci.tar",
+      "portableOciBytes": 10629061120,
+      "published": false,
+      "productionReplacement": false,
+      "reviewedPatchFilesMatched": 43,
+      "engineSelectorTestsPassed": 48,
+      "gpuAcceptanceCasesPassed": 6,
+      "baselinePromptAndOutputTokenHashMatch": true,
+      "maximumTotalContextTokens": 262144,
+      "continuousOutputTokens": 512,
+      "pairedPerformanceCertified": false,
+      "crossColdCompileTokenStabilityCertified": false,
+      "record": "../validation/2026-09-18-final-review.md",
+      "longContextRecord": "../validation/2026-09-18-final-review.json"
+    }
+  },
+  "ultra": {
+    "sourceCommit": "13c86cb",
+    "buildMode": "incremental-runtime-preserving",
+    "originalRuntimeImageId": "sha256:64898eeada4d3e2ebd0becf3d6a0ff489388fe49b958ef041b3e2d4fb415d535",
+    "candidateImage": "local/vllm-sm75:v0.1.5-ultra-ui-rc7",
+    "candidateImageId": "sha256:bf9be0a77d47a4473f1ece7baa597b93dc65aa0d109ae5acd587af2c7c3e6348",
+    "sourceManifestSha256": "7a6211bba7509682cd0c15d96fca64dfba8d5098f9d4e62fb91229d760a85ba0",
+    "linuxTests": {
+      "passed": 52,
+      "failed": 0,
+      "skipped": 0
+    },
+    "windowsTests": {
+      "passed": 50,
+      "failed": 0,
+      "skipped": 2
+    },
+    "runtimeSmoke": {
+      "profile": "fp8-dflash2",
+      "greedyRepeat": "passed",
+      "naturalStop": "passed",
+      "jsonSchema": "passed",
+      "toolRoundTrip": "passed-with-synthetic-tool-result",
+      "shortPrefixCacheHit": "not-demonstrated-zero-hits",
+      "sessionAcrossContainerRecreation": "passed",
+      "flashinferAcrossContainerRecreation": "RC5 historical check; RC6 reuses original cache mounts",
+      "dshIdentity": "uid-gid-1000-zero-effective-capabilities",
+      "dshPrivateFileIsolation": "passed",
+      "dshConfigSymlinkProtection": "passed-disposable-linux-container",
+      "longerPrefixCacheHit": {
+        "status": "passed",
+        "promptTokens": 9630,
+        "secondRequestCachedTokens": 8320,
+        "sameOutputAndNaturalStop": true,
+        "record": "../validation/2026-09-18-prefix-cache.json"
+      },
+      "liveCacheHitDisplay": "passed-fresh-positive-sampled-rate",
+      "unifiedHeader": "passed-authenticated-production-browser-all-pages-and-responsive-layout",
+      "panelLoginFlash": "fixed-checking-state-no-login-form; delayed-session-browser-verified"
+    },
+    "freshFullBuild": "completed-isolated-worker-and-independent-canary-validated",
+    "deploymentRecord": "../validation/2026-09-18-rc7-header-visibility.md",
+    "deployment": {
+      "container": "vllm-sm75-ultra",
+      "console": "http://192.0.2.53:1615/",
+      "health": "passed",
+      "unraidTemplate": "updated",
+      "originalContainer": "retained-stopped-for-rollback",
+      "rollbackContainer": "vllm-sm75-ultra-rollback-rc6-20260918",
+      "dshDataMigration": "separate-copies-original-directories-preserved"
+    },
+    "patchAudit": {
+      "matched": 43,
+      "total": 43,
+      "hooksPresent": true,
+      "inventory": "patch-inventory-ultra.csv",
+      "scope": "reviewed overlay sources only; not complete upstream or binary reproducibility",
+      "auditedImageId": "sha256:7f5dd0f41785f4199f82aa594009c72b35e69aa0949f51fc18320f45ed190ade"
+    },
+    "staticHotfix": {
+      "sourceCommit": "37587d3",
+      "production": "RC7 container plus subsequent app.js, live-summary.js and logo static fixes through 37587d3",
+      "record": "../validation/2026-09-18-header-immediate-render.md",
+      "candidateImage": "local/vllm-sm75:v0.1.5-ultra-ui-rc8",
+      "candidateImageId": "sha256:f6ad9a5a67ebcc4d74867c19ed00595c0f4faeac27d99b68d429ca73041703ef",
+      "sourceManifestSha256": "e373ae79e2ff5d837244470d98b8ae06d1d9489bfe529c6687bba10c53d315fc",
+      "linuxTestsPassed": 52,
+      "candidateContainerPromoted": false,
+      "unraidTemplate": "RC7 unchanged; RC8 lacks later monitor-page exception and final logo; neither is a complete latest-source replacement",
+      "candidateSourceCommit": "b610a6b",
+      "candidateContainsLatestProductionHotfixes": false
+    },
+    "historicalFullBuildCandidate": {
+      "sourceCommit": "42626f015626c25eb5fe1310c78e5d2ed59b8d99",
+      "image": "local/vllm-sm75:v0.1.5-ultra-full-rc1",
+      "imageId": "sha256:3bdad12bfe5b855ddb637cbb2fcf754ecaa7ad54eb2f9f4638b297bc2aabbcb9",
+      "portableOciSha256": "5991e73a04667904db691b5c1af75b2021dc6a710bbcb69af5ab603d89aadc59",
+      "portableOciBytes": 10741907968,
+      "location": "/path/to/sm75-artifacts/full-build-20260918/portable-oci/v0.1.5-ultra-full-rc1.oci.tar",
+      "published": false,
+      "productionReplacement": false,
+      "reviewedPatchFilesMatched": 43,
+      "engineSelectorTestsPassed": 48,
+      "gpuAcceptanceProfile": "27B-FP8-DFlash2-TP4",
+      "gpuAcceptanceCasesPassed": 16,
+      "baselinePromptAndOutputTokenHashMatch": true,
+      "maximumTotalContextTokens": 262144,
+      "continuousOutputTokens": 512,
+      "firstBoundaryRequestPreemptions": 2,
+      "pairedPerformanceCertified": false,
+      "record": "../validation/2026-09-18-isolated-full-build.md",
+      "longContextRecord": "../validation/2026-09-18-full-long-context.json",
+      "linuxConsoleTestsPassed": 52,
+      "consoleFilesMatched": 79,
+      "loginDshLiveSummarySmoke": "passed-in-independent-canary",
+      "jsonSchemaAndToolRoundTrip": "passed"
+    },
+    "fullBuildCandidate": {
+      "sourceCommit": "cd3eef636c7a1e2e099700011e3cd685625af731",
+      "image": "local/vllm-sm75:v0.1.5-ultra-review-cd3eef6",
+      "imageId": "sha256:54b5f40e12618348300d838a772cab569db355bc59a3ad68e223dd691d64eaa2",
+      "portableOciSha256": "6d98275a68d170d466323eccb17cf36b8cebaf1ddfe20a4f40faad82f9dc936c",
+      "archiveFile": "v0.1.5-ultra-review-cd3eef6.oci.tar",
+      "portableOciBytes": 10741904384,
+      "published": false,
+      "productionReplacement": false,
+      "reviewedPatchFilesMatched": 43,
+      "engineSelectorTestsPassed": 48,
+      "gpuAcceptanceCasesPassed": 16,
+      "baselinePromptAndOutputTokenHashMatch": true,
+      "maximumTotalContextTokens": 262144,
+      "continuousOutputTokens": 512,
+      "pairedPerformanceCertified": false,
+      "crossColdCompileTokenStabilityCertified": false,
+      "record": "../validation/2026-09-18-final-review.md",
+      "longContextRecord": "../validation/2026-09-18-final-review.json",
+      "linuxConsoleTestsPassed": 53,
+      "consoleFilesMatched": 78
+    },
+    "uiFollowup": {
+      "sourceCommit": "064749c52fedef580eb1a07aa788da805720add5",
+      "image": "local/vllm-sm75:v0.1.5-ultra-recommendation-review",
+      "imageId": "sha256:e7500fbdb343afc2704978772e27f12e6bd7a7771df430f86b9ec4f5837210f8",
+      "baseImageId": "sha256:54b5f40e12618348300d838a772cab569db355bc59a3ad68e223dd691d64eaa2",
+      "linuxConsoleTestsPassed": 58,
+      "httpSamplingDefaultsSmoke": "passed",
+      "browserDisplay": "passed-component-preview",
+      "productionPromoted": false,
+      "fullGpuAcceptanceRerun": false,
+      "record": "../validation/2026-09-18-model-recommendations.md",
+      "httpModelRecommendationsSmoke": "passed-including-presence-penalty-and-reset"
+    }
+  },
+  "modelRevisionAudit": {
+    "targetWeightsRevision": null,
+    "draftWeightsRevision": null,
+    "status": "config-and-tokenizer-hashes-recorded; weights-revision-unresolved",
+    "record": "model-config-audit.json"
+  },
+  "releaseGatesRemaining": [
+    "full-existing-production-data-upgrade-rehearsal-not-performed-in-this-canary",
+    "target-only-dflash2-mtp-awq-model-matrix",
+    "broader-paired-performance-matrix-and-isolated-monitoring-overhead",
+    "14b-35b-fp8-awq-and-future-int8-performance-matrix",
+    "broader-long-document-quality-and-concurrent-cache-eviction-cancellation",
+    "262k-first-request-kv-preemption-optimization",
+    "cross-cold-compile-cache-token-stability-investigation",
+    "public-container-image-publication",
+    "user-review-before-production-promotion"
+  ],
+  "runtimeInheritanceAudit": {
+    "record": "../validation/2026-09-18-runtime-inheritance.json",
+    "reviewedFiles": 43,
+    "standardMatchedCurrentSource": 43,
+    "ultraMatchedCurrentSource": 43,
+    "identicalToRetainedV014": 37,
+    "scope": "reviewed source files and hooks; not binary reproducibility or universal performance certification"
+  },
+  "consolidation": {
+    "record": "../validation/2026-09-18-release-consolidation.md",
+    "buildEntrypoint": "docker/build.sh",
+    "runEntrypoint": "docker/run.sh",
+    "versionFile": "docker/VERSION",
+    "editions": [
+      "standard",
+      "ultra"
+    ],
+    "currentSourceFinalImagesBuilt": false,
+    "windowsConsoleTests": {
+      "passed": 51,
+      "skipped": 2,
+      "failed": 0
+    },
+    "scriptContractTestsPassed": 15,
+    "sleepCompileCacheTestsPassed": 3,
+    "performanceComparatorTestsPassed": 3,
+    "scriptSmokeCasesPassed": 15,
+    "longContextClientTestsPassed": 4,
+    "ociImportTestsPassed": 2,
+    "sourceCommit": "cd3eef636c7a1e2e099700011e3cd685625af731",
+    "linuxConsoleTests": {
+      "passed": 53,
+      "failed": 0,
+      "skipped": 0,
+      "scope": "final complete ultra image"
+    },
+    "latestUiCandidateBuiltAndTested": true
+  },
+  "pairedPerformance": {
+    "record": "../validation/2026-09-18-paired-performance.json",
+    "passed": true,
+    "validSamples": 30,
+    "profile": "27B-FP8-DFlash2-TP4",
+    "inputTokens": [
+      8192,
+      32768
+    ],
+    "outputTokens": 512,
+    "repeats": 5,
+    "allOutputTokenHashesMatch": true,
+    "throughputTolerancePercent": 5,
+    "maximumMedianThroughputDropPercent": 0.35203,
+    "scope": "retained v0.1.4 and existing v0.1.5/production ultra images, not final consolidated-source builds",
+    "productionRestored": true,
+    "dockerDaemonRestarted": false
+  },
+  "finalReview": {
+    "record": "../validation/2026-09-18-final-review.md",
+    "sourceCommit": "cd3eef636c7a1e2e099700011e3cd685625af731",
+    "productionRestored": true,
+    "dockerDaemonRestarted": false,
+    "firstInstallAndStoredSettingsTests": "passed; no full production database migration rehearsal"
+  },
+  "redaction": {
+    "deploymentAddressesAndHostPaths": "documentation placeholders",
+    "imageIdsAndValidationHashes": "unchanged"
+  },
+  "sourceRelease": {
+    "tag": "v0.1.5",
+    "url": "https://github.com/fishensw/VLLM-SM75/releases/tag/v0.1.5",
+    "publicContainerImages": false,
+    "productionPromoted": false
+  }
+}

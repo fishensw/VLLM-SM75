@@ -1,0 +1,61 @@
+{
+  "target": {
+    "configuredPath": "/root/.cache/modelscope/hub/models/Qwen/Qwen3___8-27B-FP8",
+    "resolvedPath": "/root/.cache/modelscope/hub/models/Qwen/Qwen3___8-27B-FP8",
+    "exists": true,
+    "files": {
+      "config.json": "74227dd615bf1ea975aa676bdf355a0379858c12f394b5365cd9dfa5fc2c70bc",
+      "tokenizer_config.json": "b11349aafa7cdc6a320767cf7ceb29ed82f7eda5d65e8e0819e76f0ce947bf27",
+      "tokenizer.json": "0997f410c57a1f4e53b09e4be8f4a172d90edd9564368fb0847030937229b9f3",
+      "model.safetensors.index.json": "f0838c766951bdfe76d6afbdb2771a8f67aaa2231dedb3d33cebd817729843a2"
+    },
+    "config": {
+      "model_type": "qwen3_5",
+      "architectures": [
+        "Qwen3_5ForConditionalGeneration"
+      ],
+      "quantization_config": {
+        "activation_scheme": "dynamic",
+        "fmt": "e4m3",
+        "quant_method": "fp8",
+        "weight_block_size": [
+          128,
+          128
+        ],
+        "excludedModuleCount": 882
+      }
+    },
+    "text_config": {
+      "hidden_size": 5120,
+      "max_position_embeddings": 262144,
+      "model_type": "qwen3_5_text",
+      "num_hidden_layers": 64,
+      "layerTypeCounts": {
+        "linear_attention": 48,
+        "full_attention": 16
+      }
+    },
+    "weightsRevision": null,
+    "revisionStatus": "not-present-in-config-or-snapshot-path; weight-bytes-not-hashed"
+  },
+  "draft": {
+    "configuredPath": "/root/.cache/huggingface/hub/models/incoai/Qwen3___8-27B-DFlash2",
+    "resolvedPath": "/root/.cache/huggingface/hub/models/incoai/Qwen3___8-27B-DFlash2",
+    "exists": true,
+    "files": {
+      "config.json": "873e3556509b0da06e29654ba00d4944888d4b5e8a33afde25f7eb27d321e980"
+    },
+    "config": {
+      "model_type": "qwen3",
+      "architectures": [
+        "DFlash2DraftModel"
+      ],
+      "dtype": "bfloat16",
+      "num_hidden_layers": 5,
+      "hidden_size": 5120,
+      "max_position_embeddings": 262144
+    },
+    "weightsRevision": null,
+    "revisionStatus": "not-present-in-config-or-snapshot-path; weight-bytes-not-hashed"
+  }
+}

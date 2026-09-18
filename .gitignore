@@ -13,3 +13,8 @@ metrics
 # Byte-compiled / optimized
 __pycache__/
 *.py[cod]
+
+# Local validation artifacts and private runtime state
+/evidence/
+/ultra/source/console/data/
+/ultra/node_modules/

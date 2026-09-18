@@ -1,0 +1,5 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {switchModel} from '../switch-model.mjs';
+test('switch waits for owned model to stop and GPU release before launch',async()=>{const order=[];let n=0;await switchModel({id:'new'},{current:{id:'old'},stop:async()=>order.push('stop'),start:async()=>order.push('start'),gpus:async()=>{order.push('gpu');return [{usedMiB:n++?3:15000}]},sleep:async()=>order.push('wait')});assert.deepEqual(order,['stop','gpu','wait','gpu','start']);});
+test('same model is idempotent',async()=>{const r=await switchModel({id:'same'},{current:{id:'same'},stop:()=>assert.fail(),start:()=>assert.fail()});assert.equal(r.running,true);});
+test('does not stop unrelated GPU processes or launch on occupied GPU',async()=>{await assert.rejects(switchModel({id:'new'},{current:null,gpus:async()=>[{usedMiB:15000}],start:()=>assert.fail()}),/其他服务/);});
+test('release timeout never launches second model',async()=>{await assert.rejects(switchModel({id:'new'},{current:{id:'old'},stop:async()=>{},gpus:async()=>[{usedMiB:15000}],sleep:async()=>{},attempts:2,start:()=>assert.fail()}),/尚未释放/);});

@@ -1,0 +1,26 @@
+{
+  "name": "VLLM-SM75 工作台",
+  "short_name": "SM75",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#101c30",
+  "theme_color": "#101c30",
+  "icons": [
+    {
+      "src": "/brand/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/brand/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/brand/maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

@@ -1,4 +1,5 @@
 /.git
+/evidence
 /local-tests
 /.env
 /.env.*

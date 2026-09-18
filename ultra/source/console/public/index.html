@@ -1,0 +1,805 @@
+<!doctype html>
+<html lang="zh-CN">
+  <meta charset="utf-8" /><meta
+    name="viewport"
+    content="width=device-width,initial-scale=1"
+  /><title>VLLM-SM75 工作台</title
+  ><link rel="icon" href="/brand/favicon.svg" /><link
+    rel="manifest"
+    href="/brand/manifest.webmanifest"
+  /><link rel="stylesheet" href="/style.css" />
+  <body>
+    <aside hidden>
+      <h2 class="brand">
+        <img src="/brand/favicon.svg" width="34" height="34" alt="" />VLLM-SM75
+      </h2>
+      <nav id="nav">
+        <button data-page="chat">快速会话</button
+        ><button data-page="harness">工作台</button
+        ><button data-page="models">模型库</button
+        ><button data-page="profiles">运行配置</button
+        ><button data-page="monitor">性能监控</button
+        ><button data-page="tests">模型测试</button
+        ><button data-page="settings">设置</button>
+      </nav>
+      <small class="sidebar-foot">本地模型工作台</small>
+    </aside>
+    <main data-auth="checking">
+      <header hidden>
+        <h1 id="title">概览</h1>
+        <select id="active">
+          <option>请选择运行配置</option>
+        </select>
+        <div id="monitorControls" hidden></div>
+        <span id="state">连接中</span>
+        <div id="liveSummary" hidden></div>
+        <button
+          id="sm75P8"
+          type="button"
+          title="立即进入 P8"
+          aria-label="立即进入 P8"
+          hidden
+        >
+          ⚡</button
+        ><button id="monitorLogs" data-action="logs" hidden>查看日志</button
+        ><button id="signout" title="退出当前 Web 会话">退出登录</button
+        ><button id="taskToggle">任务 <span id="taskCount">0</span></button>
+      </header>
+      <div id="notice" role="status"></div>
+      <div id="taskDrawer" hidden>
+        <div class="actions">
+          <h3>任务</h3>
+          <button id="taskClose">关闭</button>
+        </div>
+        <div id="jobs"></div>
+      </div>
+      <div id="authPending" role="status">正在加载工作区…</div>
+      <section id="login" class="login-card" hidden>
+        <img
+          class="login-mark"
+          src="/brand/favicon.svg"
+          width="72"
+          height="72"
+          alt="VLLM-SM75"
+        /><span class="eyebrow">LOCAL MODEL WORKBENCH</span>
+        <h2>登录模型工作台</h2>
+        <p>在局域网中管理模型、对话与性能。</p>
+        <label for="token">登录 token</label
+        ><input
+          id="token"
+          type="password"
+          autocomplete="current-password"
+          placeholder="输入登录 token"
+          disabled
+        /><button id="signin" disabled>登录</button>
+        <p id="authStatus" role="status">正在确认登录状态…</p>
+        <button id="retryAuth" hidden>重新连接</button>
+        <details>
+          <summary>首次使用如何获取 token？</summary>
+          <p>
+            token 已随机生成并保存于控制台数据目录的 key
+            文件。管理员可在宿主或容器终端运行：
+          </p>
+          <code>node /opt/sm75-workbench/console/auth-cli.mjs show</code>
+          <p>升级会保留已有 token；登录 token 与模型 API Key 分开管理。</p>
+        </details>
+      </section>
+      <section id="models" hidden>
+        <div class="subnav">
+          <button id="localModelsTab" class="selected">本地模型</button
+          ><button id="downloadModelsTab">搜索下载</button>
+        </div>
+        <div id="localModelsView">
+          <h3>本地模型</h3>
+          <div class="actions">
+            <input
+              id="localModel"
+              placeholder="宿主机本地模型绝对路径"
+            /><button id="registerModel">添加本地模型</button>
+          </div>
+          <div id="modelList"></div>
+        </div>
+        <div id="downloadModelsView" hidden>
+          <h2>下载与导入</h2>
+          <p>模型文件独立保存，重复下载会复用下载目录。</p>
+          <div class="actions">
+            <select id="provider">
+              <option value="huggingface">Hugging Face</option>
+              <option value="modelscope">ModelScope</option></select
+            ><input
+              id="searchQuery"
+              placeholder="搜索模型名称，例如 Qwen3.8-27B"
+            /><button id="searchModels">搜索</button>
+          </div>
+          <div id="searchResults"></div>
+          <div class="actions">
+            <button id="searchPrev" disabled>上一页</button
+            ><span id="searchPage"></span
+            ><button id="searchNext" disabled>下一页</button>
+          </div>
+          <section id="downloadConfirm" hidden>
+            <h3>确认下载模型</h3>
+            <p id="downloadSummary"></p>
+            <input id="repo" readonly />
+            <p id="downloadPath"></p>
+            <button id="download">确认下载</button
+            ><button id="cancelDownloadSelection">取消</button>
+          </section>
+        </div>
+      </section>
+      <section id="profiles" hidden>
+        <div id="profileList">
+          <div class="actions">
+            <p>选择配置即可启动，编辑后可保存为个人模板。</p>
+            <button id="createProfile">新建配置</button
+            ><button id="importProfile">导入配置</button>
+          </div>
+          <div id="profileCards" class="profile-cards"></div>
+        </div>
+        <div id="profileEditor" hidden>
+          <div class="editor-section">
+            <div class="editor-caption">快速组合</div>
+            <div class="editor-row combo-row">
+              <label
+                >卡数<input
+                  id="comboTp"
+                  type="number"
+                  min="1"
+                  max="8"
+                  step="1"
+                  value="4" /></label
+              ><label
+                >单卡显存（GiB）<input
+                  id="comboVram"
+                  type="number"
+                  min="1"
+                  step="1"
+                  value="16" /></label
+              ><label
+                >总显存<span id="comboVramTotal" class="combo-total"
+                  >64 GiB</span
+                ></label
+              ><label class="span2">模型<select id="comboModel"></select></label
+              ><label
+                >场景<select id="comboScene">
+                  <option value="single">单人长上下文</option>
+                  <option value="coding">Coding</option>
+                  <option value="multi">多人并发</option>
+                </select></label
+              ><label
+                >KV 量化<select id="comboKv">
+                  <option value="fp8_e4m3">fp8_e4m3</option>
+                  <option value="auto">auto</option>
+                </select></label
+              ><label
+                >加速<select id="comboAccel">
+                  <option value="none">无</option>
+                  <option value="mtp">MTP</option>
+                  <option value="dflash">DFlash2</option>
+                </select></label
+              ><label
+                >CPU KV<select id="comboCpuKv">
+                  <option value="off">关</option>
+                  <option value="on">开</option>
+                </select></label
+              ><button id="comboApply">应用组合</button>
+            </div>
+            <div class="editor-row" id="comboMtpRow" hidden>
+              <label
+                >投机 tokens<select id="comboMtpTokens">
+                  <option value="1">1</option>
+                  <option value="2">2</option>
+                  <option value="3">3</option>
+                  <option value="4">4</option>
+                  <option value="5">5</option>
+                  <option value="6">6</option>
+                  <option value="7">7</option>
+                  <option value="8">8</option>
+                </select></label
+              >
+            </div>
+            <div class="editor-row" id="comboDflashRow" hidden>
+              <label id="draftChoiceLabel"
+                >草稿模型<select id="draftPath"></select></label
+              ><label
+                >投机 tokens<select id="comboDraftTokens">
+                  <option value="1">1</option>
+                  <option value="2">2</option>
+                  <option value="3">3</option>
+                  <option value="4">4</option>
+                  <option value="5">5</option>
+                  <option value="6">6</option>
+                  <option value="7">7</option>
+                  <option value="8">8</option>
+                </select></label
+              >
+            </div>
+            <div class="editor-row" id="offloadBody" hidden>
+              <label
+                >CPU KV 容量（GiB）<input
+                  id="offloadGiB"
+                  type="number"
+                  value="8"
+                  min="0"
+                  step="1"
+              /></label>
+            </div>
+            <p class="help" id="comboHint">
+              按 卡数×单卡显存 与所选模型的实际体积自动推导 上下文/并发；加速与
+              CPU KV 选择后会在下方展开对应参数；应用后可在参数区微调。
+            </p>
+          </div>
+          <div class="editor-section">
+            <div class="editor-caption">基本</div>
+            <div class="profile-toolbar editor-row">
+              <label class="span2"
+                >配置名称<input
+                  id="profileName"
+                  placeholder="例如：单人长上下文" /></label
+              ><label class="span2"
+                >场景模板<select id="templateSelect"></select></label
+              ><button id="applyTemplate">载入模板</button
+              ><button id="newProfile">另存配置</button
+              ><button id="save" class="primary">保存配置</button
+              ><button id="backProfiles">收起编辑</button>
+            </div>
+          </div>
+          <div class="editor-section">
+            <div class="editor-caption">模型</div>
+            <div class="editor-row">
+              <label
+                >权重格式<select id="format">
+                  <option value="fp8">FP8</option>
+                  <option value="awq">AWQ</option>
+                  <option value="kat">自定义</option>
+                </select></label
+              ><label hidden
+                >API 端口<input
+                  id="apiPort"
+                  type="number"
+                  value="8000" /></label
+              ><label class="grow" hidden
+                >编译缓存目录<input id="cacheRoot" /></label
+              ><label class="span3"
+                >模型<select id="mainModelSelect"></select></label
+              ><label
+                >默认启动配置<input
+                  id="profileDefault"
+                  type="checkbox"
+                  role="switch"
+              /></label>
+            </div>
+            <input id="pid" type="hidden" />
+            <details hidden>
+              <summary>参数向导</summary>
+              <div class="cards">
+                <label
+                  >模型路径<input
+                    id="modelPath"
+                    placeholder="/models/model" /></label
+                ><label
+                  >TP 卡数<input
+                    id="tp"
+                    type="number"
+                    value="4"
+                    min="1" /></label
+                ><label
+                  >最大并发<input
+                    id="seq"
+                    type="number"
+                    value="4"
+                    min="1" /></label
+                ><label
+                  >批处理 tokens<input
+                    id="batch"
+                    type="number"
+                    value="8192"
+                    min="1" /></label
+                ><label
+                  >显存利用率<input
+                    id="util"
+                    type="number"
+                    value="0.87"
+                    min="0.1"
+                    max="0.99"
+                    step="0.01" /></label
+                ><label>上下文上限<input id="context" value="262144" /></label
+                ><label
+                  >CPU KV（GiB）<input
+                    id="cpuKv"
+                    type="number"
+                    value="8"
+                    min="0" /></label
+                ><label
+                  >自动 exit（分钟）<input
+                    id="idle"
+                    type="number"
+                    value="30"
+                    min="0"
+                    step="1"
+                /></label>
+              </div>
+              <button id="applyParams">应用到下方参数</button>
+              <p>60 秒测试填写 1，日常填写 30。已有其他参数保留。</p>
+            </details>
+            <div class="feature-cards">
+              <div class="feature-card">
+                <div class="feature-head">
+                  <span>前缀缓存</span
+                  ><input
+                    id="prefixEnabled"
+                    type="checkbox"
+                    role="switch"
+                    aria-label="前缀缓存"
+                  />
+                </div>
+              </div>
+              <div id="accelOptions" style="display: none">
+                <select id="variant" hidden>
+                  <option value="base">普通</option>
+                  <option value="mtp">MTP</option>
+                  <option value="dflash">DFLASH2</option></select
+                ><button id="chooseMtp" type="button" hidden>MTP</button
+                ><button id="chooseDflash" type="button" hidden>DFLASH2</button
+                ><button id="setAcceleration" type="button" hidden>
+                  应用加速</button
+                ><input id="accelEnabled" type="checkbox" hidden />
+              </div>
+              <div id="offloadCompat" style="display: none">
+                <input id="offloadEnabled" type="checkbox" hidden />
+              </div>
+            </div>
+          </div>
+          <div class="editor-section">
+            <div class="editor-caption">电源</div>
+            <div class="editor-row">
+              <label class="span2"
+                >电源模式<select id="powerMode">
+                  <option value="pstate">
+                    常驻 P-State（默认；空闲 P8 / 负载回 16）
+                  </option>
+                  <option value="sleep">自动休眠（exit，可选）</option>
+                </select></label
+              >
+              <div id="pstateFields">
+                <label
+                  >空闲进 P8（秒）<input
+                    id="pstateIdle"
+                    type="number"
+                    value="1"
+                    min="1"
+                    step="1"
+                    title="无请求后多久进入 P8；实际延迟≈空闲时长+确认时长（轮询间隔内检测）" /></label
+                ><label
+                  >负载阈值（%）<input
+                    id="pstateUtil"
+                    type="number"
+                    value="5"
+                    min="0"
+                    max="100" /></label
+                ><label
+                  >确认时长（秒）<input
+                    id="pstateConfirm"
+                    type="number"
+                    value="60"
+                    min="0" /></label
+                ><label
+                  >P8 值<input
+                    id="pstateLow"
+                    type="number"
+                    value="8"
+                    min="1"
+                    max="16" /></label
+                ><label
+                  >高态值<input
+                    id="pstateHigh"
+                    type="number"
+                    value="16"
+                    min="1"
+                    max="16" /></label
+                ><label
+                  >轮询间隔（秒）<input
+                    id="pstatePoll"
+                    type="number"
+                    value="5"
+                    min="1"
+                /></label>
+              </div>
+              <div id="sleepFields" hidden>
+                <label
+                  >空闲休眠（分钟）<input
+                    id="sleepIdle"
+                    type="number"
+                    value="30"
+                    min="1" /></label
+                ><label
+                  >卸载目标<select id="sleepTarget">
+                    <option value="exit">exit（退出）</option>
+                  </select></label
+                >
+              </div>
+            </div>
+          </div>
+          <div class="editor-section">
+            <div class="editor-caption">参数</div>
+            <div id="parameterFields"></div>
+            <div class="editor-row">
+              <input
+                id="newParamKey"
+                placeholder="自定义参数，例如 --seed"
+              /><input
+                id="newParamValue"
+                placeholder="参数值（开关参数留空）"
+              /><button id="addParameter">添加参数</button>
+            </div>
+            <details class="template-save">
+              <summary>保存为个人模板</summary>
+              <div class="actions">
+                <input id="templateName" placeholder="个人模板名称" /><button
+                  id="saveTemplate"
+                >
+                  保存模板
+                </button>
+              </div>
+            </details>
+          </div>
+          <textarea id="args" hidden>[]</textarea
+          ><textarea id="binds" hidden>[]</textarea>
+          <details>
+            <summary>启动详情</summary>
+            <pre id="editorPreview"></pre>
+          </details>
+        </div>
+      </section>
+      <section id="chat" hidden>
+        <div id="messages" role="log" aria-label="对话消息"></div>
+        <div class="chat-bottom">
+          <div class="chat-controls">
+            <label
+              >模型<select id="model" aria-label="会话模型">
+                <option value="">加载当前模型…</option>
+              </select></label
+            ><label
+              >思考强度<select id="chatThinking">
+                <option value="default">模型默认</option>
+                <option value="off">关闭</option>
+                <option value="low">低</option>
+                <option value="medium">中</option>
+                <option value="high">高</option>
+              </select></label
+            >
+            <details id="chatParameters">
+              <summary>生成参数</summary>
+              <div class="chat-parameter-panel">
+                <label
+                  >参数方案<select id="chatParameterMode">
+                    <option value="recommended">模型推荐</option>
+                    <option value="custom">自定义</option>
+                  </select></label
+                >
+                <div class="chat-sampling-grid">
+                  <label
+                    >温度 Temperature<input
+                      id="chatTemperature"
+                      type="number"
+                      min="0"
+                      max="2"
+                      step="0.05" /></label
+                  ><label
+                    >Top P<input
+                      id="chatTopP"
+                      type="number"
+                      min="0.01"
+                      max="1"
+                      step="0.01" /></label
+                  ><label
+                    >Top K<input
+                      id="chatTopK"
+                      type="number"
+                      min="-1"
+                      step="1"
+                      placeholder="-1 不限制" /></label
+                  ><label
+                    >Min P<input
+                      id="chatMinP"
+                      type="number"
+                      min="0"
+                      max="1"
+                      step="0.01" /></label
+                  ><label
+                    >存在惩罚 Presence<input id="chatPresence" type="number" min="-2" max="2" step="0.1" /></label
+                  ><label
+                    >重复惩罚<input
+                      id="chatRepetition"
+                      type="number"
+                      min="0.01"
+                      step="0.01" /></label
+                  ><label
+                    >最大输出 tokens<input
+                      id="maxTokens"
+                      type="number"
+                      min="1"
+                      step="1"
+                      placeholder="服务默认"
+                  /></label>
+                </div>
+                <div class="actions">
+                  <select
+                    id="samplingTemplate"
+                    aria-label="生成参数模板"
+                  ></select
+                  ><button type="button" id="loadSampling">套用</button>
+                </div>
+                <div class="actions">
+                  <input id="samplingName" placeholder="模板名称" /><button
+                    type="button"
+                    id="saveSampling"
+                  >
+                    保存模板
+                  </button>
+                </div>
+                <p id="chatParameterHint" class="help"></p>
+              </div>
+            </details>
+            <button id="clearChat" title="开始新会话" aria-label="开始新会话">
+              ＋
+            </button>
+          </div>
+          <form id="chatForm">
+            <textarea
+              id="prompt"
+              rows="2"
+              placeholder="输入消息 · Enter 发送，Shift + Enter 换行"
+              aria-label="输入消息"
+            ></textarea>
+            <div class="composer-actions">
+              <span>Shift + Enter 换行</span
+              ><button type="button" id="cancel" hidden>停止生成</button
+              ><button id="sendChat" class="primary">发送 ↑</button>
+            </div>
+          </form>
+          <p id="chatStats" aria-live="polite"></p>
+        </div>
+      </section>
+      <section id="harness" hidden>
+        <p id="harnessState">正在连接 DSH…</p>
+        <button id="startHarness">重试连接</button
+        ><button id="installHarness" hidden>安装</button
+        ><button id="stopHarness" hidden>停止</button>
+      </section>
+      <section id="monitor" hidden>
+        <div id="monitorLiveView">
+          <section id="overview">
+            <div class="gpu-section-head">
+              <h2>GPU 实时状态</h2>
+              <span id="hardwareStamp"></span>
+            </div>
+            <div id="hardwareCards" class="gpu-grid"></div>
+            <div id="gpu" hidden></div>
+            <details>
+              <summary>启动与缓存详情</summary>
+              <pre id="preview"></pre>
+            </details>
+          </section>
+          <iframe id="monitorFrame" title="推理性能"></iframe>
+        </div>
+      </section>
+      <section id="tests" hidden>
+        <div id="monitorTestView">
+          <section id="benchmarks">
+            <article class="benchmark-project">
+              <div class="benchmark-heading">
+                <span>性能测试 · llm_speedtest</span
+                ><input
+                  type="checkbox"
+                  role="switch"
+                  id="benchToggle-speedtest"
+                  aria-label="启用性能测试 · llm_speedtest"
+                />
+              </div>
+              <p id="benchStatus-speedtest" role="status" hidden></p>
+              <iframe
+                id="benchFrame-speedtest"
+                title="性能测试 · llm_speedtest"
+                hidden
+              ></iframe>
+            </article>
+            <article class="benchmark-project">
+              <div class="benchmark-heading">
+                <span>SQL 测试 · SQL LLM Benchmark</span
+                ><input
+                  type="checkbox"
+                  role="switch"
+                  id="benchToggle-sql"
+                  aria-label="启用SQL 测试 · SQL LLM Benchmark"
+                />
+              </div>
+              <p id="benchStatus-sql" role="status" hidden></p>
+              <iframe
+                id="benchFrame-sql"
+                title="SQL 测试 · SQL LLM Benchmark"
+                hidden
+              ></iframe>
+            </article>
+          </section>
+        </div>
+      </section>
+      <section id="settings" hidden>
+        <div id="modelSamplingSettings">
+          <h2>模型生成参数</h2>
+          <label>工作台模型<select id="samplingModel"></select></label>
+          <div class="actions">
+            <select
+              id="modelSamplingTemplate"
+              aria-label="工作台参数模板"
+            ></select
+            ><button id="loadModelSampling">套用模板</button
+            ><button id="resetModelSampling">恢复服务默认</button>
+          </div>
+          <div id="modelSamplingRecommendations" hidden>
+            <div class="actions">
+              <select id="modelSamplingRecommendation" aria-label="模型推荐模式">
+                <option value="thinking">思考模式推荐</option>
+                <option value="nonThinking">非思考模式推荐</option>
+              </select>
+              <button id="applyModelRecommendation">套用模型推荐</button>
+            </div>
+            <p class="help" id="modelSamplingRecommendationInfo"></p>
+            <p class="help">套用后保存生效；采样参数与会话中的思考开关分别设置。</p>
+          </div>
+          <div class="chat-sampling-grid">
+            <label
+              >温度 Temperature<input
+                type="number"
+                id="modelSampling-temperature"
+                step="any"
+                placeholder="服务默认" /></label
+            ><label
+              >Top P<input
+                type="number"
+                id="modelSampling-top_p"
+                step="any"
+                placeholder="服务默认" /></label
+            ><label
+              >Top K<input
+                type="number"
+                id="modelSampling-top_k"
+                step="any"
+                placeholder="服务默认" /></label
+            ><label
+              >Min P<input
+                type="number"
+                id="modelSampling-min_p"
+                step="any"
+                placeholder="服务默认" /></label
+            ><label
+              >存在惩罚 Presence<input id="modelSampling-presence_penalty" type="number" min="-2" max="2" step="0.1" placeholder="服务默认" /></label
+            ><label
+              >重复惩罚<input
+                type="number"
+                id="modelSampling-repetition_penalty"
+                step="any"
+                placeholder="服务默认" /></label
+            ><label
+              >最大输出 tokens<input
+                type="number"
+                id="modelSampling-max_tokens"
+                step="any"
+                placeholder="服务默认"
+            /></label>
+          </div>
+          <p class="help">
+            空白项沿用服务默认值，不等于模型推荐参数。手动填写或套用推荐后保存才会覆盖。Top K 等扩展参数用于 OpenAI
+            兼容接口；其他接口仅应用温度与输出上限。
+          </p>
+          <p class="help" id="modelSamplingDefaultInfo"></p>
+          <div class="actions">
+            <button id="saveModelSampling">保存模型参数</button
+            ><input id="modelSamplingName" placeholder="模板名称" /><button
+              id="saveModelSamplingTemplate"
+            >
+              保存为模板
+            </button>
+          </div>
+        </div>
+        <div id="deploymentSettings">
+          <h2>硬件设置</h2>
+          <button id="p2pCapability">检测 P2P</button>
+          <p id="p2pResult">尚未检测</p>
+          <details>
+            <summary>检测明细</summary>
+            <h3>P2P 读取矩阵 · topo -p2p r</h3>
+            <pre id="topologyRead"></pre>
+            <h3>GPU / CPU 拓扑</h3>
+            <pre id="topologyMatrix"></pre>
+            <p class="help">
+              PIX：同一 PCIe 桥 · PXB：多级 PCIe 桥 · PHB：经过 CPU PCIe 主桥 ·
+              NODE：同一 NUMA 节点 · SYS：跨 NUMA / CPU · NV#：NVLink
+            </p>
+            <details>
+              <summary>nvidia-smi 原始检测输出</summary>
+              <pre id="topologyRaw"></pre>
+            </details>
+            <p class="help" id="p2pEvidence"></p>
+          </details>
+          <h2>模型 API</h2>
+          <label
+            >API Key<input
+              id="modelApiKey"
+              type="password"
+              autocomplete="new-password"
+              placeholder="填写新的 API Key" /></label
+          ><button id="saveApiKey">保存 API Key</button>
+          <p id="apiKeyStatus" class="help">
+            保存后下次启动模型生效；工作台内部连接独立管理。
+          </p>
+          <h2>目录与默认启动</h2>
+          <label
+            >模型下载目录<input
+              id="settingModels"
+              placeholder="/data/model"
+              aria-describedby="modelDirectoryHint"
+            />
+            <p class="help" id="modelDirectoryHint">
+              填写容器内已挂载的绝对目录，例如
+              /data/model；模型自动按下载源和模型名称分目录保存。
+            </p></label
+          ><label
+            >编译缓存目录<input
+              id="settingCache"
+              placeholder="/data/cache"
+              aria-describedby="cacheDirectoryHint"
+            />
+            <p class="help" id="cacheDirectoryHint">
+              例如
+              /data/cache，与模型目录分开。两个目录均须可写并挂载到宿主机；宿主机示例：/mnt/user/appdata/vllm-sm75/model
+              和
+              /mnt/user/appdata/vllm-sm75/cache。修改路径不会自动迁移已有文件。
+            </p></label
+          ><label>默认运行配置<select id="defaultProfile"></select></label
+          ><label
+            >工作台启动时自动启动默认模型<input
+              id="autoStart"
+              type="checkbox"
+              role="switch" /></label
+          ><button id="saveSettings">保存设置</button>
+        </div>
+      </section>
+      <dialog id="importProfileDialog">
+        <h2>导入运行配置</h2>
+        <label
+          >选择 JSON 文件<input
+            id="importProfileFile"
+            type="file"
+            accept=".json,application/json" /></label
+        ><label
+          >或粘贴完整配置<textarea
+            id="importProfileJson"
+            rows="10"
+            placeholder="粘贴导出的配置 JSON"
+          ></textarea>
+        </label>
+        <p class="help">
+          导入后可修改模型、草稿模型和参数；缓存目录、API
+          端口沿用本机设置，保存前不会启动模型。
+        </p>
+        <p id="importProfileError" role="alert"></p>
+        <div class="actions">
+          <button id="cancelImportProfile">取消</button
+          ><button id="confirmImportProfile">导入并编辑</button>
+        </div>
+      </dialog>
+      <dialog id="logDialog">
+        <div class="actions">
+          <h2>模型日志</h2>
+          <span class="help" id="logsHint">实时刷新 · 最新在最上</span
+          ><button id="moreLogs" hidden>加载更早</button
+          ><button id="pauseLogs">暂停</button
+          ><button id="closeLogs">关闭</button>
+        </div>
+        <pre id="logs"></pre>
+      </dialog>
+    </main>
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>

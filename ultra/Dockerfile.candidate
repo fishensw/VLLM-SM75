@@ -1,0 +1,14 @@
+# Incremental verification image: preserve the exact deployed inference runtime.
+# This is not a substitute for the separately documented full source build.
+ARG BASE_IMAGE=local/vllm-sm75:release-base-required
+FROM ${BASE_IMAGE}
+ARG SOURCE_REVISION=working-tree
+ARG SOURCE_SHA256
+LABEL org.opencontainers.image.title="VLLM-SM75 ultra release candidate" \
+      org.opencontainers.image.revision="${SOURCE_REVISION}" \
+      io.sm75.console.source-sha256="${SOURCE_SHA256}" \
+      io.sm75.release.channel="candidate"
+COPY source/console /opt/sm75-workbench/console
+COPY overlay/dsh-layout/ /opt/harness/node_modules/@deepseek-ai/dsh-client-ui-layout/lib/
+RUN node /opt/sm75-workbench/console/install-native-plugins.mjs \
+    && node --check /opt/sm75-workbench/console/server.mjs

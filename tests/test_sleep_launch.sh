@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+export IMAGE="vllm-sm75:v$(tr -d ' \r\n' < "$ROOT/docker/VERSION")"
 test_root="$(mktemp -d -t sm75-sleep-launch-XXXXXXXX)"
 trap 'rm -rf -- "$test_root"' EXIT
 export VLLM_API_KEY=configuration-test-placeholder
 export VLLM_SM75_CACHE_ROOT="$test_root/cache with space"
 export VLLM_SM75_MODEL_CACHE_ROOT="$test_root/model files"
 export VARIANT=base FORMAT=fp8
+export POWER_MODE=sleep
 export AUTO_SLEEP_RELOAD_PATH=/models/checkpoint
 export AUTO_SLEEP_PAGE_CACHE_KEEP_INTERVAL=0
 has_arg() { local needle="$1"; shift; for arg in "$@"; do [[ "$arg" != "$needle" ]] || return 0; done; return 1; }
@@ -21,7 +23,7 @@ docker() {
   has_arg TORCH_EXTENSIONS_DIR=/root/.cache/torch_extensions "$@"
   has_arg "VLLM_FIREFLY_AR=${VLLM_FIREFLY_AR:-auto}" "$@"
   has_arg "VLLM_ALLREDUCE_USE_FLASHINFER=${VLLM_ALLREDUCE_USE_FLASHINFER:-0}" "$@"
-  has_arg vllm-sm75:v0.1.4 "$@"
+  has_arg "$IMAGE" "$@"
   if [[ "$AUTO_SLEEP_IDLE_TIMEOUT" == 0 ]]; then
     ! has_arg --auto-sleep-idle-timeout "$@"
     ! has_arg --enable-sleep-mode "$@"

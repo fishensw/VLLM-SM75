@@ -1,0 +1,31 @@
+{
+  "buildSourceCommit": "cd3eef636c7a1e2e099700011e3cd685625af731",
+  "gitTreeIds": {
+    "vllm": "0f293b41ea035df6f238f5b1a4f149ce84488da7",
+    "docker": "8fa315317ad1b088c86764f5d1ebd5adc861b383",
+    "ultra": "b995e0028b2729772ea7b6814f8302a068f838cd",
+    "tests": "6ff09281d2a3e08d79de9c7bf5a70fae350d2b49",
+    "tools": "5a386683c84a56d438c5211d3bc966a0485b9599"
+  },
+  "purpose": "Verify that the sanitized review source preserves every tested runtime, build recipe and tool byte",
+  "uiFollowupSourceCommit": "064749c52fedef580eb1a07aa788da805720add5",
+  "reviewGitTreeIds": {
+    "vllm": "0f293b41ea035df6f238f5b1a4f149ce84488da7",
+    "docker": "8fa315317ad1b088c86764f5d1ebd5adc861b383",
+    "ultra": "c4346503a9628f831913c8654a4b1dd21c8f3d28",
+    "tests": "6ff09281d2a3e08d79de9c7bf5a70fae350d2b49",
+    "tools": "5a386683c84a56d438c5211d3bc966a0485b9599"
+  },
+  "documentationFollowupSourceCommit": "9ee618c0924ffc85f09ac1d774f3fa08349aa462",
+  "documentationFollowupGitTreeIds": {
+    "vllm": "0f293b41ea035df6f238f5b1a4f149ce84488da7",
+    "docker": "3dcf8becef132da100662d2e98ec9a212d83412b",
+    "ultra": "fe8a235caa23e1d5d99fe3b161bbd82cf4b6b8b0",
+    "tests": "6ff09281d2a3e08d79de9c7bf5a70fae350d2b49",
+    "tools": "5a386683c84a56d438c5211d3bc966a0485b9599"
+  },
+  "documentationOnlyChangesAfterUiCandidate": [
+    "docker/BUILD.md",
+    "ultra/README.md"
+  ]
+}

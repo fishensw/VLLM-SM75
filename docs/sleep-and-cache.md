@@ -30,15 +30,15 @@
 
 单位是**分钟**：60 秒测试用 `1`，30 分钟用 `30`，关闭用 `0`。计时从请求完成、引擎进入空闲后开始；有新请求时取消本轮空闲计时。
 
-仓库启动脚本默认 `30` 分钟、`exit`；直接调用 `vllm serve` 默认关闭自动休眠，且其 target 默认 `cpu`。不要混淆两套默认值。
+v0.1.4 的启动脚本默认 `30` 分钟、`exit`；当前 v0.1.5 默认常驻 P-State，需显式选择 `POWER_MODE=sleep` 才使用本文的自动休眠配置；直接调用 `vllm serve` 默认关闭自动休眠，且其 target 默认 `cpu`。不要混淆两套默认值。
 
 ```bash
 # 已按 README 设置 API key、模型路径、缓存目录及 VARIANT/FORMAT。
-AUTO_SLEEP_IDLE_TIMEOUT=1 AUTO_SLEEP_OFFLOAD_TARGET=exit bash docker/run.sh
+POWER_MODE=sleep AUTO_SLEEP_IDLE_TIMEOUT=1 AUTO_SLEEP_OFFLOAD_TARGET=exit bash docker/run.sh
 # 通过后停止/重建同名容器，将 1 改为 30；脚本不会自动替换现有容器。
-AUTO_SLEEP_IDLE_TIMEOUT=30 AUTO_SLEEP_OFFLOAD_TARGET=exit bash docker/run.sh
+POWER_MODE=sleep AUTO_SLEEP_IDLE_TIMEOUT=30 AUTO_SLEEP_OFFLOAD_TARGET=exit bash docker/run.sh
 # 关闭自动休眠
-AUTO_SLEEP_IDLE_TIMEOUT=0 bash docker/run.sh
+POWER_MODE=sleep AUTO_SLEEP_IDLE_TIMEOUT=0 bash docker/run.sh
 ```
 
 若确实需要其他模式，在原命令上使用以下对应参数；两种模式本轮仅有状态机/参数回归测试，没有真实 GPU 性能承诺：

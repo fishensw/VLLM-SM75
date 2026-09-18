@@ -1,0 +1,927 @@
+{
+  "sourceRevision": "42626f015626c25eb5fe1310c78e5d2ed59b8d99",
+  "profile": "fp8-dflash2",
+  "purpose": "functional-acceptance-not-performance-benchmark",
+  "baselineImageId": "sha256:f1f0a00b24d44d5c5505c4e78ac4a0025de86bd014957955d19a0273d64ff420",
+  "imageIds": {
+    "standard": "sha256:3dafd53886552108ddb3e446b299ad748d841f2d37c3b4cb82c7167f8ea5af58",
+    "ultra": "sha256:3bdad12bfe5b855ddb637cbb2fcf754ecaa7ad54eb2f9f4638b297bc2aabbcb9"
+  },
+  "isolation": "Sequential network-none GPU canaries; independent data; read-only model weights; production stopped during acceptance",
+  "limitations": [
+    "Only current 27B FP8 + DFlash2 TP4 profile; no target-only/MTP/AWQ/INT8 or 14B/35B coverage",
+    "Synthetic repeated filler with three retrieval records; sustained decode requests intentionally stop at length",
+    "CPU KV transfer counters are cumulative bytes, not simultaneously resident capacity",
+    "Cache cycle is 64K -> 128K -> 262K -> 64K with repeated requests; no forced reset or general concurrent-eviction proof",
+    "Timing is functional evidence, not paired performance certification"
+  ],
+  "scenarios": {
+    "ultraRetrieval": {
+      "rawJsonlSha256": "3d71098579e2e60a17ea8b19189122ff29f3c9c4acdc6820f7bfa88fee8ddfaf",
+      "passed": 10,
+      "cases": [
+        {
+          "purpose": "functional-acceptance-not-performance-benchmark",
+          "model": "VLLM-Qwen3.5-27B",
+          "inputTokens": 8192,
+          "maxOutputTokens": 128,
+          "repeat": 1,
+          "promptTokenHash": "ac3a2f48e2d89d9006fd64129efefe1adbf0fe291765dd019d1f1ebb25fb4e88",
+          "expected": {
+            "alpha": "ad100b33da",
+            "beta": "3bf1ef4a76",
+            "gamma": "1e46b2e4e6"
+          },
+          "salt": "sm75-longctx-v1",
+          "sustainedDecode": false,
+          "tokenHash": "523252f338437ee862f932cdfee858f8760d35000937d414b04da54f01e60c27",
+          "finishReason": "stop",
+          "usage": {
+            "prompt_tokens": 8192,
+            "total_tokens": 8243,
+            "completion_tokens": 51,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          },
+          "elapsedSeconds": 6.860925608998514,
+          "ttftSeconds": 6.426103284000419,
+          "decodeSeconds": 0.43488146199888433,
+          "hostMinimumAvailableBytes": 5055393792,
+          "counterDeltas": {
+            "vllm:kv_offload_store_bytes_total": 532283392.0,
+            "vllm:prefix_cache_queries_total": 8192.0,
+            "vllm:prefix_cache_hits_total": 0.0,
+            "vllm:num_preemptions_total": 0.0
+          },
+          "baselineTokenHashMatched": true,
+          "passed": true
+        },
+        {
+          "purpose": "functional-acceptance-not-performance-benchmark",
+          "model": "VLLM-Qwen3.5-27B",
+          "inputTokens": 8192,
+          "maxOutputTokens": 128,
+          "repeat": 2,
+          "promptTokenHash": "ac3a2f48e2d89d9006fd64129efefe1adbf0fe291765dd019d1f1ebb25fb4e88",
+          "expected": {
+            "alpha": "ad100b33da",
+            "beta": "3bf1ef4a76",
+            "gamma": "1e46b2e4e6"
+          },
+          "salt": "sm75-longctx-v1",
+          "sustainedDecode": false,
+          "tokenHash": "523252f338437ee862f932cdfee858f8760d35000937d414b04da54f01e60c27",
+          "finishReason": "stop",
+          "usage": {
+            "prompt_tokens": 8192,
+            "total_tokens": 8243,
+            "completion_tokens": 51,
+            "prompt_tokens_details": {
+              "cached_tokens": 6656
+            }
+          },
+          "elapsedSeconds": 1.7303953480004566,
+          "ttftSeconds": 1.3007692219980527,
+          "decodeSeconds": 0.4296647379997012,
+          "hostMinimumAvailableBytes": 5097123840,
+          "counterDeltas": {
+            "vllm:kv_offload_store_bytes_total": 0.0,
+            "vllm:prefix_cache_queries_total": 8192.0,
+            "vllm:prefix_cache_hits_total": 6656.0,
+            "vllm:num_preemptions_total": 0.0
+          },
+          "baselineTokenHashMatched": true,
+          "passed": true
+        },
+        {
+          "purpose": "functional-acceptance-not-performance-benchmark",
+          "model": "VLLM-Qwen3.5-27B",
+          "inputTokens": 32768,
+          "maxOutputTokens": 128,
+          "repeat": 1,
+          "promptTokenHash": "d790c9d9014dbefd8bc1112f6109b8841690f27a213dd2e9de2844d2de252259",
+          "expected": {
+            "alpha": "a30cb0fd6c",
+            "beta": "9b07a4a83f",
+            "gamma": "945f0a75ed"
+          },
+          "salt": "sm75-longctx-v1",
+          "sustainedDecode": false,
+          "tokenHash": "57150027ad3b91ca57f353233b0c649e1829ffb78c65d68891d6901f29cb50a8",
+          "finishReason": "stop",
+          "usage": {
+            "prompt_tokens": 32768,
+            "total_tokens": 32820,
+            "completion_tokens": 52,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          },
+          "elapsedSeconds": 27.57027683100023,
+          "ttftSeconds": 27.09389527500025,
+          "decodeSeconds": 0.4764725470013218,
+          "hostMinimumAvailableBytes": 5046870016,
+          "counterDeltas": {
+            "vllm:kv_offload_store_bytes_total": 2504654848.0,
+            "vllm:prefix_cache_queries_total": 32768.0,
+            "vllm:prefix_cache_hits_total": 0.0,
+            "vllm:num_preemptions_total": 0.0
+          },
+          "baselineTokenHashMatched": true,
+          "passed": true
+        },
+        {
+          "purpose": "functional-acceptance-not-performance-benchmark",
+          "model": "VLLM-Qwen3.5-27B",
+          "inputTokens": 32768,
+          "maxOutputTokens": 128,
+          "repeat": 2,
+          "promptTokenHash": "d790c9d9014dbefd8bc1112f6109b8841690f27a213dd2e9de2844d2de252259",
+          "expected": {
+            "alpha": "a30cb0fd6c",
+            "beta": "9b07a4a83f",
+            "gamma": "945f0a75ed"
+          },
+          "salt": "sm75-longctx-v1",
+          "sustainedDecode": false,
+          "tokenHash": "57150027ad3b91ca57f353233b0c649e1829ffb78c65d68891d6901f29cb50a8",
+          "finishReason": "stop",
+          "usage": {
+            "prompt_tokens": 32768,
+            "total_tokens": 32820,
+            "completion_tokens": 52,
+            "prompt_tokens_details": {
+              "cached_tokens": 31616
+            }
+          },
+          "elapsedSeconds": 1.632626849001099,
+          "ttftSeconds": 1.1616888550015574,
+          "decodeSeconds": 0.4709930159988289,
+          "hostMinimumAvailableBytes": 5100023808,
+          "counterDeltas": {
+            "vllm:kv_offload_store_bytes_total": 0.0,
+            "vllm:prefix_cache_queries_total": 32768.0,
+            "vllm:prefix_cache_hits_total": 31616.0,
+            "vllm:num_preemptions_total": 0.0
+          },
+          "baselineTokenHashMatched": true,
+          "passed": true
+        },
+        {
+          "purpose": "functional-acceptance-not-performance-benchmark",
+          "model": "VLLM-Qwen3.5-27B",
+          "inputTokens": 65536,
+          "maxOutputTokens": 128,
+          "repeat": 1,
+          "promptTokenHash": "0eb00a4e02cc419bc3932f3fb5b6a4af0ea4f00d14e5e9cf1af2c5b5a5bb1083",
+          "expected": {
+            "alpha": "95e151904b",
+            "beta": "83369ad3e3",
+            "gamma": "1eed82230f"
+          },
+          "salt": "sm75-longctx-v1",
+          "sustainedDecode": false,
+          "tokenHash": "ea99d8c038bdfac311bc87e7ff36a4c6d595cbe0a57124f9449b7688402ded53",
+          "finishReason": "stop",
+          "usage": {
+            "prompt_tokens": 65536,
+            "total_tokens": 65588,
+            "completion_tokens": 52,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          },
+          "elapsedSeconds": 58.998937974,
+          "ttftSeconds": 58.5895488740025,
+          "decodeSeconds": 0.4094686649987125,
+          "hostMinimumAvailableBytes": 5056741376,
+          "counterDeltas": {
+            "vllm:kv_offload_store_bytes_total": 4903010304.0,
+            "vllm:prefix_cache_queries_total": 65536.0,
+            "vllm:prefix_cache_hits_total": 0.0,
+            "vllm:num_preemptions_total": 0.0
+          },
+          "baselineTokenHashMatched": true,
+          "passed": true
+        },
+        {
+          "purpose": "functional-acceptance-not-performance-benchmark",
+          "model": "VLLM-Qwen3.5-27B",
+          "inputTokens": 65536,
+          "maxOutputTokens": 128,
+          "repeat": 2,
+          "promptTokenHash": "0eb00a4e02cc419bc3932f3fb5b6a4af0ea4f00d14e5e9cf1af2c5b5a5bb1083",
+          "expected": {
+            "alpha": "95e151904b",
+            "beta": "83369ad3e3",
+            "gamma": "1eed82230f"
+          },
+          "salt": "sm75-longctx-v1",
+          "sustainedDecode": false,
+          "tokenHash": "ea99d8c038bdfac311bc87e7ff36a4c6d595cbe0a57124f9449b7688402ded53",
+          "finishReason": "stop",
+          "usage": {
+            "prompt_tokens": 65536,
+            "total_tokens": 65588,
+            "completion_tokens": 52,
+            "prompt_tokens_details": {
+              "cached_tokens": 64064
+            }
+          },
+          "elapsedSeconds": 2.2693800190027105,
+          "ttftSeconds": 1.8551502789996448,
+          "decodeSeconds": 0.414292313002079,
+          "hostMinimumAvailableBytes": 5066534912,
+          "counterDeltas": {
+            "vllm:kv_offload_load_bytes_total": 375521280.0,
+            "vllm:kv_offload_store_bytes_total": 0.0,
+            "vllm:prefix_cache_queries_total": 65536.0,
+            "vllm:prefix_cache_hits_total": 59904.0,
+            "vllm:num_preemptions_total": 0.0
+          },
+          "baselineTokenHashMatched": true,
+          "passed": true
+        },
+        {
+          "purpose": "functional-acceptance-not-performance-benchmark",
+          "model": "VLLM-Qwen3.5-27B",
+          "inputTokens": 131072,
+          "maxOutputTokens": 128,
+          "repeat": 1,
+          "promptTokenHash": "b64f7592fc3f474b250c9a7ea0272232aae5fcda88d44506153d28cafdaa5360",
+          "expected": {
+            "alpha": "f738601d93",
+            "beta": "11734a669b",
+            "gamma": "794b1d7506"
+          },
+          "salt": "sm75-longctx-v1",
+          "sustainedDecode": false,
+          "tokenHash": "0f184a47b303994b8560572f203ba55abce890f3144ef5280f114d238598cefc",
+          "finishReason": "stop",
+          "usage": {
+            "prompt_tokens": 131072,
+            "total_tokens": 131127,
+            "completion_tokens": 55,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          },
+          "elapsedSeconds": 134.4072010609998,
+          "ttftSeconds": 133.94377019899912,
+          "decodeSeconds": 0.4634891339992464,
+          "hostMinimumAvailableBytes": 4987572224,
+          "counterDeltas": {
+            "vllm:kv_offload_load_bytes_total": 0.0,
+            "vllm:kv_offload_store_bytes_total": 9823059968.0,
+            "vllm:prefix_cache_queries_total": 131072.0,
+            "vllm:prefix_cache_hits_total": 0.0,
+            "vllm:num_preemptions_total": 0.0
+          },
+          "baselineTokenHashMatched": true,
+          "passed": true
+        },
+        {
+          "purpose": "functional-acceptance-not-performance-benchmark",
+          "model": "VLLM-Qwen3.5-27B",
+          "inputTokens": 131072,
+          "maxOutputTokens": 128,
+          "repeat": 2,
+          "promptTokenHash": "b64f7592fc3f474b250c9a7ea0272232aae5fcda88d44506153d28cafdaa5360",
+          "expected": {
+            "alpha": "f738601d93",
+            "beta": "11734a669b",
+            "gamma": "794b1d7506"
+          },
+          "salt": "sm75-longctx-v1",
+          "sustainedDecode": false,
+          "tokenHash": "0f184a47b303994b8560572f203ba55abce890f3144ef5280f114d238598cefc",
+          "finishReason": "stop",
+          "usage": {
+            "prompt_tokens": 131072,
+            "total_tokens": 131127,
+            "completion_tokens": 55,
+            "prompt_tokens_details": {
+              "cached_tokens": 129792
+            }
+          },
+          "elapsedSeconds": 2.5618945679998433,
+          "ttftSeconds": 2.08879635500125,
+          "decodeSeconds": 0.47319504500046605,
+          "hostMinimumAvailableBytes": 4997197824,
+          "counterDeltas": {
+            "vllm:kv_offload_load_bytes_total": 0.0,
+            "vllm:kv_offload_store_bytes_total": 68157440.0,
+            "vllm:prefix_cache_queries_total": 131072.0,
+            "vllm:prefix_cache_hits_total": 129792.0,
+            "vllm:num_preemptions_total": 0.0
+          },
+          "baselineTokenHashMatched": true,
+          "passed": true
+        },
+        {
+          "purpose": "functional-acceptance-not-performance-benchmark",
+          "model": "VLLM-Qwen3.5-27B",
+          "inputTokens": 262016,
+          "maxOutputTokens": 128,
+          "repeat": 1,
+          "promptTokenHash": "8dda8d5fcbb8a99af234c09455914fd4db5149e328d9671699033e52cd8e1058",
+          "expected": {
+            "alpha": "6d7ce4b138",
+            "beta": "64e11ac763",
+            "gamma": "027e12db1c"
+          },
+          "salt": "sm75-longctx-v1",
+          "sustainedDecode": false,
+          "tokenHash": "d57f32220b3033f2337a560b56041391ed6daab9f06331a2c66d1930435dc32e",
+          "finishReason": "stop",
+          "usage": {
+            "prompt_tokens": 262016,
+            "total_tokens": 262068,
+            "completion_tokens": 52,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          },
+          "elapsedSeconds": 340.8315697200014,
+          "ttftSeconds": 340.39439010099886,
+          "decodeSeconds": 0.43725391600310104,
+          "hostMinimumAvailableBytes": 4811771904,
+          "counterDeltas": {
+            "vllm:kv_offload_load_bytes_total": 860094464.0,
+            "vllm:kv_offload_store_bytes_total": 19539820544.0,
+            "vllm:prefix_cache_queries_total": 262016.0,
+            "vllm:prefix_cache_hits_total": 0.0,
+            "vllm:num_preemptions_total": 2.0
+          },
+          "baselineTokenHashMatched": true,
+          "passed": true
+        },
+        {
+          "purpose": "functional-acceptance-not-performance-benchmark",
+          "model": "VLLM-Qwen3.5-27B",
+          "inputTokens": 262016,
+          "maxOutputTokens": 128,
+          "repeat": 2,
+          "promptTokenHash": "8dda8d5fcbb8a99af234c09455914fd4db5149e328d9671699033e52cd8e1058",
+          "expected": {
+            "alpha": "6d7ce4b138",
+            "beta": "64e11ac763",
+            "gamma": "027e12db1c"
+          },
+          "salt": "sm75-longctx-v1",
+          "sustainedDecode": false,
+          "tokenHash": "d57f32220b3033f2337a560b56041391ed6daab9f06331a2c66d1930435dc32e",
+          "finishReason": "stop",
+          "usage": {
+            "prompt_tokens": 262016,
+            "total_tokens": 262068,
+            "completion_tokens": 52,
+            "prompt_tokens_details": {
+              "cached_tokens": 260416
+            }
+          },
+          "elapsedSeconds": 4.43535537599746,
+          "ttftSeconds": 4.061007727999822,
+          "decodeSeconds": 0.37443050000001676,
+          "hostMinimumAvailableBytes": 4853116928,
+          "counterDeltas": {
+            "vllm:kv_offload_load_bytes_total": 430047232.0,
+            "vllm:kv_offload_store_bytes_total": 0.0,
+            "vllm:prefix_cache_queries_total": 262016.0,
+            "vllm:prefix_cache_hits_total": 254592.0,
+            "vllm:num_preemptions_total": 0.0
+          },
+          "baselineTokenHashMatched": true,
+          "passed": true
+        }
+      ]
+    },
+    "ultraCacheCycle": {
+      "rawJsonlSha256": "5c4b1c3d210cfc0756c312159d645b4e5c6acf2af18858fa8f7a915f91208e4e",
+      "passed": 2,
+      "cases": [
+        {
+          "purpose": "functional-acceptance-not-performance-benchmark",
+          "model": "VLLM-Qwen3.5-27B",
+          "inputTokens": 65536,
+          "maxOutputTokens": 128,
+          "repeat": 1,
+          "promptTokenHash": "0eb00a4e02cc419bc3932f3fb5b6a4af0ea4f00d14e5e9cf1af2c5b5a5bb1083",
+          "expected": {
+            "alpha": "95e151904b",
+            "beta": "83369ad3e3",
+            "gamma": "1eed82230f"
+          },
+          "salt": "sm75-longctx-v1",
+          "sustainedDecode": false,
+          "tokenHash": "ea99d8c038bdfac311bc87e7ff36a4c6d595cbe0a57124f9449b7688402ded53",
+          "finishReason": "stop",
+          "usage": {
+            "prompt_tokens": 65536,
+            "total_tokens": 65588,
+            "completion_tokens": 52,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          },
+          "elapsedSeconds": 59.17632441800015,
+          "ttftSeconds": 58.73864958900231,
+          "decodeSeconds": 0.43773021000015433,
+          "hostMinimumAvailableBytes": 4937940992,
+          "counterDeltas": {
+            "vllm:kv_offload_load_bytes_total": 0.0,
+            "vllm:kv_offload_store_bytes_total": 4903010304.0,
+            "vllm:prefix_cache_queries_total": 65536.0,
+            "vllm:prefix_cache_hits_total": 0.0,
+            "vllm:num_preemptions_total": 0.0
+          },
+          "baselineTokenHashMatched": true,
+          "passed": true
+        },
+        {
+          "purpose": "functional-acceptance-not-performance-benchmark",
+          "model": "VLLM-Qwen3.5-27B",
+          "inputTokens": 65536,
+          "maxOutputTokens": 128,
+          "repeat": 2,
+          "promptTokenHash": "0eb00a4e02cc419bc3932f3fb5b6a4af0ea4f00d14e5e9cf1af2c5b5a5bb1083",
+          "expected": {
+            "alpha": "95e151904b",
+            "beta": "83369ad3e3",
+            "gamma": "1eed82230f"
+          },
+          "salt": "sm75-longctx-v1",
+          "sustainedDecode": false,
+          "tokenHash": "ea99d8c038bdfac311bc87e7ff36a4c6d595cbe0a57124f9449b7688402ded53",
+          "finishReason": "stop",
+          "usage": {
+            "prompt_tokens": 65536,
+            "total_tokens": 65588,
+            "completion_tokens": 52,
+            "prompt_tokens_details": {
+              "cached_tokens": 64064
+            }
+          },
+          "elapsedSeconds": 2.3134105919998547,
+          "ttftSeconds": 1.8770169919989712,
+          "decodeSeconds": 0.43645856300281594,
+          "hostMinimumAvailableBytes": 4953481216,
+          "counterDeltas": {
+            "vllm:kv_offload_load_bytes_total": 375521280.0,
+            "vllm:kv_offload_store_bytes_total": 0.0,
+            "vllm:prefix_cache_queries_total": 65536.0,
+            "vllm:prefix_cache_hits_total": 59904.0,
+            "vllm:num_preemptions_total": 0.0
+          },
+          "baselineTokenHashMatched": true,
+          "passed": true
+        }
+      ]
+    },
+    "ultraSustainedDecode": {
+      "rawJsonlSha256": "778dbd88675ca364c7f159bfdb140c731145b8885313818c96ad5ba92d864189",
+      "passed": 4,
+      "cases": [
+        {
+          "purpose": "functional-acceptance-not-performance-benchmark",
+          "model": "VLLM-Qwen3.5-27B",
+          "inputTokens": 131072,
+          "maxOutputTokens": 512,
+          "repeat": 1,
+          "promptTokenHash": "16060130d25a574b9ab446e1b9cbc969642a182c0aa141c77f2a432bb8f49bf9",
+          "expected": {
+            "alpha": "f738601d93",
+            "beta": "11734a669b",
+            "gamma": "794b1d7506"
+          },
+          "salt": "sm75-longctx-v1",
+          "sustainedDecode": true,
+          "tokenHash": "8bbe4fd9c9abd95384a22db1e59f9fbcfc2822f436c0ba455398a368d0a1ac5e",
+          "finishReason": "length",
+          "usage": {
+            "prompt_tokens": 131072,
+            "total_tokens": 131584,
+            "completion_tokens": 512,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          },
+          "elapsedSeconds": 143.62262507099877,
+          "ttftSeconds": 134.13326080099796,
+          "decodeSeconds": 9.489590470999246,
+          "hostMinimumAvailableBytes": 4895674368,
+          "counterDeltas": {
+            "vllm:kv_offload_load_bytes_total": 0.0,
+            "vllm:kv_offload_store_bytes_total": 9823059968.0,
+            "vllm:prefix_cache_queries_total": 131072.0,
+            "vllm:prefix_cache_hits_total": 0.0,
+            "vllm:num_preemptions_total": 0.0
+          },
+          "baselineTokenHashMatched": true,
+          "passed": true
+        },
+        {
+          "purpose": "functional-acceptance-not-performance-benchmark",
+          "model": "VLLM-Qwen3.5-27B",
+          "inputTokens": 131072,
+          "maxOutputTokens": 512,
+          "repeat": 2,
+          "promptTokenHash": "16060130d25a574b9ab446e1b9cbc969642a182c0aa141c77f2a432bb8f49bf9",
+          "expected": {
+            "alpha": "f738601d93",
+            "beta": "11734a669b",
+            "gamma": "794b1d7506"
+          },
+          "salt": "sm75-longctx-v1",
+          "sustainedDecode": true,
+          "tokenHash": "8bbe4fd9c9abd95384a22db1e59f9fbcfc2822f436c0ba455398a368d0a1ac5e",
+          "finishReason": "length",
+          "usage": {
+            "prompt_tokens": 131072,
+            "total_tokens": 131584,
+            "completion_tokens": 512,
+            "prompt_tokens_details": {
+              "cached_tokens": 129792
+            }
+          },
+          "elapsedSeconds": 11.563383147997229,
+          "ttftSeconds": 2.0931739309999102,
+          "decodeSeconds": 9.47039255999698,
+          "hostMinimumAvailableBytes": 4866691072,
+          "counterDeltas": {
+            "vllm:kv_offload_load_bytes_total": 0.0,
+            "vllm:kv_offload_store_bytes_total": 68157440.0,
+            "vllm:prefix_cache_queries_total": 131072.0,
+            "vllm:prefix_cache_hits_total": 129792.0,
+            "vllm:num_preemptions_total": 0.0
+          },
+          "baselineTokenHashMatched": true,
+          "passed": true
+        },
+        {
+          "purpose": "functional-acceptance-not-performance-benchmark",
+          "model": "VLLM-Qwen3.5-27B",
+          "inputTokens": 261632,
+          "maxOutputTokens": 512,
+          "repeat": 1,
+          "promptTokenHash": "4c2d1ce565bbea62e15b36b2c7440a36da215d014e953ad0ee7c16dd986ad435",
+          "expected": {
+            "alpha": "9d8172402d",
+            "beta": "b3066855d6",
+            "gamma": "2cbc05a779"
+          },
+          "salt": "sm75-longctx-v1",
+          "sustainedDecode": true,
+          "tokenHash": "b8fa10193fc5d28b05796c6748cf4238da8317253d10f9bad5b587aa2b107c27",
+          "finishReason": "length",
+          "usage": {
+            "prompt_tokens": 261632,
+            "total_tokens": 262144,
+            "completion_tokens": 512,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          },
+          "elapsedSeconds": 348.5296753440016,
+          "ttftSeconds": 338.54497002500284,
+          "decodeSeconds": 9.9848926559971,
+          "hostMinimumAvailableBytes": 4669837312,
+          "counterDeltas": {
+            "vllm:kv_offload_load_bytes_total": 860094464.0,
+            "vllm:kv_offload_store_bytes_total": 19539820544.0,
+            "vllm:prefix_cache_queries_total": 261632.0,
+            "vllm:prefix_cache_hits_total": 0.0,
+            "vllm:num_preemptions_total": 2.0
+          },
+          "baselineTokenHashMatched": true,
+          "passed": true
+        },
+        {
+          "purpose": "functional-acceptance-not-performance-benchmark",
+          "model": "VLLM-Qwen3.5-27B",
+          "inputTokens": 261632,
+          "maxOutputTokens": 512,
+          "repeat": 2,
+          "promptTokenHash": "4c2d1ce565bbea62e15b36b2c7440a36da215d014e953ad0ee7c16dd986ad435",
+          "expected": {
+            "alpha": "9d8172402d",
+            "beta": "b3066855d6",
+            "gamma": "2cbc05a779"
+          },
+          "salt": "sm75-longctx-v1",
+          "sustainedDecode": true,
+          "tokenHash": "b8fa10193fc5d28b05796c6748cf4238da8317253d10f9bad5b587aa2b107c27",
+          "finishReason": "length",
+          "usage": {
+            "prompt_tokens": 261632,
+            "total_tokens": 262144,
+            "completion_tokens": 512,
+            "prompt_tokens_details": {
+              "cached_tokens": 260416
+            }
+          },
+          "elapsedSeconds": 12.51175581699863,
+          "ttftSeconds": 2.956234236000455,
+          "decodeSeconds": 9.555680547997326,
+          "hostMinimumAvailableBytes": 4751044608,
+          "counterDeltas": {
+            "vllm:kv_offload_load_bytes_total": 430047232.0,
+            "vllm:kv_offload_store_bytes_total": 0.0,
+            "vllm:prefix_cache_queries_total": 261632.0,
+            "vllm:prefix_cache_hits_total": 254592.0,
+            "vllm:num_preemptions_total": 0.0
+          },
+          "baselineTokenHashMatched": true,
+          "passed": true
+        }
+      ]
+    },
+    "standardRetrieval": {
+      "rawJsonlSha256": "ae61cd8591c06cad35d733d8ce875106d352ecc89c9bc29f092c32328d589173",
+      "passed": 2,
+      "cases": [
+        {
+          "purpose": "functional-acceptance-not-performance-benchmark",
+          "model": "VLLM-Qwen3.5-27B",
+          "inputTokens": 8192,
+          "maxOutputTokens": 128,
+          "repeat": 1,
+          "promptTokenHash": "ac3a2f48e2d89d9006fd64129efefe1adbf0fe291765dd019d1f1ebb25fb4e88",
+          "expected": {
+            "alpha": "ad100b33da",
+            "beta": "3bf1ef4a76",
+            "gamma": "1e46b2e4e6"
+          },
+          "salt": "sm75-longctx-v1",
+          "sustainedDecode": false,
+          "tokenHash": "523252f338437ee862f932cdfee858f8760d35000937d414b04da54f01e60c27",
+          "finishReason": "stop",
+          "usage": {
+            "prompt_tokens": 8192,
+            "total_tokens": 8243,
+            "completion_tokens": 51,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          },
+          "elapsedSeconds": 7.186367595000775,
+          "ttftSeconds": 6.753820166002697,
+          "decodeSeconds": 0.43261804199937615,
+          "hostMinimumAvailableBytes": 5978042368,
+          "counterDeltas": {
+            "vllm:kv_offload_store_bytes_total": 532283392.0,
+            "vllm:prefix_cache_queries_total": 8192.0,
+            "vllm:prefix_cache_hits_total": 0.0,
+            "vllm:num_preemptions_total": 0.0
+          },
+          "baselineTokenHashMatched": true,
+          "passed": true
+        },
+        {
+          "purpose": "functional-acceptance-not-performance-benchmark",
+          "model": "VLLM-Qwen3.5-27B",
+          "inputTokens": 8192,
+          "maxOutputTokens": 128,
+          "repeat": 2,
+          "promptTokenHash": "ac3a2f48e2d89d9006fd64129efefe1adbf0fe291765dd019d1f1ebb25fb4e88",
+          "expected": {
+            "alpha": "ad100b33da",
+            "beta": "3bf1ef4a76",
+            "gamma": "1e46b2e4e6"
+          },
+          "salt": "sm75-longctx-v1",
+          "sustainedDecode": false,
+          "tokenHash": "523252f338437ee862f932cdfee858f8760d35000937d414b04da54f01e60c27",
+          "finishReason": "stop",
+          "usage": {
+            "prompt_tokens": 8192,
+            "total_tokens": 8243,
+            "completion_tokens": 51,
+            "prompt_tokens_details": {
+              "cached_tokens": 6656
+            }
+          },
+          "elapsedSeconds": 1.723086982001405,
+          "ttftSeconds": 1.2943019480007933,
+          "decodeSeconds": 0.4288439500014647,
+          "hostMinimumAvailableBytes": 5979451392,
+          "counterDeltas": {
+            "vllm:kv_offload_store_bytes_total": 0.0,
+            "vllm:prefix_cache_queries_total": 8192.0,
+            "vllm:prefix_cache_hits_total": 6656.0,
+            "vllm:num_preemptions_total": 0.0
+          },
+          "baselineTokenHashMatched": true,
+          "passed": true
+        }
+      ]
+    },
+    "standardSustainedDecode": {
+      "rawJsonlSha256": "fb07a37d44ad46564b8fb0aaef2aeaab55eea9639a1768952c98433426ce53e3",
+      "passed": 4,
+      "cases": [
+        {
+          "purpose": "functional-acceptance-not-performance-benchmark",
+          "model": "VLLM-Qwen3.5-27B",
+          "inputTokens": 131072,
+          "maxOutputTokens": 512,
+          "repeat": 1,
+          "promptTokenHash": "16060130d25a574b9ab446e1b9cbc969642a182c0aa141c77f2a432bb8f49bf9",
+          "expected": {
+            "alpha": "f738601d93",
+            "beta": "11734a669b",
+            "gamma": "794b1d7506"
+          },
+          "salt": "sm75-longctx-v1",
+          "sustainedDecode": true,
+          "tokenHash": "8bbe4fd9c9abd95384a22db1e59f9fbcfc2822f436c0ba455398a368d0a1ac5e",
+          "finishReason": "length",
+          "usage": {
+            "prompt_tokens": 131072,
+            "total_tokens": 131584,
+            "completion_tokens": 512,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          },
+          "elapsedSeconds": 142.91954601999896,
+          "ttftSeconds": 133.7863944689998,
+          "decodeSeconds": 9.133309650002047,
+          "hostMinimumAvailableBytes": 5765664768,
+          "counterDeltas": {
+            "vllm:kv_offload_store_bytes_total": 9823059968.0,
+            "vllm:prefix_cache_queries_total": 131072.0,
+            "vllm:prefix_cache_hits_total": 0.0,
+            "vllm:num_preemptions_total": 0.0
+          },
+          "baselineTokenHashMatched": true,
+          "passed": true
+        },
+        {
+          "purpose": "functional-acceptance-not-performance-benchmark",
+          "model": "VLLM-Qwen3.5-27B",
+          "inputTokens": 131072,
+          "maxOutputTokens": 512,
+          "repeat": 2,
+          "promptTokenHash": "16060130d25a574b9ab446e1b9cbc969642a182c0aa141c77f2a432bb8f49bf9",
+          "expected": {
+            "alpha": "f738601d93",
+            "beta": "11734a669b",
+            "gamma": "794b1d7506"
+          },
+          "salt": "sm75-longctx-v1",
+          "sustainedDecode": true,
+          "tokenHash": "8bbe4fd9c9abd95384a22db1e59f9fbcfc2822f436c0ba455398a368d0a1ac5e",
+          "finishReason": "length",
+          "usage": {
+            "prompt_tokens": 131072,
+            "total_tokens": 131584,
+            "completion_tokens": 512,
+            "prompt_tokens_details": {
+              "cached_tokens": 129792
+            }
+          },
+          "elapsedSeconds": 11.236114351999277,
+          "ttftSeconds": 2.101237571998354,
+          "decodeSeconds": 9.135146902000997,
+          "hostMinimumAvailableBytes": 5856088064,
+          "counterDeltas": {
+            "vllm:kv_offload_store_bytes_total": 68157440.0,
+            "vllm:prefix_cache_queries_total": 131072.0,
+            "vllm:prefix_cache_hits_total": 129792.0,
+            "vllm:num_preemptions_total": 0.0
+          },
+          "baselineTokenHashMatched": true,
+          "passed": true
+        },
+        {
+          "purpose": "functional-acceptance-not-performance-benchmark",
+          "model": "VLLM-Qwen3.5-27B",
+          "inputTokens": 261632,
+          "maxOutputTokens": 512,
+          "repeat": 1,
+          "promptTokenHash": "4c2d1ce565bbea62e15b36b2c7440a36da215d014e953ad0ee7c16dd986ad435",
+          "expected": {
+            "alpha": "9d8172402d",
+            "beta": "b3066855d6",
+            "gamma": "2cbc05a779"
+          },
+          "salt": "sm75-longctx-v1",
+          "sustainedDecode": true,
+          "tokenHash": "b8fa10193fc5d28b05796c6748cf4238da8317253d10f9bad5b587aa2b107c27",
+          "finishReason": "length",
+          "usage": {
+            "prompt_tokens": 261632,
+            "total_tokens": 262144,
+            "completion_tokens": 512,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          },
+          "elapsedSeconds": 349.18131562800045,
+          "ttftSeconds": 339.4724711480012,
+          "decodeSeconds": 9.709067821000644,
+          "hostMinimumAvailableBytes": 5692506112,
+          "counterDeltas": {
+            "vllm:kv_offload_load_bytes_total": 860094464.0,
+            "vllm:kv_offload_store_bytes_total": 19539820544.0,
+            "vllm:prefix_cache_queries_total": 261632.0,
+            "vllm:prefix_cache_hits_total": 0.0,
+            "vllm:num_preemptions_total": 2.0
+          },
+          "baselineTokenHashMatched": true,
+          "passed": true
+        },
+        {
+          "purpose": "functional-acceptance-not-performance-benchmark",
+          "model": "VLLM-Qwen3.5-27B",
+          "inputTokens": 261632,
+          "maxOutputTokens": 512,
+          "repeat": 2,
+          "promptTokenHash": "4c2d1ce565bbea62e15b36b2c7440a36da215d014e953ad0ee7c16dd986ad435",
+          "expected": {
+            "alpha": "9d8172402d",
+            "beta": "b3066855d6",
+            "gamma": "2cbc05a779"
+          },
+          "salt": "sm75-longctx-v1",
+          "sustainedDecode": true,
+          "tokenHash": "b8fa10193fc5d28b05796c6748cf4238da8317253d10f9bad5b587aa2b107c27",
+          "finishReason": "length",
+          "usage": {
+            "prompt_tokens": 261632,
+            "total_tokens": 262144,
+            "completion_tokens": 512,
+            "prompt_tokens_details": {
+              "cached_tokens": 260416
+            }
+          },
+          "elapsedSeconds": 12.488392832998215,
+          "ttftSeconds": 2.9824513610001304,
+          "decodeSeconds": 9.506270958998357,
+          "hostMinimumAvailableBytes": 5705801728,
+          "counterDeltas": {
+            "vllm:kv_offload_load_bytes_total": 430047232.0,
+            "vllm:kv_offload_store_bytes_total": 0.0,
+            "vllm:prefix_cache_queries_total": 261632.0,
+            "vllm:prefix_cache_hits_total": 254592.0,
+            "vllm:num_preemptions_total": 0.0
+          },
+          "baselineTokenHashMatched": true,
+          "passed": true
+        }
+      ]
+    }
+  },
+  "earlierFailedAttempt": {
+    "rawJsonlSha256": "c149d5d8e17635b1993d512c8de92882cdc5809729d08e89b0952f899063d0da",
+    "case": {
+      "purpose": "functional-acceptance-not-performance-benchmark",
+      "model": "VLLM-Qwen3.5-27B",
+      "inputTokens": 131072,
+      "maxOutputTokens": 512,
+      "repeat": 1,
+      "promptTokenHash": "16060130d25a574b9ab446e1b9cbc969642a182c0aa141c77f2a432bb8f49bf9",
+      "expected": {
+        "alpha": "f738601d93",
+        "beta": "11734a669b",
+        "gamma": "794b1d7506"
+      },
+      "salt": "sm75-longctx-v1",
+      "sustainedDecode": true,
+      "tokenHash": "72eedca85a62df1539eb8344f4251783293f9d0cbe408307f607381b3c51021f",
+      "finishReason": "length",
+      "usage": {
+        "prompt_tokens": 131072,
+        "total_tokens": 131584,
+        "completion_tokens": 512,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        }
+      },
+      "elapsedSeconds": 143.60423930699835,
+      "ttftSeconds": 133.78743899999972,
+      "decodeSeconds": 9.816971879001358,
+      "hostMinimumAvailableBytes": 5475483648,
+      "counterDeltas": {
+        "vllm:kv_offload_store_bytes_total": 9823059968.0,
+        "vllm:prefix_cache_queries_total": 131072.0,
+        "vllm:prefix_cache_hits_total": 0.0,
+        "vllm:num_preemptions_total": 0.0
+      },
+      "passed": false,
+      "error": "AssertionError: Baseline output token hash mismatch"
+    },
+    "compileCacheFactorDifference": {
+      "NVCC_THREADS": {
+        "ultra": "1",
+        "initialStandard": null
+      }
+    },
+    "followUp": "Repeat in a separate standard canary with NVCC_THREADS=1, preserving the failed attempt",
+    "causalityLimit": "Cache-factor difference explains a different graph-cache key; it alone does not prove why generated tokens differed"
+  },
+  "totalPassed": 22,
+  "minimumHostAvailableGiB": 4.349124908447266
+}
