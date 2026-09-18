@@ -6,7 +6,7 @@
 
 面向 Turing SM75 的 vLLM 0.29.0 适配，保留 FlashQLA GDN prefill、Triton decode、FlashInfer 0.6.18、Marlin FP8、Firefly AWQ prefill、FP8 all-reduce、MTP/DFlash2、CPU KV offload 和持久编译缓存。
 
-当前源码版本为 **v0.1.5**，源码与更新说明见 [GitHub Release](https://github.com/fishensw/VLLM-SM75/releases/tag/v0.1.5)。Docker 镜像需按下文自行构建，尚未提供公开镜像。标准版提供推理 API 和 `/monitor`；ultra 在相同推理基础上增加 Web 控制台、工作台、随机 token 登录、模型/配置管理及实时监控。FlashNext TP8 AWQ 实验属于独立 `vllm-sm75-next`，不混入本发布。
+当前源码版本为 **v0.1.5**，源码与更新说明见 [GitHub Release](https://github.com/fishensw/VLLM-SM75/releases/tag/v0.1.5)。Docker 镜像需按下文自行构建，尚未提供公开镜像。标准版提供推理 API 和 `/monitor`；ultra 在相同推理基础上增加 Web 控制台、工作台、随机 token 登录、模型/配置管理及实时监控。
 
 QQ 交流群：**878924874**
 

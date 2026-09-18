@@ -1,6 +1,6 @@
 # v0.1.5-ultra
 
-本目录将现有 ultra 控制台、DSH 插件和运行时覆盖层纳入源码管理。标准版的构建入口仍为 `docker/Dockerfile`。本次改动修复控制台认证、跳转、编辑状态与生命周期，不引入 FlashNext 内核。
+本目录将现有 ultra 控制台、DSH 插件和运行时覆盖层纳入源码管理。标准版的构建入口仍为 `docker/Dockerfile`。本次改动修复控制台认证、跳转、编辑状态与生命周期。
 
 更新内容见 [ultra 发布说明](../docs/releases/v0.1.5-ultra.zh-CN.md)，实测与边界见 [统一验证记录](../docs/validation/v0.1.5.md)。
 

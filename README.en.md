@@ -6,7 +6,7 @@
 
 Turing SM75 adaptation of vLLM 0.29.0, retaining FlashQLA GDN prefill, Triton decode, FlashInfer 0.6.18, Marlin FP8, Firefly AWQ prefill, FP8 all-reduce, MTP/DFlash2, CPU KV offload and persistent compilation caches.
 
-The current source is **v0.1.5**; source and release notes are available in the [GitHub Release](https://github.com/fishensw/VLLM-SM75/releases/tag/v0.1.5). Build Docker images locally using the instructions below; public container images are not provided. Standard provides the inference API and `/monitor`. Ultra adds the Web console, workbench, random-token login, model/configuration management and monitoring on the same inference base. FlashNext TP8 AWQ experiments remain in the separate `vllm-sm75-next` branch.
+The current source is **v0.1.5**; source and release notes are available in the [GitHub Release](https://github.com/fishensw/VLLM-SM75/releases/tag/v0.1.5). Build Docker images locally using the instructions below; public container images are not provided. Standard provides the inference API and `/monitor`. Ultra adds the Web console, workbench, random-token login, model/configuration management and monitoring on the same inference base.
 
 QQ community group: **878924874**
 
