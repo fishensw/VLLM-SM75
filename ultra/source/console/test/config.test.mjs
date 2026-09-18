@@ -8,3 +8,5 @@ test('invalid profile refused before invoking docker',()=>{for(const bad of [{id
 
 
 test('workbench namespace gives each engine its own API port without host networking',()=>{const p={id:'fp8',args:['model'],port:8015,format:'fp8',cacheRoot:'/cache',backend:'docker'};const c=makeCommand(p,'secret',{engineNetwork:'container:sm75-v015-test-workbench'});assert.equal(c.args[c.args.indexOf('--network')+1],'container:sm75-v015-test-workbench');assert.equal(c.args[c.args.indexOf('--port')+1],'8015');assert.ok(!c.args.includes('--publish'));assert.throws(()=>makeCommand(p,'secret',{engineNetwork:'host'}));});
+
+test('API key cannot be overridden with equals syntax',()=>{assert.throws(()=>validateProfile({...p,args:['model','--api-key=override']}),/API key/);});

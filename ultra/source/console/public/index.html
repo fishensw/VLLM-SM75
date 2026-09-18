@@ -422,16 +422,20 @@
           </div>
           <div class="editor-section">
             <div class="editor-caption">参数</div>
-            <div id="parameterFields"></div>
+            <div class="editor-caption">自定义启动参数</div>
             <div class="editor-row">
               <input
                 id="newParamKey"
+                aria-label="自定义启动参数名"
                 placeholder="自定义参数，例如 --seed"
               /><input
                 id="newParamValue"
+                aria-label="自定义启动参数值"
                 placeholder="参数值（开关参数留空）"
               /><button id="addParameter">添加参数</button>
             </div>
+            <p class="muted">每次添加一个参数。值中的空格和 JSON 会完整保留，无需添加 shell 引号；开关参数留空。添加后需保存运行配置。</p>
+            <div id="parameterFields"></div>
             <details class="template-save">
               <summary>保存为个人模板</summary>
               <div class="actions">

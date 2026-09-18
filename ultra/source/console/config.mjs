@@ -35,7 +35,7 @@ export function validateProfile(p) {
   if (!Array.isArray(p.args)||!p.args.length||p.args.some(a=>typeof a!=='string'||a.includes('\0'))) throw Error('模型与参数须为字符串数组');
   if (!Number.isInteger(p.port)||p.port<1024||p.port>65535) throw Error('端口范围 1024–65535');
   if (!['docker','native'].includes(p.backend||'docker')) throw Error('未知运行方式');
-  if (p.args.includes('--api-key')) throw Error('API key 由服务端管理');
+  if (p.args.some(a=>a==='--api-key'||a.startsWith('--api-key='))) throw Error('API key 由服务端管理');
   if(p.backend!=='native' && p.image && !p.image.startsWith('local/vllm-sm75:v015-')) throw Error('本地候选阶段仅运行 v015 独立镜像');
   if(!p.power)p.power={mode:'pstate',idleSeconds:1,util:5,confirm:60,low:8,high:16,poll:5,gpus:'0,1,2,3'};
   if(p.power){

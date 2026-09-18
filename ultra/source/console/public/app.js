@@ -2870,6 +2870,52 @@ export function mountConsole(document = globalThis.document, options = {}) {
           .flatMap((r) => [r.key, ...r.values]),
       ]);
     };
+    const toolKeys = new Set([
+      "--enable-auto-tool-choice", "--no-enable-auto-tool-choice",
+      "--tool-call-parser", "--tool-parser-plugin", "--chat-template",
+      "--chat-template-content-format", "--reasoning-parser",
+    ]);
+    const tools = section("工具调用与对话解析");
+    const note = document.createElement("p");
+    note.className = "wide";
+    note.textContent = "解析器需与模型及当前引擎支持列表匹配；留空沿用引擎默认。保存后在模型下次启动时生效。";
+    tools.append(note);
+    for (const [key, label, hint] of [
+      ["--enable-auto-tool-choice", "自动工具选择", ""],
+      ["--tool-call-parser", "工具调用解析器", "例如 qwen3_coder"],
+      ["--reasoning-parser", "推理内容解析器", "填写模型支持的解析器"],
+      ["--chat-template", "对话模板", "引擎容器内的模板路径或模板内容"],
+      ["--chat-template-content-format", "模板消息内容格式", "auto / string / openai"],
+      ["--tool-parser-plugin", "工具解析器插件", "引擎容器内已安装的插件路径"],
+    ]) {
+      const row = state.rows.find((r) => r.key.split("=")[0] === key);
+      const control = document.createElement("input");
+      const labelNode = document.createElement("label");
+      labelNode.textContent = label;
+      control.setAttribute("aria-label", label);
+      if (key === "--enable-auto-tool-choice") {
+        control.type = "checkbox";
+        control.setAttribute("role", "switch");
+        control.checked = !!row && !state.rows.some((r) => r.key === "--no-enable-auto-tool-choice");
+      } else {
+        control.type = "text";
+        control.value = row ? (row.key.includes("=") ? row.key.slice(row.key.indexOf("=") + 1) : row.values[0] || "") : "";
+        control.placeholder = hint;
+      }
+      control.onchange = () => {
+        state.rows = state.rows.filter((r) => r.key.split("=")[0] !== key &&
+          !(key === "--enable-auto-tool-choice" && r.key === "--no-enable-auto-tool-choice"));
+        if (control.type === "checkbox") {
+          if (control.checked) state.rows.push({key, values: []});
+        } else if (control.value.trim()) {
+          state.rows.push({key, values: [control.value]});
+        }
+        commit();
+        editorDirty = true;
+      };
+      labelNode.append(control);
+      tools.append(labelNode);
+    }
     function leaf(parent, label, value, set) {
       if (value && typeof value === "object" && !Array.isArray(value)) {
         for (const [k, v] of Object.entries(value)) {
@@ -3052,6 +3098,7 @@ export function mountConsole(document = globalThis.document, options = {}) {
     }
 
     state.rows.forEach((row) => {
+      if (toolKeys.has(row.key.split("=")[0])) return;
       if (
         [
           "--port",
@@ -3130,10 +3177,19 @@ export function mountConsole(document = globalThis.document, options = {}) {
     const key = $("newParamKey").value.trim();
     if (!/^--[a-z][a-z0-9-]*$/.test(key)) throw Error("参数名使用 --name 格式");
     const a = JSON.parse($("args").value);
+    if (["--api-key", "--host", "--port", "--model"].includes(key))
+      throw Error("该参数由服务或专用配置项管理，请在对应位置修改");
+    if (readParamRows().rows.some((r) => r.key.split("=")[0] === key))
+      throw Error("该参数已存在，请编辑现有参数");
+    if ($("newParamValue").value.includes("\0")) throw Error("参数值不能包含空字符");
     a.push(key);
     if ($("newParamValue").value) a.push($("newParamValue").value);
     $("args").value = JSON.stringify(a);
+    editorDirty = true;
+    $("newParamKey").value = "";
+    $("newParamValue").value = "";
     renderParameters();
+    $("notice").textContent = "参数已添加，请保存运行配置；模型下次启动时生效。";
   });
   $("newProfile").onclick = () => {
     $("pid").value =
