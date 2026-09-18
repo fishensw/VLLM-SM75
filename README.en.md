@@ -27,7 +27,6 @@ Ultra includes the standard inference service and adds the following features:
 - Integrated Web administration, quick chat and DSH workbench.
 - Random initial token, persistent Web sessions, and fixes for login flashes during navigation and refresh.
 - Shared, immediately rendered quick-chat/workbench header: engine/P-State, GPU temperature, power, core utilization, VRAM, P/D, KV and cache hits. The performance page avoids a duplicate metric bar.
-- Unified layout and branding, with the vLLM mark and a small translucent lightning accent at the lower left.
 - Configuration drafts, process cleanup and DSH privilege dropping. Account login and client-network allowlists remain future work.
 
 [Ultra release notes (Chinese)](docs/releases/v0.1.5-ultra.zh-CN.md) · [Login, upgrade and rollback](ultra/README.md)
