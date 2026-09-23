@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import importlib.metadata
 import shutil
 from pathlib import Path
 
@@ -15,6 +16,13 @@ def main() -> None:
     parser.add_argument("overlay", type=Path)
     parser.add_argument("--source-copy", type=Path)
     args = parser.parse_args()
+
+    version = importlib.metadata.version("vllm")
+    if version.partition("+")[0] != "0.30.0":
+        raise RuntimeError(
+            f"SM75 v0.1.6 overlays require vLLM 0.30.0; found {version}. "
+            "Build the new runtime before installing these sources."
+        )
 
     source_root = args.overlay.resolve()
     package_root = Path(vllm.__file__).resolve().parent
@@ -32,6 +40,8 @@ def main() -> None:
         "distributed/kv_transfer/kv_connector/v1/base.py",
         "model_executor/kernels/linear/mixed_precision/marlin.py",
         "model_executor/kernels/linear/scaled_mm/marlin.py",
+        "model_executor/kernels/linear/scaled_mm/cutlass.py",
+        "model_executor/kernels/linear/scaled_mm/humming.py",
         "model_executor/layers/mamba/gdn/qwen_gdn_linear_attn.py",
         "model_executor/layers/quantization/kv_cache.py",
         "model_executor/layers/quantization/utils/marlin_utils_fp8.py",

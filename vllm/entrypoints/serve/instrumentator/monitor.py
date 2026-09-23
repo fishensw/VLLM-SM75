@@ -7,7 +7,8 @@
 (Prometheus 文本)渲染并发/KV 趋势、prefix 缓存命中、token 统计、延迟分位
 (P50/P90/P99)、prompt/generation token 分布、preemption 与 sleep 状态。
 HTML 独立成 dashboard.html, 可直接用浏览器打开看样式; 每次请求读盘, 改样式
-无需重启。VLLM_MONITOR 默认开, '0'/'off'/'false'/'no' 关(不挂路由)。
+无需重启。VLLM_MONITOR 默认开, '0'/'off'/'false'/'no' 只关闭 HTML 页面。
+投机解码控制 API 始终注册, 供 Ultra 等替代监控界面复用。
 """
 
 import hashlib
@@ -74,7 +75,8 @@ def _verify_api_key(request: Request) -> bool:
 def attach_router(app: FastAPI) -> None:
     """按 VLLM_MONITOR 开关把 /monitor 挂到 app。
 
-    关(0/off/false/no)时不挂任何路由。/monitor 不在 GUARDED_PREFIX 内,
+    关(0/off/false/no)时只隐藏 HTML 页面, 控制 API 仍可用。
+    /monitor 不在 GUARDED_PREFIX 内,
     浏览器无需 API key 即可访问; 页面内 fetch /metrics 亦同源无鉴权。
     每次请求读盘 dashboard.html, 改样式直接刷新即可(无需重启)。
 
@@ -83,12 +85,11 @@ def attach_router(app: FastAPI) -> None:
     - POST /monitor/spec_decode  写, 需 x-api-key-hash(SHA-256), 切换开关
     开关只跳草稿计算, 不卸显存; 未配 --speculative-config 时 POST 返回 409。
     """
-    if not _monitor_enabled():
-        return
+    if _monitor_enabled():
 
-    @app.get("/monitor", response_class=HTMLResponse, include_in_schema=False)
-    def monitor() -> HTMLResponse:  # noqa: N802
-        return HTMLResponse(_DASHBOARD_HTML_PATH.read_text(encoding="utf-8"))
+        @app.get("/monitor", response_class=HTMLResponse, include_in_schema=False)
+        def monitor() -> HTMLResponse:  # noqa: N802
+            return HTMLResponse(_DASHBOARD_HTML_PATH.read_text(encoding="utf-8"))
 
     @app.get("/monitor/spec_decode", include_in_schema=False)
     async def get_spec_decode(request: Request) -> JSONResponse:  # noqa: N802

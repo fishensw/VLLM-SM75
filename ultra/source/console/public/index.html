@@ -9,10 +9,11 @@
     href="/brand/manifest.webmanifest"
   /><link rel="stylesheet" href="/style.css" />
   <body>
-    <aside hidden>
+    <aside id="consoleSidebar" hidden>
       <h2 class="brand">
         <img src="/brand/favicon.svg" width="34" height="34" alt="" />VLLM-SM75
       </h2>
+      <div id="sidebarActiveProfile"></div>
       <nav id="nav">
         <button data-page="chat">快速会话</button
         ><button data-page="harness">工作台</button
@@ -20,17 +21,22 @@
         ><button data-page="profiles">运行配置</button
         ><button data-page="monitor">性能监控</button
         ><button data-page="tests">模型测试</button
-        ><button data-page="settings">设置</button>
+        ><button id="harnessUsage" data-page="usage">使用统计</button
+        ><button id="harnessPlugins" data-page="plugins">插件</button
+        ><button id="openUnifiedSettings" data-page="settings">设置</button>
       </nav>
+      <div id="workspaceSidebar" class="dsh-surface" hidden></div>
+      <div id="sidebarHeaderActions"></div>
       <small class="sidebar-foot">本地模型工作台</small>
     </aside>
+    <div id="nativeOverlays" class="dsh-surface"></div>
     <main data-auth="checking">
-      <header hidden>
-        <h1 id="title">概览</h1>
-        <select id="active">
+      <header id="appHeader" hidden>
+        <h1 id="title">运行配置</h1>
+        <div id="workspaceToolbar" class="dsh-surface" hidden></div>
+        <select id="active" aria-label="当前运行配置" title="当前运行配置">
           <option>请选择运行配置</option>
         </select>
-        <div id="monitorControls" hidden></div>
         <span id="state">连接中</span>
         <div id="liveSummary" hidden></div>
         <button
@@ -41,9 +47,9 @@
           hidden
         >
           ⚡</button
-        ><button id="monitorLogs" data-action="logs" hidden>查看日志</button
-        ><button id="signout" title="退出当前 Web 会话">退出登录</button
-        ><button id="taskToggle">任务 <span id="taskCount">0</span></button>
+        ><button id="monitorLogs" data-action="logs" title="查看模型日志" aria-label="查看模型日志" hidden>▤</button
+        ><button id="signout" title="退出登录" aria-label="退出登录">⏻</button
+        ><button id="taskToggle" title="后台任务" aria-label="后台任务">☷ <span id="taskCount">0</span></button>
       </header>
       <div id="notice" role="status"></div>
       <div id="taskDrawer" hidden>
@@ -64,7 +70,9 @@
         /><span class="eyebrow">LOCAL MODEL WORKBENCH</span>
         <h2>登录模型工作台</h2>
         <p>在局域网中管理模型、对话与性能。</p>
-        <label for="token">登录 token</label
+        <label id="loginUsernameLabel" for="loginUsername" hidden>管理员账号</label>
+        <input id="loginUsername" autocomplete="username" hidden disabled />
+        <label id="loginSecretLabel" for="token">登录 token</label
         ><input
           id="token"
           type="password"
@@ -137,116 +145,18 @@
           <div id="profileCards" class="profile-cards"></div>
         </div>
         <div id="profileEditor" hidden>
-          <div class="editor-section">
-            <div class="editor-caption">快速组合</div>
-            <div class="editor-row combo-row">
-              <label
-                >卡数<input
-                  id="comboTp"
-                  type="number"
-                  min="1"
-                  max="8"
-                  step="1"
-                  value="4" /></label
-              ><label
-                >单卡显存（GiB）<input
-                  id="comboVram"
-                  type="number"
-                  min="1"
-                  step="1"
-                  value="16" /></label
-              ><label
-                >总显存<span id="comboVramTotal" class="combo-total"
-                  >64 GiB</span
-                ></label
-              ><label class="span2">模型<select id="comboModel"></select></label
-              ><label
-                >场景<select id="comboScene">
-                  <option value="single">单人长上下文</option>
-                  <option value="coding">Coding</option>
-                  <option value="multi">多人并发</option>
-                </select></label
-              ><label
-                >KV 量化<select id="comboKv">
-                  <option value="fp8_e4m3">fp8_e4m3</option>
-                  <option value="auto">auto</option>
-                </select></label
-              ><label
-                >加速<select id="comboAccel">
-                  <option value="none">无</option>
-                  <option value="mtp">MTP</option>
-                  <option value="dflash">DFlash2</option>
-                </select></label
-              ><label
-                >CPU KV<select id="comboCpuKv">
-                  <option value="off">关</option>
-                  <option value="on">开</option>
-                </select></label
-              ><button id="comboApply">应用组合</button>
+          <div class="profile-toolbar">
+            <label>配置名称<input id="profileName" placeholder="例如：单人长上下文" /></label>
+            <div class="profile-save-actions">
+              <button id="backProfiles">收起编辑</button>
+              <button id="newProfile">另存配置</button>
+              <button id="save" class="primary">保存配置</button>
             </div>
-            <div class="editor-row" id="comboMtpRow" hidden>
-              <label
-                >投机 tokens<select id="comboMtpTokens">
-                  <option value="1">1</option>
-                  <option value="2">2</option>
-                  <option value="3">3</option>
-                  <option value="4">4</option>
-                  <option value="5">5</option>
-                  <option value="6">6</option>
-                  <option value="7">7</option>
-                  <option value="8">8</option>
-                </select></label
-              >
-            </div>
-            <div class="editor-row" id="comboDflashRow" hidden>
-              <label id="draftChoiceLabel"
-                >草稿模型<select id="draftPath"></select></label
-              ><label
-                >投机 tokens<select id="comboDraftTokens">
-                  <option value="1">1</option>
-                  <option value="2">2</option>
-                  <option value="3">3</option>
-                  <option value="4">4</option>
-                  <option value="5">5</option>
-                  <option value="6">6</option>
-                  <option value="7">7</option>
-                  <option value="8">8</option>
-                </select></label
-              >
-            </div>
-            <div class="editor-row" id="offloadBody" hidden>
-              <label
-                >CPU KV 容量（GiB）<input
-                  id="offloadGiB"
-                  type="number"
-                  value="8"
-                  min="0"
-                  step="1"
-              /></label>
-            </div>
-            <p class="help" id="comboHint">
-              按 卡数×单卡显存 与所选模型的实际体积自动推导 上下文/并发；加速与
-              CPU KV 选择后会在下方展开对应参数；应用后可在参数区微调。
-            </p>
+            <p class="help">统一保存以下设置，模型下次启动时生效。</p>
           </div>
-          <div class="editor-section">
-            <div class="editor-caption">基本</div>
-            <div class="profile-toolbar editor-row">
-              <label class="span2"
-                >配置名称<input
-                  id="profileName"
-                  placeholder="例如：单人长上下文" /></label
-              ><label class="span2"
-                >场景模板<select id="templateSelect"></select></label
-              ><button id="applyTemplate">载入模板</button
-              ><button id="newProfile">另存配置</button
-              ><button id="save" class="primary">保存配置</button
-              ><button id="backProfiles">收起编辑</button>
-            </div>
-          </div>
-          <div class="editor-section">
-            <div class="editor-caption">模型</div>
-            <div class="editor-row">
+          <section class="editor-section" id="modelSettings">
+            <h3 class="editor-caption">模型</h3>
+            <div class="editor-row model-row">
               <label
                 >权重格式<select id="format">
                   <option value="fp8">FP8</option>
@@ -349,9 +259,159 @@
                 <input id="offloadEnabled" type="checkbox" hidden />
               </div>
             </div>
+          </section>
+          <details class="editor-section editor-fold" id="quickConfiguration">
+            <summary>快速组合与投机解码<span>场景模板、卡数、KV 精度和 DFlash2 / MTP</span></summary>
+            <div class="section-body">
+            <div class="template-load editor-row"><label>场景模板<select id="templateSelect"></select></label><button id="applyTemplate">载入模板</button></div>
+            <div class="editor-row combo-row">
+              <label
+                >卡数<input
+                  id="comboTp"
+                  type="number"
+                  min="1"
+                  max="8"
+                  step="1"
+                  value="4" /></label
+              ><label
+                >单卡显存（GiB）<input
+                  id="comboVram"
+                  type="number"
+                  min="1"
+                  step="1"
+                  value="16" /></label
+              ><label
+                >总显存<span id="comboVramTotal" class="combo-total"
+                  >64 GiB</span
+                ></label
+              ><label class="span2">模型<select id="comboModel"></select></label
+              ><label
+                >场景<select id="comboScene">
+                  <option value="single">单人长上下文</option>
+                  <option value="coding">Coding</option>
+                  <option value="multi">多人并发</option>
+                </select></label
+              ><label
+                >KV 量化<select id="comboKv">
+                  <option value="fp8_e4m3">fp8_e4m3</option>
+                  <option value="auto">auto</option>
+                </select></label
+              ><label
+                >加速<select id="comboAccel">
+                  <option value="none">无</option>
+                  <option value="mtp">MTP</option>
+                  <option value="dflash">DFlash2</option>
+                </select></label
+              ><label hidden
+                >CPU KV<select id="comboCpuKv">
+                  <option value="off">关</option>
+                  <option value="on">开</option>
+                </select></label
+              ><button id="comboApply">应用组合</button>
+            </div>
+            <div class="editor-row" id="comboMtpRow" hidden>
+              <label
+                >投机 tokens<select id="comboMtpTokens">
+                  <option value="1">1</option>
+                  <option value="2">2</option>
+                  <option value="3">3</option>
+                  <option value="4">4</option>
+                  <option value="5">5</option>
+                  <option value="6">6</option>
+                  <option value="7">7</option>
+                  <option value="8">8</option>
+                </select></label
+              >
+            </div>
+            <div class="editor-row" id="comboDflashRow" hidden>
+              <label id="draftChoiceLabel"
+                >草稿模型<select id="draftPath"></select></label
+              ><label
+                >投机 tokens<select id="comboDraftTokens">
+                  <option value="1">1</option>
+                  <option value="2">2</option>
+                  <option value="3">3</option>
+                  <option value="4">4</option>
+                  <option value="5">5</option>
+                  <option value="6">6</option>
+                  <option value="7">7</option>
+                  <option value="8">8</option>
+                </select></label
+              >
+            </div>
+            <div class="editor-row" id="offloadBody" hidden style="display: none">
+              <label
+                >CPU KV 容量（GiB）<input
+                  id="offloadGiB"
+                  type="number"
+                  value="8"
+                  min="0"
+                  step="1"
+              /></label>
+            </div>
+            <p class="help" id="comboHint">
+              应用组合会更新模型、卡数、并发和加速方式。上下文与缓存容量单独保存。
+            </p>
+            </div>
+          </details>
+          <div class="context-cache-grid">
+          <section class="editor-section" id="contextSettings" aria-labelledby="contextSettingsTitle">
+            <h3 class="editor-caption" id="contextSettingsTitle">上下文与 GPU KV</h3>
+            <p class="help" id="contextMetadata"></p>
+            <div class="editor-row two-columns">
+              <label>最大上下文长度<input id="ctxMaxModelLen" aria-label="最大上下文长度" list="contextLengths" placeholder="auto" /></label>
+              <datalist id="contextLengths"><option value="auto"></option><option value="32768"></option><option value="131072"></option><option value="262144"></option><option value="524288"></option><option value="1048576"></option></datalist>
+              <label>每卡 GPU KV（GiB）<input id="ctxGpuKvGiB" aria-label="每张 GPU 的 KV 容量（GiB）" type="number" min="0" step="any" placeholder="留空：自动分配" /></label>
+            </div>
+            <div class="yarn-controls">
+              <label class="inline-switch">YaRN 上下文扩展<input id="ctxYarnEnabled" aria-label="YaRN 上下文扩展" type="checkbox" role="switch" /></label>
+              <button id="ctxOneMillion" type="button">设置 1M</button>
+            </div>
+            <div class="editor-row two-columns" id="ctxYarnFields" hidden>
+              <label>原生位置长度<input id="ctxYarnOriginal" aria-label="YaRN 原生位置长度" type="number" min="1" step="1" /></label>
+              <label>YaRN 扩展倍率<input id="ctxYarnFactor" aria-label="YaRN 扩展倍率" type="number" min="1" step="any" /></label>
+            </div>
+            <details class="editor-help"><summary>上下文与缓存说明</summary>
+              <p class="help">填写 GPU KV 后使用每卡固定预算，优先于显存利用比例。CPU 缓存用于卸载和复用，不能与 GPU 容量相加计算单个活动请求的上下文。</p>
+              <p class="help">1M 为 1,048,576 tokens，YaRN 倍率按模型原生位置长度计算。更换模型后需重新配置；扩展后的质量与容量仍需按模型验证。</p>
+              <p class="help" id="contextWarnings" style="white-space: pre-line" role="status" aria-live="polite"></p>
+            </details>
+            <button id="ctxApply" type="button" hidden>应用上下文设置</button>
+          </section>
+          <section class="editor-section" id="lmcacheSettings" aria-labelledby="lmcacheTitle">
+            <h3 class="editor-caption" id="lmcacheTitle">CPU KV 与分层缓存</h3>
+            <label class="cache-choice">缓存方案<select id="cacheBackend" aria-label="缓存方案"><option value="default">默认</option><option value="lmcache">LMCache</option><option value="custom" disabled>自定义连接器（保留）</option></select></label>
+            <div id="nativeCacheFields">
+              <div class="editor-row two-columns">
+                <label>CPU KV 前缀缓存<select id="ctxCpuKvMode" aria-label="CPU KV 前缀缓存"><option value="off">关闭</option><option value="native">开启</option><option value="custom" disabled>保留自定义连接器</option></select></label>
+                <label id="ctxCpuKvFields" hidden>CPU KV 总容量（GiB）<input id="ctxCpuKvGiB" aria-label="CPU KV 总容量（GiB，TP 合计）" type="number" min="0" step="any" /></label>
+              </div>
+              <p class="help">使用引擎原生 CPU KV；容量为所有 TP 卡的合计。</p>
+            </div>
+            <div id="lmcacheFields" hidden>
+              <div class="editor-row two-columns">
+                <label>CPU 缓存总容量（GiB）<input id="lmcacheCpuGiB" aria-label="LMCache CPU 缓存总容量（GiB）" type="number" min="0" step="any" value="8" /></label>
+                <label>缓存块大小（tokens）<input id="lmcacheChunkSize" aria-label="LMCache chunk size" type="number" min="1" step="1" placeholder="按运行日志填写" /></label>
+                <label class="full-width">磁盘缓存目录<input id="lmcacheDiskPath" aria-label="LMCache 磁盘缓存目录" placeholder="留空：仅使用 CPU 缓存" /></label>
+              </div>
+              <details class="inline-details"><summary>磁盘与服务设置</summary><div class="editor-row two-columns">
+                <label class="full-width">启动所需磁盘剩余空间（GiB）<input id="lmcacheMinFreeDiskGiB" aria-label="LMCache 启动所需剩余空间（GiB）" type="number" min="0" step="any" value="4" /></label>
+                <label>RPC 端口<input id="lmcachePort" aria-label="LMCache RPC 端口" type="number" min="1024" max="65535" step="1" value="5555" /></label>
+                <label>HTTP 端口<input id="lmcacheHttpPort" aria-label="LMCache HTTP 端口" type="number" min="1024" max="65535" step="1" value="5556" /></label>
+              </div></details>
+              <details class="editor-help"><summary>LMCache 使用说明</summary>
+                <p class="help">LMCache 0.5.5 提供 CPU 与磁盘分层缓存。缓存块大小须为运行日志中的块大小或其整数倍，更换模型或 TP 后重新核对。</p>
+                <p class="help">磁盘目录使用 Linux 绝对路径。“剩余空间”只做启动检查，用量上限由卷配额控制。启动时会检查依赖和缓存服务。</p>
+                <p class="help">当前支持 Ultra 单容器和本机运行；需使用 P-State，暂不支持 DFlash / MTP。选择此方案会替代原生 CPU KV，自定义连接器与草稿配置需手动处理。</p>
+              </details>
+            </div>
+            <p class="help cache-status" id="lmcacheStatus" role="status" aria-live="polite" style="white-space: pre-line"></p>
+            <button id="lmcacheApply" type="button" hidden>应用缓存设置</button>
+            <button id="lmcacheReplaceNative" type="button" hidden>替换原生 CPU KV</button>
+          </section>
           </div>
-          <div class="editor-section">
-            <div class="editor-caption">电源</div>
+          <section class="editor-section" id="powerSettings">
+            <h3 class="editor-caption">电源与省电</h3>
             <div class="editor-row">
               <label class="span2"
                 >电源模式<select id="powerMode">
@@ -361,7 +421,7 @@
                   <option value="sleep">自动休眠（exit，可选）</option>
                 </select></label
               >
-              <div id="pstateFields">
+              <details id="pstateFields" class="inline-details"><summary>P-State 详细设置</summary><div class="editor-row">
                 <label
                   >空闲进 P8（秒）<input
                     id="pstateIdle"
@@ -404,7 +464,7 @@
                     value="5"
                     min="1"
                 /></label>
-              </div>
+              </div></details>
               <div id="sleepFields" hidden>
                 <label
                   >空闲休眠（分钟）<input
@@ -419,9 +479,10 @@
                 >
               </div>
             </div>
-          </div>
-          <div class="editor-section">
-            <div class="editor-caption">参数</div>
+          </section>
+          <details class="editor-section editor-fold" id="advancedParameters">
+            <summary>高级启动参数<span>资源、工具解析、自定义参数和个人模板</span></summary>
+            <div class="section-body">
             <div class="editor-caption">自定义启动参数</div>
             <div class="editor-row">
               <input
@@ -446,10 +507,11 @@
                 </button>
               </div>
             </details>
-          </div>
+            </div>
+          </details>
           <textarea id="args" hidden>[]</textarea
           ><textarea id="binds" hidden>[]</textarea>
-          <details>
+          <details class="editor-section editor-fold">
             <summary>启动详情</summary>
             <pre id="editorPreview"></pre>
           </details>
@@ -550,6 +612,8 @@
             </button>
           </div>
           <form id="chatForm">
+              <input id="chatImages" type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple hidden />
+              <button type="button" id="pickChatImages">图片</button><span id="chatImageList"></span>
             <textarea
               id="prompt"
               rows="2"
@@ -570,8 +634,10 @@
         <button id="startHarness">重试连接</button
         ><button id="installHarness" hidden>安装</button
         ><button id="stopHarness" hidden>停止</button>
+        <div id="root" class="dsh-surface" hidden></div>
       </section>
       <section id="monitor" hidden>
+        <div id="monitorControls" class="monitor-controls" hidden></div>
         <div id="monitorLiveView">
           <section id="overview">
             <div class="gpu-section-head">
@@ -629,7 +695,33 @@
         </div>
       </section>
       <section id="settings" hidden>
-        <div id="modelSamplingSettings">
+        <div class="settings-heading">
+          <nav class="settings-tabs" aria-label="设置分类" role="tablist">
+            <button type="button" data-settings-tab="appearance" role="tab" aria-selected="false">外观显示</button>
+            <button type="button" data-settings-tab="assistant" role="tab" aria-selected="false">助手工具</button>
+            <button type="button" data-settings-tab="connections" role="tab" aria-selected="false">模型连接</button>
+            <button type="button" data-settings-tab="sampling" role="tab" aria-selected="false">参数模板</button>
+            <button type="button" class="selected" data-settings-tab="deployment" role="tab" aria-selected="true">部署硬件</button>
+            <button type="button" data-settings-tab="security" role="tab" aria-selected="false">账号访问</button>
+          </nav>
+          <button id="saveUnifiedSettings" type="button">保存设置</button>
+        </div>
+        <p id="settingsSaveHint" class="help" role="status"></p>
+        <div id="nativeSettingsSurface" class="dsh-surface" hidden></div>
+        <div id="securitySettings" data-settings-panel="security" hidden>
+          <h2>账号与访问控制</h2>
+          <p id="securityStatus"></p>
+          <label>管理员账号<input id="adminUsername" autocomplete="username" maxlength="64" placeholder="3–64 位字母、数字、下划线、点或短横线" /></label>
+          <label>当前密码<input id="adminCurrentPassword" type="password" autocomplete="current-password" placeholder="首次创建账号无需填写" /></label>
+          <label>新密码<input id="adminPassword" type="password" autocomplete="new-password" minlength="12" maxlength="256" placeholder="至少 12 位" /></label>
+          <label>确认新密码<input id="adminPasswordConfirm" type="password" autocomplete="new-password" maxlength="256" /></label>
+          <button id="saveAdmin">创建管理员账号</button>
+          <label>允许访问的 IP / 网段<textarea id="allowedNetworks" rows="3" placeholder="每行一个，例如 192.168.1.0/24"></textarea></label>
+          <p id="networkPeer"></p>
+          <p>留空不限制网段；支持 IPv4 / IPv6。按直连地址校验，经过反向代理时请在代理侧限制客户端网段。修改已有账号或白名单需填写当前密码。</p>
+          <button id="saveNetworks">保存网段白名单</button>
+        </div>
+        <div id="modelSamplingSettings" data-settings-panel="sampling" hidden>
           <h2>模型生成参数</h2>
           <label>工作台模型<select id="samplingModel"></select></label>
           <div class="actions">
@@ -698,7 +790,7 @@
           </p>
           <p class="help" id="modelSamplingDefaultInfo"></p>
           <div class="actions">
-            <button id="saveModelSampling">保存模型参数</button
+            <button id="saveModelSampling" hidden>保存模型参数</button
             ><input id="modelSamplingName" placeholder="模板名称" /><button
               id="saveModelSamplingTemplate"
             >
@@ -706,7 +798,7 @@
             </button>
           </div>
         </div>
-        <div id="deploymentSettings">
+        <div id="deploymentSettings" data-settings-panel="deployment">
           <h2>硬件设置</h2>
           <button id="p2pCapability">检测 P2P</button>
           <p id="p2pResult">尚未检测</p>
@@ -756,9 +848,9 @@
             />
             <p class="help" id="cacheDirectoryHint">
               例如
-              /data/cache，与模型目录分开。两个目录均须可写并挂载到宿主机；宿主机示例：/mnt/user/appdata/vllm-sm75/model
+              /data/cache，与模型目录分开。两个目录均须可写并挂载到宿主机；宿主机示例：/srv/vllm-sm75/models
               和
-              /mnt/user/appdata/vllm-sm75/cache。修改路径不会自动迁移已有文件。
+              /srv/vllm-sm75/cache。修改路径不会自动迁移已有文件。
             </p></label
           ><label>默认运行配置<select id="defaultProfile"></select></label
           ><label
@@ -766,7 +858,7 @@
               id="autoStart"
               type="checkbox"
               role="switch" /></label
-          ><button id="saveSettings">保存设置</button>
+          ><button id="saveSettings" hidden>保存设置</button>
         </div>
       </section>
       <dialog id="importProfileDialog">

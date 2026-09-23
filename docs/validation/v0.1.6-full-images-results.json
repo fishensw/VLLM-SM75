@@ -1,0 +1,3619 @@
+{
+  "schemaVersion": 1,
+  "status": "completed-with-release-blockers",
+  "hardware": {
+    "gpu": "4 x Tesla T10 16384MiB",
+    "driver": "610.43.02",
+    "cpu": "Intel Core i9-7900X (10 cores / 20 threads)",
+    "pcie": "3.0 x8",
+    "containerCpuLimit": 8,
+    "containerMemoryGiB": 24
+  },
+  "build": {
+    "sourceRevision": "9e041764374fc2c60ffab37291566717de67c74d",
+    "archiveSha256": "c07fb012d6a894e888d89a3198db3fc93cd65585b4bde522cb1eb6361ae9a54f",
+    "combinedDockerfileSha256": "0bd6ae9c4ece5ecce11bcc78052901ce0368d996c7503006a21a72737163fc1f",
+    "status": "both-complete-imported-and-GPU-preflight-passed",
+    "images": {
+      "standard": {
+        "configSha256": "1e600e5375a3cfbd7e66cb834b500078231f922f7195568b7f66f4de453abb45",
+        "manifestSha256": "fea949a03e493d59d419e84032116b1f5add601b81e72a687d06c8bfac6430be",
+        "gpuPreflight": {
+          "buildEvidenceBytes": {
+            "selector-pytest.log": 18354,
+            "cuda-libraries.json": 3941,
+            "cuobjdump.txt": 48
+          },
+          "tag": "v0.1.6-rc1",
+          "torch": "2.13.0+cu129",
+          "cuda": "12.9",
+          "gpus": [
+            {
+              "index": 0,
+              "name": "Tesla T10",
+              "capability": "7.5",
+              "fp16Matmul": true
+            },
+            {
+              "index": 1,
+              "name": "Tesla T10",
+              "capability": "7.5",
+              "fp16Matmul": true
+            },
+            {
+              "index": 2,
+              "name": "Tesla T10",
+              "capability": "7.5",
+              "fp16Matmul": true
+            },
+            {
+              "index": 3,
+              "name": "Tesla T10",
+              "capability": "7.5",
+              "fp16Matmul": true
+            }
+          ],
+          "cudaLibraries": "record-hashes-passed",
+          "lmcacheGpuConnector": "not-requested"
+        },
+        "dockerArchive": {
+          "imageId": "sha256:1e600e5375a3cfbd7e66cb834b500078231f922f7195568b7f66f4de453abb45",
+          "tag": "local/vllm-sm75:v0.1.6-rc1",
+          "existingParentLayers": 0,
+          "includedLayers": 98,
+          "includedBlobBytes": 17812124396,
+          "archiveBytes": 17812275200,
+          "portable": true,
+          "requiresExactExistingParentChain": []
+        },
+        "ociArchiveSha256": "93dc0e1182e81180c0184e3a9eec6b672a63018fae48a3cfa6108ee7410131fd",
+        "dockerArchiveSha256": "f865eacb7c713dec9bf059a2548841616b9e09f37cd1bd843874c666788a7bc8",
+        "selectorTests": {
+          "passed": 126,
+          "failed": 0
+        }
+      },
+      "ultra": {
+        "configSha256": "6c550dc42f8659d357a92b7907289771870f3d01536a33a1cafc53517f9033d1",
+        "manifestSha256": "42a91e241b51e6388e65e9a77a68f4ccd2ec242703b0c4dd5ea1bf2f2c2386a6",
+        "gpuPreflight": {
+          "buildEvidenceBytes": {
+            "selector-pytest.log": 18354,
+            "ultra-node-tests.log": 41118,
+            "cuda-libraries.json": 3941,
+            "cuobjdump.txt": 48
+          },
+          "tag": "v0.1.6-ultra-rc1",
+          "torch": "2.13.0+cu129",
+          "cuda": "12.9",
+          "gpus": [
+            {
+              "index": 0,
+              "name": "Tesla T10",
+              "capability": "7.5",
+              "fp16Matmul": true
+            },
+            {
+              "index": 1,
+              "name": "Tesla T10",
+              "capability": "7.5",
+              "fp16Matmul": true
+            },
+            {
+              "index": 2,
+              "name": "Tesla T10",
+              "capability": "7.5",
+              "fp16Matmul": true
+            },
+            {
+              "index": 3,
+              "name": "Tesla T10",
+              "capability": "7.5",
+              "fp16Matmul": true
+            }
+          ],
+          "cudaLibraries": "record-hashes-passed",
+          "lmcacheGpuConnector": "passed"
+        },
+        "dockerArchive": {
+          "imageId": "sha256:6c550dc42f8659d357a92b7907289771870f3d01536a33a1cafc53517f9033d1",
+          "tag": "local/vllm-sm75:v0.1.6-ultra-rc1",
+          "existingParentLayers": 0,
+          "includedLayers": 109,
+          "includedBlobBytes": 18161596820,
+          "archiveBytes": 18161766400,
+          "portable": true,
+          "requiresExactExistingParentChain": []
+        },
+        "ociArchiveSha256": "5795dc541c7c9d53036b4041fabc1daa21c069db80fe4b32fdf4e3b3d2c30a45",
+        "dockerArchiveSha256": "fb3bce5c3920dd1fa274f5fe28cfd738d90d419e3c79224799ed63a8a3c9b317",
+        "selectorTests": {
+          "passed": 126,
+          "failed": 0
+        },
+        "consoleTests": {
+          "passed": 182,
+          "failed": 0,
+          "skipped": 0
+        }
+      }
+    }
+  },
+  "baseline": {
+    "contract": "sm75-release-v2",
+    "baselineImage": "sha256:dbbf2ad146e2b8b1e1acd7a85754108e978f32a54526842de99b554ae16196a2",
+    "baselineVersion": "0.1.5-ultra",
+    "perf": [
+      {
+        "inputTokens": 8192,
+        "samples": 3,
+        "prefillTokensPerSecond": 1271.7086276520686,
+        "decodeTokensPerSecond": 62.74310858012834,
+        "ttftSeconds": 6.441727155004628,
+        "acceptanceRate": 0.250384024577573,
+        "allValid": true,
+        "allCachedTokensZero": true,
+        "allPreemptionsZero": true
+      },
+      {
+        "inputTokens": 32768,
+        "samples": 3,
+        "prefillTokensPerSecond": 1203.7679207285648,
+        "decodeTokensPerSecond": 58.843130372101506,
+        "ttftSeconds": 27.221193915989716,
+        "acceptanceRate": 0.23686158401184307,
+        "allValid": true,
+        "allCachedTokensZero": true,
+        "allPreemptionsZero": true
+      },
+      {
+        "inputTokens": 131072,
+        "samples": 3,
+        "prefillTokensPerSecond": 976.0786459232038,
+        "decodeTokensPerSecond": 59.85396082170285,
+        "ttftSeconds": 134.2842613630055,
+        "acceptanceRate": 0.27516233766233766,
+        "allValid": true,
+        "allCachedTokensZero": true,
+        "allPreemptionsZero": true
+      }
+    ],
+    "candidateStatus": "complete; paired comparisons retained as strict failures",
+    "context": {
+      "baseline-context": [
+        {
+          "inputTokens": 8192,
+          "maxOutputTokens": 128,
+          "repeat": 1,
+          "passed": true,
+          "tokenHash": "523252f338437ee862f932cdfee858f8760d35000937d414b04da54f01e60c27",
+          "counterDeltas": {
+            "vllm:kv_offload_cpu_allocation_size_count": 12.0,
+            "vllm:kv_offload_cpu_allocation_size_sum": 35.0,
+            "vllm:kv_offload_store_bytes_total": 532283392.0,
+            "vllm:prefix_cache_queries_total": 8192.0,
+            "vllm:prefix_cache_hits_total": 0.0,
+            "vllm:num_preemptions_total": 0.0
+          },
+          "error": null,
+          "completionTokens": 51
+        },
+        {
+          "inputTokens": 8192,
+          "maxOutputTokens": 128,
+          "repeat": 2,
+          "passed": true,
+          "tokenHash": "523252f338437ee862f932cdfee858f8760d35000937d414b04da54f01e60c27",
+          "counterDeltas": {
+            "vllm:kv_offload_cpu_allocation_size_count": 0.0,
+            "vllm:kv_offload_cpu_allocation_size_sum": 0.0,
+            "vllm:kv_offload_store_bytes_total": 0.0,
+            "vllm:prefix_cache_queries_total": 8192.0,
+            "vllm:prefix_cache_hits_total": 6656.0,
+            "vllm:num_preemptions_total": 0.0
+          },
+          "error": null,
+          "completionTokens": 51
+        },
+        {
+          "inputTokens": 32768,
+          "maxOutputTokens": 128,
+          "repeat": 1,
+          "passed": true,
+          "tokenHash": "57150027ad3b91ca57f353233b0c649e1829ffb78c65d68891d6901f29cb50a8",
+          "counterDeltas": {
+            "vllm:kv_offload_cpu_allocation_size_count": 56.0,
+            "vllm:kv_offload_cpu_allocation_size_sum": 165.0,
+            "vllm:kv_offload_store_bytes_total": 2504654848.0,
+            "vllm:prefix_cache_queries_total": 32768.0,
+            "vllm:prefix_cache_hits_total": 0.0,
+            "vllm:num_preemptions_total": 0.0
+          },
+          "error": null,
+          "completionTokens": 52
+        },
+        {
+          "inputTokens": 32768,
+          "maxOutputTokens": 128,
+          "repeat": 2,
+          "passed": true,
+          "tokenHash": "57150027ad3b91ca57f353233b0c649e1829ffb78c65d68891d6901f29cb50a8",
+          "counterDeltas": {
+            "vllm:kv_offload_cpu_allocation_size_count": 0.0,
+            "vllm:kv_offload_cpu_allocation_size_sum": 0.0,
+            "vllm:kv_offload_store_bytes_total": 0.0,
+            "vllm:prefix_cache_queries_total": 32768.0,
+            "vllm:prefix_cache_hits_total": 31616.0,
+            "vllm:num_preemptions_total": 0.0
+          },
+          "error": null,
+          "completionTokens": 52
+        },
+        {
+          "inputTokens": 131072,
+          "maxOutputTokens": 128,
+          "repeat": 1,
+          "passed": true,
+          "tokenHash": "0f184a47b303994b8560572f203ba55abce890f3144ef5280f114d238598cefc",
+          "counterDeltas": {
+            "vllm:kv_offload_cpu_allocation_size_count": 199.0,
+            "vllm:kv_offload_cpu_allocation_size_sum": 649.0,
+            "vllm:kv_offload_store_bytes_total": 9823059968.0,
+            "vllm:prefix_cache_queries_total": 131072.0,
+            "vllm:prefix_cache_hits_total": 0.0,
+            "vllm:num_preemptions_total": 0.0
+          },
+          "error": null,
+          "completionTokens": 55
+        },
+        {
+          "inputTokens": 131072,
+          "maxOutputTokens": 128,
+          "repeat": 2,
+          "passed": true,
+          "tokenHash": "0f184a47b303994b8560572f203ba55abce890f3144ef5280f114d238598cefc",
+          "counterDeltas": {
+            "vllm:kv_offload_cpu_allocation_size_count": 1.0,
+            "vllm:kv_offload_cpu_allocation_size_sum": 5.0,
+            "vllm:kv_offload_store_bytes_total": 68157440.0,
+            "vllm:prefix_cache_queries_total": 131072.0,
+            "vllm:prefix_cache_hits_total": 129792.0,
+            "vllm:num_preemptions_total": 0.0
+          },
+          "error": null,
+          "completionTokens": 55
+        },
+        {
+          "inputTokens": 262016,
+          "maxOutputTokens": 128,
+          "repeat": 1,
+          "passed": true,
+          "tokenHash": "d57f32220b3033f2337a560b56041391ed6daab9f06331a2c66d1930435dc32e",
+          "counterDeltas": {
+            "vllm:kv_offload_cpu_allocation_size_count": 386.0,
+            "vllm:kv_offload_cpu_allocation_size_sum": 1292.0,
+            "vllm:kv_offload_load_bytes_total": 860094464.0,
+            "vllm:kv_offload_store_bytes_total": 19539820544.0,
+            "vllm:prefix_cache_queries_total": 262016.0,
+            "vllm:prefix_cache_hits_total": 0.0,
+            "vllm:num_preemptions_total": 2.0
+          },
+          "error": null,
+          "completionTokens": 52
+        },
+        {
+          "inputTokens": 262016,
+          "maxOutputTokens": 128,
+          "repeat": 2,
+          "passed": true,
+          "tokenHash": "d57f32220b3033f2337a560b56041391ed6daab9f06331a2c66d1930435dc32e",
+          "counterDeltas": {
+            "vllm:kv_offload_cpu_allocation_size_count": 0.0,
+            "vllm:kv_offload_cpu_allocation_size_sum": 0.0,
+            "vllm:kv_offload_load_bytes_total": 430047232.0,
+            "vllm:kv_offload_store_bytes_total": 0.0,
+            "vllm:prefix_cache_queries_total": 262016.0,
+            "vllm:prefix_cache_hits_total": 254592.0,
+            "vllm:num_preemptions_total": 0.0
+          },
+          "error": null,
+          "completionTokens": 52
+        }
+      ],
+      "baseline-context-decode512": [
+        {
+          "inputTokens": 261632,
+          "maxOutputTokens": 512,
+          "repeat": 1,
+          "passed": true,
+          "tokenHash": "20ec23f10f674b06cada69f0233ea411a729db42f58549ec64d4c52037859dda",
+          "counterDeltas": {
+            "vllm:kv_offload_cpu_allocation_size_count": 386.0,
+            "vllm:kv_offload_cpu_allocation_size_sum": 1292.0,
+            "vllm:kv_offload_load_bytes_total": 860094464.0,
+            "vllm:kv_offload_store_bytes_total": 19539820544.0,
+            "vllm:prefix_cache_queries_total": 261632.0,
+            "vllm:prefix_cache_hits_total": 0.0,
+            "vllm:num_preemptions_total": 2.0
+          },
+          "error": null,
+          "completionTokens": 512
+        },
+        {
+          "inputTokens": 261632,
+          "maxOutputTokens": 512,
+          "repeat": 2,
+          "passed": false,
+          "tokenHash": "b72ac0485cbed29e92a1cce069293bfecbd2f840df2b5efd001f12d3b9c7adc3",
+          "counterDeltas": {
+            "vllm:kv_offload_cpu_allocation_size_count": 0.0,
+            "vllm:kv_offload_cpu_allocation_size_sum": 0.0,
+            "vllm:kv_offload_load_bytes_total": 430047232.0,
+            "vllm:kv_offload_store_bytes_total": 0.0,
+            "vllm:prefix_cache_queries_total": 261632.0,
+            "vllm:prefix_cache_hits_total": 254592.0,
+            "vllm:num_preemptions_total": 0.0
+          },
+          "error": "AssertionError: Repeated output token hash mismatch",
+          "completionTokens": 512
+        }
+      ]
+    }
+  },
+  "standard": {
+    "status": "all-functional-samples-passed; cross-version-regression-gate-failed",
+    "perf": [
+      {
+        "inputTokens": 8192,
+        "samples": 3,
+        "prefillTokensPerSecond": 1282.2717991448167,
+        "decodeTokensPerSecond": 65.77952336265768,
+        "ttftSeconds": 6.3886611289926805,
+        "acceptanceRate": 0.273538961038961,
+        "approxDraftStepsPerSecond": 22.655961079897757,
+        "allValid": true,
+        "withinVersionUniqueOutputs": 1
+      },
+      {
+        "inputTokens": 32768,
+        "samples": 3,
+        "prefillTokensPerSecond": 1209.024962457001,
+        "decodeTokensPerSecond": 64.46386006127089,
+        "ttftSeconds": 27.10283163501299,
+        "acceptanceRate": 0.2742857142857143,
+        "approxDraftStepsPerSecond": 22.07666440454483,
+        "allValid": true,
+        "withinVersionUniqueOutputs": 1
+      },
+      {
+        "inputTokens": 131072,
+        "samples": 3,
+        "prefillTokensPerSecond": 977.8046594763332,
+        "decodeTokensPerSecond": 53.012622539552055,
+        "ttftSeconds": 134.047223778005,
+        "acceptanceRate": 0.2336996336996337,
+        "approxDraftStepsPerSecond": 20.229865744056067,
+        "allValid": true,
+        "withinVersionUniqueOutputs": 1
+      }
+    ],
+    "samples": [
+      {
+        "contract": "sm75-release-v2",
+        "label": "v016-full-standard",
+        "model": "sm75-release-test",
+        "benchmarkSha256": "40006f79dcc5f8151b9f1bc87d624a0b69aa92d46531caa040231923e8aaa2cc",
+        "protocolSha256": "022328f1533568eeed78b0da139a5ef3dd27c881957536d19cf6ea807f9053a0",
+        "inputTokens": 8192,
+        "outputTokens": 512,
+        "repeat": 1,
+        "promptTokenHash": "2caff004d213fc3f79b05c2f90940d156e80fdda4b8cdb4d9183dfa8b61442aa",
+        "tokenHash": "f71490c0e1bb04bb02bc4d44c1b48d9d68e7f0fc99024e5730b9c4933dc5f6ab",
+        "ttftSeconds": 6.377805799013004,
+        "prefillTokensPerSecond": 1284.4542869693134,
+        "decodeTokensPerSecond": 65.12946009404523,
+        "tpotSeconds": 0.015354034849299016,
+        "firstEmissionTokens": 1,
+        "decodeWindowSeconds": 7.845911807991797,
+        "speculativeCounters": {
+          "drafts": 176.0,
+          "draftTokens": 1232.0,
+          "acceptedTokens": 337.0
+        },
+        "speculativeMetricsValid": true,
+        "acceptanceRate": 0.273538961038961,
+        "elapsedSeconds": 14.224096000019927,
+        "cachedTokens": 0,
+        "preemptions": 0.0,
+        "retrievalPassed": true,
+        "complete": true,
+        "hostMinimumAvailableBytes": 5220311040,
+        "valid": true
+      },
+      {
+        "contract": "sm75-release-v2",
+        "label": "v016-full-standard",
+        "model": "sm75-release-test",
+        "benchmarkSha256": "40006f79dcc5f8151b9f1bc87d624a0b69aa92d46531caa040231923e8aaa2cc",
+        "protocolSha256": "022328f1533568eeed78b0da139a5ef3dd27c881957536d19cf6ea807f9053a0",
+        "inputTokens": 8192,
+        "outputTokens": 512,
+        "repeat": 2,
+        "promptTokenHash": "2caff004d213fc3f79b05c2f90940d156e80fdda4b8cdb4d9183dfa8b61442aa",
+        "tokenHash": "f71490c0e1bb04bb02bc4d44c1b48d9d68e7f0fc99024e5730b9c4933dc5f6ab",
+        "ttftSeconds": 6.39348492101999,
+        "prefillTokensPerSecond": 1281.3043435931154,
+        "decodeTokensPerSecond": 65.77952336265768,
+        "tpotSeconds": 0.015202299270044408,
+        "firstEmissionTokens": 1,
+        "decodeWindowSeconds": 7.768374926992692,
+        "speculativeCounters": {
+          "drafts": 176.0,
+          "draftTokens": 1232.0,
+          "acceptedTokens": 337.0
+        },
+        "speculativeMetricsValid": true,
+        "acceptanceRate": 0.273538961038961,
+        "elapsedSeconds": 14.162253004004015,
+        "cachedTokens": 0,
+        "preemptions": 0.0,
+        "retrievalPassed": true,
+        "complete": true,
+        "hostMinimumAvailableBytes": 5289541632,
+        "valid": true
+      },
+      {
+        "contract": "sm75-release-v2",
+        "label": "v016-full-standard",
+        "model": "sm75-release-test",
+        "benchmarkSha256": "40006f79dcc5f8151b9f1bc87d624a0b69aa92d46531caa040231923e8aaa2cc",
+        "protocolSha256": "022328f1533568eeed78b0da139a5ef3dd27c881957536d19cf6ea807f9053a0",
+        "inputTokens": 8192,
+        "outputTokens": 512,
+        "repeat": 3,
+        "promptTokenHash": "2caff004d213fc3f79b05c2f90940d156e80fdda4b8cdb4d9183dfa8b61442aa",
+        "tokenHash": "f71490c0e1bb04bb02bc4d44c1b48d9d68e7f0fc99024e5730b9c4933dc5f6ab",
+        "ttftSeconds": 6.3886611289926805,
+        "prefillTokensPerSecond": 1282.2717991448167,
+        "decodeTokensPerSecond": 66.08147477412642,
+        "tpotSeconds": 0.015132834178082546,
+        "firstEmissionTokens": 1,
+        "decodeWindowSeconds": 7.732878265000181,
+        "speculativeCounters": {
+          "drafts": 176.0,
+          "draftTokens": 1232.0,
+          "acceptedTokens": 337.0
+        },
+        "speculativeMetricsValid": true,
+        "acceptanceRate": 0.273538961038961,
+        "elapsedSeconds": 14.121900592988823,
+        "cachedTokens": 0,
+        "preemptions": 0.0,
+        "retrievalPassed": true,
+        "complete": true,
+        "hostMinimumAvailableBytes": 5273063424,
+        "valid": true
+      },
+      {
+        "contract": "sm75-release-v2",
+        "label": "v016-full-standard",
+        "model": "sm75-release-test",
+        "benchmarkSha256": "40006f79dcc5f8151b9f1bc87d624a0b69aa92d46531caa040231923e8aaa2cc",
+        "protocolSha256": "022328f1533568eeed78b0da139a5ef3dd27c881957536d19cf6ea807f9053a0",
+        "inputTokens": 32768,
+        "outputTokens": 512,
+        "repeat": 1,
+        "promptTokenHash": "9d1b42d051ab68b01bd92ffcc11bc0221571e1504e5dd6c39d17e0e814f67a01",
+        "tokenHash": "902e80776d81cb221f4e0627e7fda6df43fb4eee6f90328050d5cd8014933a86",
+        "ttftSeconds": 27.102586644992698,
+        "prefillTokensPerSecond": 1209.035891268113,
+        "decodeTokensPerSecond": 63.97687993429309,
+        "tpotSeconds": 0.015630646587127123,
+        "firstEmissionTokens": 1,
+        "decodeWindowSeconds": 7.98726040602196,
+        "speculativeCounters": {
+          "drafts": 175.0,
+          "draftTokens": 1225.0,
+          "acceptedTokens": 336.0
+        },
+        "speculativeMetricsValid": true,
+        "acceptanceRate": 0.2742857142857143,
+        "elapsedSeconds": 35.09016588499071,
+        "cachedTokens": 0,
+        "preemptions": 0.0,
+        "retrievalPassed": true,
+        "complete": true,
+        "hostMinimumAvailableBytes": 5253177344,
+        "valid": true
+      },
+      {
+        "contract": "sm75-release-v2",
+        "label": "v016-full-standard",
+        "model": "sm75-release-test",
+        "benchmarkSha256": "40006f79dcc5f8151b9f1bc87d624a0b69aa92d46531caa040231923e8aaa2cc",
+        "protocolSha256": "022328f1533568eeed78b0da139a5ef3dd27c881957536d19cf6ea807f9053a0",
+        "inputTokens": 32768,
+        "outputTokens": 512,
+        "repeat": 2,
+        "promptTokenHash": "9d1b42d051ab68b01bd92ffcc11bc0221571e1504e5dd6c39d17e0e814f67a01",
+        "tokenHash": "902e80776d81cb221f4e0627e7fda6df43fb4eee6f90328050d5cd8014933a86",
+        "ttftSeconds": 27.10283163501299,
+        "prefillTokensPerSecond": 1209.024962457001,
+        "decodeTokensPerSecond": 64.46386006127089,
+        "tpotSeconds": 0.01551256780232414,
+        "firstEmissionTokens": 1,
+        "decodeWindowSeconds": 7.926922146987636,
+        "speculativeCounters": {
+          "drafts": 175.0,
+          "draftTokens": 1225.0,
+          "acceptedTokens": 336.0
+        },
+        "speculativeMetricsValid": true,
+        "acceptanceRate": 0.2742857142857143,
+        "elapsedSeconds": 35.03003689201432,
+        "cachedTokens": 0,
+        "preemptions": 0.0,
+        "retrievalPassed": true,
+        "complete": true,
+        "hostMinimumAvailableBytes": 5232209920,
+        "valid": true
+      },
+      {
+        "contract": "sm75-release-v2",
+        "label": "v016-full-standard",
+        "model": "sm75-release-test",
+        "benchmarkSha256": "40006f79dcc5f8151b9f1bc87d624a0b69aa92d46531caa040231923e8aaa2cc",
+        "protocolSha256": "022328f1533568eeed78b0da139a5ef3dd27c881957536d19cf6ea807f9053a0",
+        "inputTokens": 32768,
+        "outputTokens": 512,
+        "repeat": 3,
+        "promptTokenHash": "9d1b42d051ab68b01bd92ffcc11bc0221571e1504e5dd6c39d17e0e814f67a01",
+        "tokenHash": "902e80776d81cb221f4e0627e7fda6df43fb4eee6f90328050d5cd8014933a86",
+        "ttftSeconds": 27.128638405993115,
+        "prefillTokensPerSecond": 1207.8748483285865,
+        "decodeTokensPerSecond": 65.06599519815255,
+        "tpotSeconds": 0.015369011062607917,
+        "firstEmissionTokens": 1,
+        "decodeWindowSeconds": 7.853564652992645,
+        "speculativeCounters": {
+          "drafts": 175.0,
+          "draftTokens": 1225.0,
+          "acceptedTokens": 336.0
+        },
+        "speculativeMetricsValid": true,
+        "acceptanceRate": 0.2742857142857143,
+        "elapsedSeconds": 34.98252115998184,
+        "cachedTokens": 0,
+        "preemptions": 0.0,
+        "retrievalPassed": true,
+        "complete": true,
+        "hostMinimumAvailableBytes": 5218861056,
+        "valid": true
+      },
+      {
+        "contract": "sm75-release-v2",
+        "label": "v016-full-standard",
+        "model": "sm75-release-test",
+        "benchmarkSha256": "40006f79dcc5f8151b9f1bc87d624a0b69aa92d46531caa040231923e8aaa2cc",
+        "protocolSha256": "022328f1533568eeed78b0da139a5ef3dd27c881957536d19cf6ea807f9053a0",
+        "inputTokens": 131072,
+        "outputTokens": 512,
+        "repeat": 1,
+        "promptTokenHash": "6ad21d98f5de93246f3d80566bae14eca547f48752e6f82ca3a92f505a394262",
+        "tokenHash": "db1e367b74e3560061b236ff4cce87351ceaf5ee5ad57f02aa1679090acae1a5",
+        "ttftSeconds": 134.04500865301816,
+        "prefillTokensPerSecond": 977.8208179260599,
+        "decodeTokensPerSecond": 53.57425306870713,
+        "tpotSeconds": 0.018665682538168745,
+        "firstEmissionTokens": 1,
+        "decodeWindowSeconds": 9.538163777004229,
+        "speculativeCounters": {
+          "drafts": 195.0,
+          "draftTokens": 1365.0,
+          "acceptedTokens": 319.0
+        },
+        "speculativeMetricsValid": true,
+        "acceptanceRate": 0.2336996336996337,
+        "elapsedSeconds": 143.5834924740193,
+        "cachedTokens": 0,
+        "preemptions": 0.0,
+        "retrievalPassed": true,
+        "complete": true,
+        "hostMinimumAvailableBytes": 5103640576,
+        "valid": true
+      },
+      {
+        "contract": "sm75-release-v2",
+        "label": "v016-full-standard",
+        "model": "sm75-release-test",
+        "benchmarkSha256": "40006f79dcc5f8151b9f1bc87d624a0b69aa92d46531caa040231923e8aaa2cc",
+        "protocolSha256": "022328f1533568eeed78b0da139a5ef3dd27c881957536d19cf6ea807f9053a0",
+        "inputTokens": 131072,
+        "outputTokens": 512,
+        "repeat": 2,
+        "promptTokenHash": "6ad21d98f5de93246f3d80566bae14eca547f48752e6f82ca3a92f505a394262",
+        "tokenHash": "db1e367b74e3560061b236ff4cce87351ceaf5ee5ad57f02aa1679090acae1a5",
+        "ttftSeconds": 134.0692523799953,
+        "prefillTokensPerSecond": 977.6439987037436,
+        "decodeTokensPerSecond": 52.82033191105042,
+        "tpotSeconds": 0.018932103677121958,
+        "firstEmissionTokens": 1,
+        "decodeWindowSeconds": 9.674304979009321,
+        "speculativeCounters": {
+          "drafts": 195.0,
+          "draftTokens": 1365.0,
+          "acceptedTokens": 319.0
+        },
+        "speculativeMetricsValid": true,
+        "acceptanceRate": 0.2336996336996337,
+        "elapsedSeconds": 143.74385485300445,
+        "cachedTokens": 0,
+        "preemptions": 0.0,
+        "retrievalPassed": true,
+        "complete": true,
+        "hostMinimumAvailableBytes": 5126025216,
+        "valid": true
+      },
+      {
+        "contract": "sm75-release-v2",
+        "label": "v016-full-standard",
+        "model": "sm75-release-test",
+        "benchmarkSha256": "40006f79dcc5f8151b9f1bc87d624a0b69aa92d46531caa040231923e8aaa2cc",
+        "protocolSha256": "022328f1533568eeed78b0da139a5ef3dd27c881957536d19cf6ea807f9053a0",
+        "inputTokens": 131072,
+        "outputTokens": 512,
+        "repeat": 3,
+        "promptTokenHash": "6ad21d98f5de93246f3d80566bae14eca547f48752e6f82ca3a92f505a394262",
+        "tokenHash": "db1e367b74e3560061b236ff4cce87351ceaf5ee5ad57f02aa1679090acae1a5",
+        "ttftSeconds": 134.047223778005,
+        "prefillTokensPerSecond": 977.8046594763332,
+        "decodeTokensPerSecond": 53.012622539552055,
+        "tpotSeconds": 0.01886343199214324,
+        "firstEmissionTokens": 1,
+        "decodeWindowSeconds": 9.639213747985195,
+        "speculativeCounters": {
+          "drafts": 195.0,
+          "draftTokens": 1365.0,
+          "acceptedTokens": 319.0
+        },
+        "speculativeMetricsValid": true,
+        "acceptanceRate": 0.2336996336996337,
+        "elapsedSeconds": 143.68680810698424,
+        "cachedTokens": 0,
+        "preemptions": 0.0,
+        "retrievalPassed": true,
+        "complete": true,
+        "hostMinimumAvailableBytes": 5111517184,
+        "valid": true
+      }
+    ],
+    "context": {
+      "standard-context": [
+        {
+          "inputTokens": 8192,
+          "maxOutputTokens": 128,
+          "repeat": 1,
+          "passed": true,
+          "elapsedSeconds": 6.834376035025343,
+          "ttftSeconds": 6.398220296017826,
+          "tokenHash": "523252f338437ee862f932cdfee858f8760d35000937d414b04da54f01e60c27",
+          "counterDeltas": {
+            "vllm:kv_offload_cpu_allocation_size_count": 2.0,
+            "vllm:kv_offload_cpu_allocation_size_sum": 20.0,
+            "vllm:kv_offload_store_bytes_total": 286261248.0,
+            "vllm:prefix_cache_queries_total": 8192.0,
+            "vllm:prefix_cache_hits_total": 0.0,
+            "vllm:num_preemptions_total": 0.0
+          },
+          "error": null,
+          "completionTokens": 51
+        },
+        {
+          "inputTokens": 8192,
+          "maxOutputTokens": 128,
+          "repeat": 2,
+          "passed": true,
+          "elapsedSeconds": 6.87913179397583,
+          "ttftSeconds": 6.443102714983979,
+          "tokenHash": "523252f338437ee862f932cdfee858f8760d35000937d414b04da54f01e60c27",
+          "counterDeltas": {
+            "vllm:kv_offload_cpu_allocation_size_count": 10.0,
+            "vllm:kv_offload_cpu_allocation_size_sum": 10.0,
+            "vllm:kv_offload_store_bytes_total": 160825344.0,
+            "vllm:prefix_cache_queries_total": 8192.0,
+            "vllm:prefix_cache_hits_total": 0.0,
+            "vllm:num_preemptions_total": 0.0
+          },
+          "error": null,
+          "completionTokens": 51
+        }
+      ],
+      "standard-context-decode512": [
+        {
+          "inputTokens": 261632,
+          "maxOutputTokens": 512,
+          "repeat": 1,
+          "passed": true,
+          "elapsedSeconds": 345.3893308840052,
+          "ttftSeconds": 335.7132084860059,
+          "tokenHash": "b8fa10193fc5d28b05796c6748cf4238da8317253d10f9bad5b587aa2b107c27",
+          "counterDeltas": {
+            "vllm:kv_offload_cpu_allocation_size_count": 36.0,
+            "vllm:kv_offload_cpu_allocation_size_sum": 631.0,
+            "vllm:kv_offload_store_bytes_total": 8611692544.0,
+            "vllm:prefix_cache_queries_total": 261632.0,
+            "vllm:prefix_cache_hits_total": 0.0,
+            "vllm:num_preemptions_total": 0.0
+          },
+          "error": null,
+          "completionTokens": 512
+        },
+        {
+          "inputTokens": 261632,
+          "maxOutputTokens": 512,
+          "repeat": 2,
+          "passed": true,
+          "elapsedSeconds": 345.3570046350069,
+          "ttftSeconds": 335.65382962100557,
+          "tokenHash": "b8fa10193fc5d28b05796c6748cf4238da8317253d10f9bad5b587aa2b107c27",
+          "counterDeltas": {
+            "vllm:kv_offload_cpu_allocation_size_count": 43.0,
+            "vllm:kv_offload_cpu_allocation_size_sum": 150.0,
+            "vllm:kv_offload_store_bytes_total": 2069233664.0,
+            "vllm:prefix_cache_queries_total": 261632.0,
+            "vllm:prefix_cache_hits_total": 0.0,
+            "vllm:num_preemptions_total": 0.0
+          },
+          "error": null,
+          "completionTokens": 512
+        }
+      ]
+    }
+  },
+  "ultra": {
+    "status": "performance-context-browser-power-complete",
+    "perf": [
+      {
+        "inputTokens": 8192,
+        "samples": 3,
+        "prefillTokensPerSecond": 1281.3353512439512,
+        "decodeTokensPerSecond": 60.492542681866894,
+        "ttftSeconds": 6.39333020200138,
+        "acceptanceRate": 0.23735119047619047,
+        "allValid": true,
+        "allCachedTokensZero": true,
+        "allPreemptionsZero": true,
+        "outputHashes": 1,
+        "approximateDraftStepsPerDecodeSecond": 22.729096271856054
+      },
+      {
+        "inputTokens": 32768,
+        "samples": 3,
+        "prefillTokensPerSecond": 1207.6168948669329,
+        "decodeTokensPerSecond": 63.46702759199937,
+        "ttftSeconds": 27.134433229017304,
+        "acceptanceRate": 0.266560255387071,
+        "allValid": true,
+        "allCachedTokensZero": true,
+        "allPreemptionsZero": true,
+        "outputHashes": 1,
+        "approximateDraftStepsPerDecodeSecond": 22.23208990013285
+      },
+      {
+        "inputTokens": 131072,
+        "samples": 3,
+        "prefillTokensPerSecond": 978.0801202110157,
+        "decodeTokensPerSecond": 58.729952484505056,
+        "ttftSeconds": 134.00947150599677,
+        "acceptanceRate": 0.2649640861931365,
+        "allValid": true,
+        "allCachedTokensZero": true,
+        "allPreemptionsZero": true,
+        "outputHashes": 1,
+        "approximateDraftStepsPerDecodeSecond": 20.57272308165637
+      }
+    ],
+    "samples": [
+      {
+        "contract": "sm75-release-v2",
+        "label": "v016-full-ultra",
+        "model": "sm75-release-test",
+        "benchmarkSha256": "40006f79dcc5f8151b9f1bc87d624a0b69aa92d46531caa040231923e8aaa2cc",
+        "protocolSha256": "022328f1533568eeed78b0da139a5ef3dd27c881957536d19cf6ea807f9053a0",
+        "inputTokens": 8192,
+        "outputTokens": 512,
+        "repeat": 1,
+        "promptTokenHash": "2caff004d213fc3f79b05c2f90940d156e80fdda4b8cdb4d9183dfa8b61442aa",
+        "tokenHash": "6ac4dc31ff139a296ac3babbeb67d80eebf7eb0faa85c9db4ff0386814c6c531",
+        "ttftSeconds": 6.39333020200138,
+        "prefillTokensPerSecond": 1281.3353512439512,
+        "decodeTokensPerSecond": 60.517783258620135,
+        "tpotSeconds": 0.016524068565541193,
+        "firstEmissionTokens": 1,
+        "decodeWindowSeconds": 8.44379903699155,
+        "speculativeCounters": {
+          "drafts": 192.0,
+          "draftTokens": 1344.0,
+          "acceptedTokens": 319.0
+        },
+        "speculativeMetricsValid": true,
+        "acceptanceRate": 0.23735119047619047,
+        "elapsedSeconds": 14.837464667012682,
+        "cachedTokens": 0,
+        "preemptions": 0.0,
+        "retrievalPassed": true,
+        "complete": true,
+        "hostMinimumAvailableBytes": 5415075840,
+        "valid": true
+      },
+      {
+        "contract": "sm75-release-v2",
+        "label": "v016-full-ultra",
+        "model": "sm75-release-test",
+        "benchmarkSha256": "40006f79dcc5f8151b9f1bc87d624a0b69aa92d46531caa040231923e8aaa2cc",
+        "protocolSha256": "022328f1533568eeed78b0da139a5ef3dd27c881957536d19cf6ea807f9053a0",
+        "inputTokens": 8192,
+        "outputTokens": 512,
+        "repeat": 2,
+        "promptTokenHash": "2caff004d213fc3f79b05c2f90940d156e80fdda4b8cdb4d9183dfa8b61442aa",
+        "tokenHash": "6ac4dc31ff139a296ac3babbeb67d80eebf7eb0faa85c9db4ff0386814c6c531",
+        "ttftSeconds": 6.386929564003367,
+        "prefillTokensPerSecond": 1282.6194367587802,
+        "decodeTokensPerSecond": 60.492542681866894,
+        "tpotSeconds": 0.016530963250446368,
+        "firstEmissionTokens": 1,
+        "decodeWindowSeconds": 8.447322220978094,
+        "speculativeCounters": {
+          "drafts": 192.0,
+          "draftTokens": 1344.0,
+          "acceptedTokens": 319.0
+        },
+        "speculativeMetricsValid": true,
+        "acceptanceRate": 0.23735119047619047,
+        "elapsedSeconds": 14.83463321797899,
+        "cachedTokens": 0,
+        "preemptions": 0.0,
+        "retrievalPassed": true,
+        "complete": true,
+        "hostMinimumAvailableBytes": 5448384512,
+        "valid": true
+      },
+      {
+        "contract": "sm75-release-v2",
+        "label": "v016-full-ultra",
+        "model": "sm75-release-test",
+        "benchmarkSha256": "40006f79dcc5f8151b9f1bc87d624a0b69aa92d46531caa040231923e8aaa2cc",
+        "protocolSha256": "022328f1533568eeed78b0da139a5ef3dd27c881957536d19cf6ea807f9053a0",
+        "inputTokens": 8192,
+        "outputTokens": 512,
+        "repeat": 3,
+        "promptTokenHash": "2caff004d213fc3f79b05c2f90940d156e80fdda4b8cdb4d9183dfa8b61442aa",
+        "tokenHash": "6ac4dc31ff139a296ac3babbeb67d80eebf7eb0faa85c9db4ff0386814c6c531",
+        "ttftSeconds": 6.39611496598809,
+        "prefillTokensPerSecond": 1280.7774787604176,
+        "decodeTokensPerSecond": 60.383640511754585,
+        "tpotSeconds": 0.01656077691780334,
+        "firstEmissionTokens": 1,
+        "decodeWindowSeconds": 8.462557004997507,
+        "speculativeCounters": {
+          "drafts": 192.0,
+          "draftTokens": 1344.0,
+          "acceptedTokens": 319.0
+        },
+        "speculativeMetricsValid": true,
+        "acceptanceRate": 0.23735119047619047,
+        "elapsedSeconds": 14.858927483990556,
+        "cachedTokens": 0,
+        "preemptions": 0.0,
+        "retrievalPassed": true,
+        "complete": true,
+        "hostMinimumAvailableBytes": 5446610944,
+        "valid": true
+      },
+      {
+        "contract": "sm75-release-v2",
+        "label": "v016-full-ultra",
+        "model": "sm75-release-test",
+        "benchmarkSha256": "40006f79dcc5f8151b9f1bc87d624a0b69aa92d46531caa040231923e8aaa2cc",
+        "protocolSha256": "022328f1533568eeed78b0da139a5ef3dd27c881957536d19cf6ea807f9053a0",
+        "inputTokens": 32768,
+        "outputTokens": 512,
+        "repeat": 1,
+        "promptTokenHash": "9d1b42d051ab68b01bd92ffcc11bc0221571e1504e5dd6c39d17e0e814f67a01",
+        "tokenHash": "079bb1b2c04128ccc83697c51418d695add509f443ab98644850afbf72b8f982",
+        "ttftSeconds": 27.121330530004343,
+        "prefillTokensPerSecond": 1208.20031169742,
+        "decodeTokensPerSecond": 63.48716959430492,
+        "tpotSeconds": 0.015751214086093143,
+        "firstEmissionTokens": 1,
+        "decodeWindowSeconds": 8.048870397993596,
+        "speculativeCounters": {
+          "drafts": 179.0,
+          "draftTokens": 1253.0,
+          "acceptedTokens": 334.0
+        },
+        "speculativeMetricsValid": true,
+        "acceptanceRate": 0.266560255387071,
+        "elapsedSeconds": 35.17051715598791,
+        "cachedTokens": 0,
+        "preemptions": 0.0,
+        "retrievalPassed": true,
+        "complete": true,
+        "hostMinimumAvailableBytes": 5408378880,
+        "valid": true
+      },
+      {
+        "contract": "sm75-release-v2",
+        "label": "v016-full-ultra",
+        "model": "sm75-release-test",
+        "benchmarkSha256": "40006f79dcc5f8151b9f1bc87d624a0b69aa92d46531caa040231923e8aaa2cc",
+        "protocolSha256": "022328f1533568eeed78b0da139a5ef3dd27c881957536d19cf6ea807f9053a0",
+        "inputTokens": 32768,
+        "outputTokens": 512,
+        "repeat": 2,
+        "promptTokenHash": "9d1b42d051ab68b01bd92ffcc11bc0221571e1504e5dd6c39d17e0e814f67a01",
+        "tokenHash": "079bb1b2c04128ccc83697c51418d695add509f443ab98644850afbf72b8f982",
+        "ttftSeconds": 27.14555221699993,
+        "prefillTokensPerSecond": 1207.122247433191,
+        "decodeTokensPerSecond": 63.38212510609556,
+        "tpotSeconds": 0.01577731889434279,
+        "firstEmissionTokens": 1,
+        "decodeWindowSeconds": 8.062209955009166,
+        "speculativeCounters": {
+          "drafts": 179.0,
+          "draftTokens": 1253.0,
+          "acceptedTokens": 334.0
+        },
+        "speculativeMetricsValid": true,
+        "acceptanceRate": 0.266560255387071,
+        "elapsedSeconds": 35.208024054009,
+        "cachedTokens": 0,
+        "preemptions": 0.0,
+        "retrievalPassed": true,
+        "complete": true,
+        "hostMinimumAvailableBytes": 5411135488,
+        "valid": true
+      },
+      {
+        "contract": "sm75-release-v2",
+        "label": "v016-full-ultra",
+        "model": "sm75-release-test",
+        "benchmarkSha256": "40006f79dcc5f8151b9f1bc87d624a0b69aa92d46531caa040231923e8aaa2cc",
+        "protocolSha256": "022328f1533568eeed78b0da139a5ef3dd27c881957536d19cf6ea807f9053a0",
+        "inputTokens": 32768,
+        "outputTokens": 512,
+        "repeat": 3,
+        "promptTokenHash": "9d1b42d051ab68b01bd92ffcc11bc0221571e1504e5dd6c39d17e0e814f67a01",
+        "tokenHash": "079bb1b2c04128ccc83697c51418d695add509f443ab98644850afbf72b8f982",
+        "ttftSeconds": 27.134433229017304,
+        "prefillTokensPerSecond": 1207.6168948669329,
+        "decodeTokensPerSecond": 63.46702759199937,
+        "tpotSeconds": 0.01575621291780899,
+        "firstEmissionTokens": 1,
+        "decodeWindowSeconds": 8.051424801000394,
+        "speculativeCounters": {
+          "drafts": 179.0,
+          "draftTokens": 1253.0,
+          "acceptedTokens": 334.0
+        },
+        "speculativeMetricsValid": true,
+        "acceptanceRate": 0.266560255387071,
+        "elapsedSeconds": 35.18620655301493,
+        "cachedTokens": 0,
+        "preemptions": 0.0,
+        "retrievalPassed": true,
+        "complete": true,
+        "hostMinimumAvailableBytes": 5409456128,
+        "valid": true
+      },
+      {
+        "contract": "sm75-release-v2",
+        "label": "v016-full-ultra",
+        "model": "sm75-release-test",
+        "benchmarkSha256": "40006f79dcc5f8151b9f1bc87d624a0b69aa92d46531caa040231923e8aaa2cc",
+        "protocolSha256": "022328f1533568eeed78b0da139a5ef3dd27c881957536d19cf6ea807f9053a0",
+        "inputTokens": 131072,
+        "outputTokens": 512,
+        "repeat": 1,
+        "promptTokenHash": "6ad21d98f5de93246f3d80566bae14eca547f48752e6f82ca3a92f505a394262",
+        "tokenHash": "c1646d2c730014a4896975c5cf87f11b50d568e13f7dcebeb852699c3899601a",
+        "ttftSeconds": 134.00947150599677,
+        "prefillTokensPerSecond": 978.0801202110157,
+        "decodeTokensPerSecond": 58.729952484505056,
+        "tpotSeconds": 0.01702708682190461,
+        "firstEmissionTokens": 1,
+        "decodeWindowSeconds": 8.700841365993256,
+        "speculativeCounters": {
+          "drafts": 179.0,
+          "draftTokens": 1253.0,
+          "acceptedTokens": 332.0
+        },
+        "speculativeMetricsValid": true,
+        "acceptanceRate": 0.2649640861931365,
+        "elapsedSeconds": 142.7105213229952,
+        "cachedTokens": 0,
+        "preemptions": 0.0,
+        "retrievalPassed": true,
+        "complete": true,
+        "hostMinimumAvailableBytes": 5238423552,
+        "valid": true
+      },
+      {
+        "contract": "sm75-release-v2",
+        "label": "v016-full-ultra",
+        "model": "sm75-release-test",
+        "benchmarkSha256": "40006f79dcc5f8151b9f1bc87d624a0b69aa92d46531caa040231923e8aaa2cc",
+        "protocolSha256": "022328f1533568eeed78b0da139a5ef3dd27c881957536d19cf6ea807f9053a0",
+        "inputTokens": 131072,
+        "outputTokens": 512,
+        "repeat": 2,
+        "promptTokenHash": "6ad21d98f5de93246f3d80566bae14eca547f48752e6f82ca3a92f505a394262",
+        "tokenHash": "c1646d2c730014a4896975c5cf87f11b50d568e13f7dcebeb852699c3899601a",
+        "ttftSeconds": 133.99425155099016,
+        "prefillTokensPerSecond": 978.1912170323358,
+        "decodeTokensPerSecond": 58.63240106028184,
+        "tpotSeconds": 0.017055416150736656,
+        "firstEmissionTokens": 1,
+        "decodeWindowSeconds": 8.715317653026432,
+        "speculativeCounters": {
+          "drafts": 179.0,
+          "draftTokens": 1253.0,
+          "acceptedTokens": 332.0
+        },
+        "speculativeMetricsValid": true,
+        "acceptanceRate": 0.2649640861931365,
+        "elapsedSeconds": 142.70989073900273,
+        "cachedTokens": 0,
+        "preemptions": 0.0,
+        "retrievalPassed": true,
+        "complete": true,
+        "hostMinimumAvailableBytes": 5300764672,
+        "valid": true
+      },
+      {
+        "contract": "sm75-release-v2",
+        "label": "v016-full-ultra",
+        "model": "sm75-release-test",
+        "benchmarkSha256": "40006f79dcc5f8151b9f1bc87d624a0b69aa92d46531caa040231923e8aaa2cc",
+        "protocolSha256": "022328f1533568eeed78b0da139a5ef3dd27c881957536d19cf6ea807f9053a0",
+        "inputTokens": 131072,
+        "outputTokens": 512,
+        "repeat": 3,
+        "promptTokenHash": "6ad21d98f5de93246f3d80566bae14eca547f48752e6f82ca3a92f505a394262",
+        "tokenHash": "c1646d2c730014a4896975c5cf87f11b50d568e13f7dcebeb852699c3899601a",
+        "ttftSeconds": 134.05340672901366,
+        "prefillTokensPerSecond": 977.7595601502279,
+        "decodeTokensPerSecond": 58.85445653772612,
+        "tpotSeconds": 0.016991066757349002,
+        "firstEmissionTokens": 1,
+        "decodeWindowSeconds": 8.68243511300534,
+        "speculativeCounters": {
+          "drafts": 179.0,
+          "draftTokens": 1253.0,
+          "acceptedTokens": 332.0
+        },
+        "speculativeMetricsValid": true,
+        "acceptanceRate": 0.2649640861931365,
+        "elapsedSeconds": 142.73618662002264,
+        "cachedTokens": 0,
+        "preemptions": 0.0,
+        "retrievalPassed": true,
+        "complete": true,
+        "hostMinimumAvailableBytes": 5292081152,
+        "valid": true
+      }
+    ],
+    "context": {
+      "ultra-context": [
+        {
+          "inputTokens": 8192,
+          "maxOutputTokens": 128,
+          "repeat": 1,
+          "passed": true,
+          "elapsedSeconds": 6.8400714570016135,
+          "ttftSeconds": 6.408055289997719,
+          "tokenHash": "523252f338437ee862f932cdfee858f8760d35000937d414b04da54f01e60c27",
+          "counterDeltas": {
+            "vllm:kv_offload_cpu_allocation_size_count": 2.0,
+            "vllm:kv_offload_cpu_allocation_size_sum": 20.0,
+            "vllm:kv_offload_store_bytes_total": 286261248.0,
+            "vllm:prefix_cache_queries_total": 8192.0,
+            "vllm:prefix_cache_hits_total": 0.0,
+            "vllm:num_preemptions_total": 0.0
+          },
+          "error": null,
+          "completionTokens": 51
+        },
+        {
+          "inputTokens": 8192,
+          "maxOutputTokens": 128,
+          "repeat": 2,
+          "passed": true,
+          "elapsedSeconds": 6.886824515007902,
+          "ttftSeconds": 6.451776692003477,
+          "tokenHash": "523252f338437ee862f932cdfee858f8760d35000937d414b04da54f01e60c27",
+          "counterDeltas": {
+            "vllm:kv_offload_cpu_allocation_size_count": 10.0,
+            "vllm:kv_offload_cpu_allocation_size_sum": 10.0,
+            "vllm:kv_offload_store_bytes_total": 160825344.0,
+            "vllm:prefix_cache_queries_total": 8192.0,
+            "vllm:prefix_cache_hits_total": 0.0,
+            "vllm:num_preemptions_total": 0.0
+          },
+          "error": null,
+          "completionTokens": 51
+        }
+      ],
+      "ultra-context-decode512": [
+        {
+          "inputTokens": 261632,
+          "maxOutputTokens": 512,
+          "repeat": 1,
+          "passed": true,
+          "elapsedSeconds": 345.2498391059926,
+          "ttftSeconds": 335.53103166099754,
+          "tokenHash": "b8fa10193fc5d28b05796c6748cf4238da8317253d10f9bad5b587aa2b107c27",
+          "counterDeltas": {
+            "vllm:kv_offload_cpu_allocation_size_count": 36.0,
+            "vllm:kv_offload_cpu_allocation_size_sum": 631.0,
+            "vllm:kv_offload_store_bytes_total": 8611692544.0,
+            "vllm:prefix_cache_queries_total": 261632.0,
+            "vllm:prefix_cache_hits_total": 0.0,
+            "vllm:num_preemptions_total": 0.0
+          },
+          "error": null,
+          "completionTokens": 512
+        },
+        {
+          "inputTokens": 261632,
+          "maxOutputTokens": 512,
+          "repeat": 2,
+          "passed": true,
+          "elapsedSeconds": 345.14561551602674,
+          "ttftSeconds": 335.39246198601904,
+          "tokenHash": "b8fa10193fc5d28b05796c6748cf4238da8317253d10f9bad5b587aa2b107c27",
+          "counterDeltas": {
+            "vllm:kv_offload_cpu_allocation_size_count": 43.0,
+            "vllm:kv_offload_cpu_allocation_size_sum": 150.0,
+            "vllm:kv_offload_store_bytes_total": 2069233664.0,
+            "vllm:prefix_cache_queries_total": 261632.0,
+            "vllm:prefix_cache_hits_total": 0.0,
+            "vllm:num_preemptions_total": 0.0
+          },
+          "error": null,
+          "completionTokens": 512
+        }
+      ]
+    },
+    "power": {
+      "passed": true,
+      "before": [
+        {
+          "index": 0,
+          "pstate": "P0",
+          "memoryMiB": 15377,
+          "smMHz": 1065,
+          "watts": 39.8
+        },
+        {
+          "index": 1,
+          "pstate": "P0",
+          "memoryMiB": 15377,
+          "smMHz": 1065,
+          "watts": 38.94
+        },
+        {
+          "index": 2,
+          "pstate": "P0",
+          "memoryMiB": 15377,
+          "smMHz": 1065,
+          "watts": 44.23
+        },
+        {
+          "index": 3,
+          "pstate": "P0",
+          "memoryMiB": 15377,
+          "smMHz": 1065,
+          "watts": 39.44
+        }
+      ],
+      "powerBefore": {
+        "state": {
+          "mode": "active",
+          "idle_timeout": 1800,
+          "idle_remaining": 1777,
+          "util": 0,
+          "updated": 1790151596
+        },
+        "nvapi": true
+      },
+      "idle": [
+        {
+          "index": 0,
+          "pstate": "P8",
+          "memoryMiB": 15377,
+          "smMHz": 645,
+          "watts": 20.1
+        },
+        {
+          "index": 1,
+          "pstate": "P8",
+          "memoryMiB": 15377,
+          "smMHz": 645,
+          "watts": 19.39
+        },
+        {
+          "index": 2,
+          "pstate": "P8",
+          "memoryMiB": 15377,
+          "smMHz": 645,
+          "watts": 24.95
+        },
+        {
+          "index": 3,
+          "pstate": "P8",
+          "memoryMiB": 15377,
+          "smMHz": 645,
+          "watts": 21.02
+        }
+      ],
+      "powerIdle": {
+        "state": {
+          "mode": "idle",
+          "idle_timeout": 1800,
+          "idle_remaining": 0,
+          "util": 0,
+          "updated": 1790151602
+        },
+        "nvapi": true
+      },
+      "request": {
+        "elapsedSeconds": 4.566389119980158,
+        "usage": {
+          "prompt_tokens": 12,
+          "total_tokens": 268,
+          "completion_tokens": 256,
+          "prompt_tokens_details": {
+            "cached_tokens": 0,
+            "created_cache_tokens": null,
+            "multimodal_tokens": null
+          },
+          "completion_tokens_details": null
+        },
+        "textNonempty": true
+      },
+      "activitySamples": [
+        [
+          {
+            "index": 0,
+            "pstate": "P8",
+            "memoryMiB": 15377,
+            "smMHz": 645,
+            "watts": 19.95
+          },
+          {
+            "index": 1,
+            "pstate": "P8",
+            "memoryMiB": 15377,
+            "smMHz": 645,
+            "watts": 28.47
+          },
+          {
+            "index": 2,
+            "pstate": "P8",
+            "memoryMiB": 15377,
+            "smMHz": 645,
+            "watts": 34.32
+          },
+          {
+            "index": 3,
+            "pstate": "P0",
+            "memoryMiB": 15377,
+            "smMHz": 1560,
+            "watts": 29.53
+          }
+        ],
+        [
+          {
+            "index": 0,
+            "pstate": "P0",
+            "memoryMiB": 15377,
+            "smMHz": 1590,
+            "watts": 104.92
+          },
+          {
+            "index": 1,
+            "pstate": "P0",
+            "memoryMiB": 15377,
+            "smMHz": 1590,
+            "watts": 98.83
+          },
+          {
+            "index": 2,
+            "pstate": "P0",
+            "memoryMiB": 15377,
+            "smMHz": 1590,
+            "watts": 96.95
+          },
+          {
+            "index": 3,
+            "pstate": "P0",
+            "memoryMiB": 15377,
+            "smMHz": 1590,
+            "watts": 97.49
+          }
+        ],
+        [
+          {
+            "index": 0,
+            "pstate": "P0",
+            "memoryMiB": 15377,
+            "smMHz": 1590,
+            "watts": 104.25
+          },
+          {
+            "index": 1,
+            "pstate": "P0",
+            "memoryMiB": 15377,
+            "smMHz": 1590,
+            "watts": 100.31
+          },
+          {
+            "index": 2,
+            "pstate": "P0",
+            "memoryMiB": 15377,
+            "smMHz": 1590,
+            "watts": 107.49
+          },
+          {
+            "index": 3,
+            "pstate": "P0",
+            "memoryMiB": 15377,
+            "smMHz": 1590,
+            "watts": 101.28
+          }
+        ],
+        [
+          {
+            "index": 0,
+            "pstate": "P0",
+            "memoryMiB": 15377,
+            "smMHz": 1590,
+            "watts": 104.29
+          },
+          {
+            "index": 1,
+            "pstate": "P0",
+            "memoryMiB": 15377,
+            "smMHz": 1590,
+            "watts": 106.93
+          },
+          {
+            "index": 2,
+            "pstate": "P0",
+            "memoryMiB": 15377,
+            "smMHz": 1590,
+            "watts": 106.16
+          },
+          {
+            "index": 3,
+            "pstate": "P0",
+            "memoryMiB": 15377,
+            "smMHz": 1590,
+            "watts": 100.82
+          }
+        ],
+        [
+          {
+            "index": 0,
+            "pstate": "P0",
+            "memoryMiB": 15377,
+            "smMHz": 1590,
+            "watts": 102.3
+          },
+          {
+            "index": 1,
+            "pstate": "P0",
+            "memoryMiB": 15377,
+            "smMHz": 1590,
+            "watts": 105.54
+          },
+          {
+            "index": 2,
+            "pstate": "P0",
+            "memoryMiB": 15377,
+            "smMHz": 1590,
+            "watts": 106.19
+          },
+          {
+            "index": 3,
+            "pstate": "P0",
+            "memoryMiB": 15377,
+            "smMHz": 1590,
+            "watts": 100.35
+          }
+        ],
+        [
+          {
+            "index": 0,
+            "pstate": "P0",
+            "memoryMiB": 15377,
+            "smMHz": 1590,
+            "watts": 102.57
+          },
+          {
+            "index": 1,
+            "pstate": "P0",
+            "memoryMiB": 15377,
+            "smMHz": 1590,
+            "watts": 105.69
+          },
+          {
+            "index": 2,
+            "pstate": "P0",
+            "memoryMiB": 15377,
+            "smMHz": 1590,
+            "watts": 109.43
+          },
+          {
+            "index": 3,
+            "pstate": "P0",
+            "memoryMiB": 15377,
+            "smMHz": 1590,
+            "watts": 98.5
+          }
+        ],
+        [
+          {
+            "index": 0,
+            "pstate": "P0",
+            "memoryMiB": 15377,
+            "smMHz": 1590,
+            "watts": 100.74
+          },
+          {
+            "index": 1,
+            "pstate": "P0",
+            "memoryMiB": 15377,
+            "smMHz": 1590,
+            "watts": 104.5
+          },
+          {
+            "index": 2,
+            "pstate": "P0",
+            "memoryMiB": 15377,
+            "smMHz": 1590,
+            "watts": 109.03
+          },
+          {
+            "index": 3,
+            "pstate": "P0",
+            "memoryMiB": 15377,
+            "smMHz": 1590,
+            "watts": 97.77
+          }
+        ]
+      ],
+      "powerAfter": {
+        "state": {
+          "mode": "active",
+          "idle_timeout": 1800,
+          "idle_remaining": 1800,
+          "util": 94,
+          "updated": 1790151606
+        },
+        "nvapi": true
+      }
+    },
+    "browser": {
+      "passed": true,
+      "browser": "153.0.4234.48",
+      "checks": [
+        "actual browser login",
+        "persisted configuration and desktop/mobile context layout",
+        "GPU monitor reads actual T10 hardware",
+        "actual Harness assets and bidirectional WebSocket"
+      ],
+      "errors": [],
+      "failures": [
+        {
+          "path": "/console-api/profiles/release-dflash2/metrics",
+          "status": 400
+        },
+        {
+          "path": "/console-api/profiles/release-dflash2/spec",
+          "status": 400
+        },
+        {
+          "path": "/console-api/profiles/release-dflash2/metrics",
+          "status": 400
+        }
+      ],
+      "sockets": [
+        {
+          "path": "/dsh/api/remote.mux",
+          "received": 6,
+          "sent": 4
+        }
+      ],
+      "layout": {
+        "width": 420,
+        "documentWidth": 420,
+        "fields": [
+          {
+            "id": "ctxMaxModelLen",
+            "left": 16,
+            "right": 203
+          },
+          {
+            "id": "ctxGpuKvGiB",
+            "left": 217,
+            "right": 404
+          },
+          {
+            "id": "ctxCpuKvMode",
+            "left": 16,
+            "right": 203
+          },
+          {
+            "id": "ctxCpuKvGiB",
+            "left": 217,
+            "right": 404
+          },
+          {
+            "id": "ctxYarnEnabled",
+            "left": 20,
+            "right": 56
+          },
+                    {
+            "id": "ctxYarnOriginal",
+            "left": 16,
+            "right": 203
+          },
+          {
+            "id": "ctxYarnFactor",
+            "left": 217,
+            "right": 404
+          },
+          {
+            "id": "ctxApply",
+            "left": 16,
+            "right": 198
+          }
+        ]
+      },
+      "httpResponseContext": "The first complete run had no HTTP failures. The post-notice recheck ran after the DFlash profile was stopped; that offline profile metrics/spec polling returned HTTP400. Harness assets and WebSocket passed; no browser JavaScript errors or model requests were involved."
+    },
+    "automaticPower": {
+      "passed": true,
+      "trigger": "automatic idle timer; no manual P8 call",
+      "testSettings": {
+        "idleSeconds": 10,
+        "confirmSeconds": 5,
+        "pollSeconds": 1,
+        "low": 8,
+        "high": 16
+      },
+      "warmup": {
+        "elapsedSeconds": 1.3753367379831616,
+        "usage": {
+          "prompt_tokens": 12,
+          "total_tokens": 76,
+          "completion_tokens": 64,
+          "prompt_tokens_details": {
+            "cached_tokens": 0,
+            "created_cache_tokens": null,
+            "multimodal_tokens": null
+          },
+          "completion_tokens_details": null
+        },
+        "textNonempty": true
+      },
+      "powerBefore": {
+        "state": {
+          "mode": "active",
+          "idle_timeout": 10,
+          "idle_remaining": 10,
+          "util": 96,
+          "updated": 1790162912
+        },
+        "nvapi": true
+      },
+      "before": [
+        {
+          "index": 0,
+          "pstate": "P0",
+          "memoryMiB": 15261,
+          "smMHz": 1590,
+          "watts": 59.44
+        },
+        {
+          "index": 1,
+          "pstate": "P0",
+          "memoryMiB": 15261,
+          "smMHz": 1590,
+          "watts": 54.78
+        },
+        {
+          "index": 2,
+          "pstate": "P0",
+          "memoryMiB": 15261,
+          "smMHz": 1590,
+          "watts": 59.53
+        },
+        {
+          "index": 3,
+          "pstate": "P0",
+          "memoryMiB": 15261,
+          "smMHz": 1590,
+          "watts": 111.6
+        }
+      ],
+      "idleTransitionSeconds": 16.353402134001954,
+      "idle": [
+        {
+          "index": 0,
+          "pstate": "P8",
+          "memoryMiB": 15261,
+          "smMHz": 645,
+          "watts": 19.22
+        },
+        {
+          "index": 1,
+          "pstate": "P8",
+          "memoryMiB": 15261,
+          "smMHz": 645,
+          "watts": 18.59
+        },
+        {
+          "index": 2,
+          "pstate": "P8",
+          "memoryMiB": 15261,
+          "smMHz": 645,
+          "watts": 24.13
+        },
+        {
+          "index": 3,
+          "pstate": "P8",
+          "memoryMiB": 15261,
+          "smMHz": 645,
+          "watts": 19.49
+        }
+      ],
+      "powerIdle": {
+        "state": {
+          "mode": "idle",
+          "idle_timeout": 10,
+          "idle_remaining": 0,
+          "util": 0,
+          "updated": 1790162929
+        },
+        "nvapi": true
+      },
+      "request": {
+        "elapsedSeconds": 5.318526724993717,
+        "usage": {
+          "prompt_tokens": 12,
+          "total_tokens": 268,
+          "completion_tokens": 256,
+          "prompt_tokens_details": {
+            "cached_tokens": 0,
+            "created_cache_tokens": null,
+            "multimodal_tokens": null
+          },
+          "completion_tokens_details": null
+        },
+        "textNonempty": true
+      },
+      "activitySamples": [
+        [
+          {
+            "index": 0,
+            "pstate": "P8",
+            "memoryMiB": 15261,
+            "smMHz": 645,
+            "watts": 27.98
+          },
+          {
+            "index": 1,
+            "pstate": "P0",
+            "memoryMiB": 15261,
+            "smMHz": 1065,
+            "watts": 42.08
+          },
+          {
+            "index": 2,
+            "pstate": "P0",
+            "memoryMiB": 15261,
+            "smMHz": 1065,
+            "watts": 38.11
+          },
+          {
+            "index": 3,
+            "pstate": "P8",
+            "memoryMiB": 15261,
+            "smMHz": 645,
+            "watts": 28.5
+          }
+        ],
+        [
+          {
+            "index": 0,
+            "pstate": "P0",
+            "memoryMiB": 15261,
+            "smMHz": 1590,
+            "watts": 113.74
+          },
+          {
+            "index": 1,
+            "pstate": "P0",
+            "memoryMiB": 15261,
+            "smMHz": 1590,
+            "watts": 116.48
+          },
+          {
+            "index": 2,
+            "pstate": "P0",
+            "memoryMiB": 15261,
+            "smMHz": 1590,
+            "watts": 118.41
+          },
+          {
+            "index": 3,
+            "pstate": "P0",
+            "memoryMiB": 15261,
+            "smMHz": 1590,
+            "watts": 109.18
+          }
+        ],
+        [
+          {
+            "index": 0,
+            "pstate": "P0",
+            "memoryMiB": 15261,
+            "smMHz": 1590,
+            "watts": 114.36
+          },
+          {
+            "index": 1,
+            "pstate": "P0",
+            "memoryMiB": 15261,
+            "smMHz": 1590,
+            "watts": 117.44
+          },
+          {
+            "index": 2,
+            "pstate": "P0",
+            "memoryMiB": 15261,
+            "smMHz": 1590,
+            "watts": 118.46
+          },
+          {
+            "index": 3,
+            "pstate": "P0",
+            "memoryMiB": 15261,
+            "smMHz": 1590,
+            "watts": 111.39
+          }
+        ],
+        [
+          {
+            "index": 0,
+            "pstate": "P0",
+            "memoryMiB": 15261,
+            "smMHz": 1590,
+            "watts": 118.16
+          },
+          {
+            "index": 1,
+            "pstate": "P0",
+            "memoryMiB": 15261,
+            "smMHz": 1590,
+            "watts": 118.15
+          },
+          {
+            "index": 2,
+            "pstate": "P0",
+            "memoryMiB": 15261,
+            "smMHz": 1590,
+            "watts": 118.76
+          },
+          {
+            "index": 3,
+            "pstate": "P0",
+            "memoryMiB": 15261,
+            "smMHz": 1590,
+            "watts": 111.71
+          }
+        ],
+        [
+          {
+            "index": 0,
+            "pstate": "P0",
+            "memoryMiB": 15261,
+            "smMHz": 1590,
+            "watts": 113.95
+          },
+          {
+            "index": 1,
+            "pstate": "P0",
+            "memoryMiB": 15261,
+            "smMHz": 1590,
+            "watts": 116.71
+          },
+          {
+            "index": 2,
+            "pstate": "P0",
+            "memoryMiB": 15261,
+            "smMHz": 1590,
+            "watts": 114.86
+          },
+          {
+            "index": 3,
+            "pstate": "P0",
+            "memoryMiB": 15261,
+            "smMHz": 1590,
+            "watts": 110.72
+          }
+        ],
+        [
+          {
+            "index": 0,
+            "pstate": "P0",
+            "memoryMiB": 15261,
+            "smMHz": 1590,
+            "watts": 116.38
+          },
+          {
+            "index": 1,
+            "pstate": "P0",
+            "memoryMiB": 15261,
+            "smMHz": 1590,
+            "watts": 119.66
+          },
+          {
+            "index": 2,
+            "pstate": "P0",
+            "memoryMiB": 15261,
+            "smMHz": 1590,
+            "watts": 119.93
+          },
+          {
+            "index": 3,
+            "pstate": "P0",
+            "memoryMiB": 15261,
+            "smMHz": 1590,
+            "watts": 111.43
+          }
+        ],
+        [
+          {
+            "index": 0,
+            "pstate": "P0",
+            "memoryMiB": 15261,
+            "smMHz": 1590,
+            "watts": 114.82
+          },
+          {
+            "index": 1,
+            "pstate": "P0",
+            "memoryMiB": 15261,
+            "smMHz": 1590,
+            "watts": 117.62
+          },
+          {
+            "index": 2,
+            "pstate": "P0",
+            "memoryMiB": 15261,
+            "smMHz": 1590,
+            "watts": 119.28
+          },
+          {
+            "index": 3,
+            "pstate": "P0",
+            "memoryMiB": 15261,
+            "smMHz": 1590,
+            "watts": 111.41
+          }
+        ],
+        [
+          {
+            "index": 0,
+            "pstate": "P0",
+            "memoryMiB": 15261,
+            "smMHz": 1590,
+            "watts": 114.67
+          },
+          {
+            "index": 1,
+            "pstate": "P0",
+            "memoryMiB": 15261,
+            "smMHz": 1590,
+            "watts": 116.96
+          },
+          {
+            "index": 2,
+            "pstate": "P0",
+            "memoryMiB": 15261,
+            "smMHz": 1590,
+            "watts": 119.4
+          },
+          {
+            "index": 3,
+            "pstate": "P0",
+            "memoryMiB": 15261,
+            "smMHz": 1590,
+            "watts": 111.65
+          }
+        ],
+        [
+          {
+            "index": 0,
+            "pstate": "P0",
+            "memoryMiB": 15261,
+            "smMHz": 1590,
+            "watts": 113.43
+          },
+          {
+            "index": 1,
+            "pstate": "P0",
+            "memoryMiB": 15261,
+            "smMHz": 1590,
+            "watts": 116.4
+          },
+          {
+            "index": 2,
+            "pstate": "P0",
+            "memoryMiB": 15261,
+            "smMHz": 1590,
+            "watts": 119.34
+          },
+          {
+            "index": 3,
+            "pstate": "P0",
+            "memoryMiB": 15261,
+            "smMHz": 1590,
+            "watts": 110.98
+          }
+        ]
+      ],
+      "powerAfter": {
+        "state": {
+          "mode": "active",
+          "idle_timeout": 10,
+          "idle_remaining": 10,
+          "util": 97,
+          "updated": 1790162934
+        },
+        "nvapi": true
+      }
+    }
+  },
+  "baselineToStandardRegression": {
+    "baseline": "baseline-performance",
+    "throughputTolerancePercent": 5.0,
+    "passed": false,
+    "errors": [
+      "standard-performance/8192: output token mismatch",
+      "standard-performance/32768: output token mismatch",
+      "standard-performance/131072: output token mismatch",
+      "standard-performance/131072: decodeTokensPerSecond regressed -11.43%"
+    ],
+    "results": {
+      "baseline-performance": {
+        "8192": {
+          "samples": 3,
+          "tokenHashMatches": true,
+          "metrics": {
+            "prefillTokensPerSecond": {
+              "median": 1271.7086276520686,
+              "baselineChangePercent": 0.0
+            },
+            "decodeTokensPerSecond": {
+              "median": 62.74310858012834,
+              "baselineChangePercent": 0.0
+            },
+            "ttftSeconds": {
+              "median": 6.441727155004628,
+              "baselineChangePercent": 0.0
+            },
+            "tpotSeconds": {
+              "median": 0.01593800534640253,
+              "baselineChangePercent": 0.0
+            }
+          }
+        },
+        "32768": {
+          "samples": 3,
+          "tokenHashMatches": true,
+          "metrics": {
+            "prefillTokensPerSecond": {
+              "median": 1203.7679207285648,
+              "baselineChangePercent": 0.0
+            },
+            "decodeTokensPerSecond": {
+              "median": 58.843130372101506,
+              "baselineChangePercent": 0.0
+            },
+            "ttftSeconds": {
+              "median": 27.221193915989716,
+              "baselineChangePercent": 0.0
+            },
+            "tpotSeconds": {
+              "median": 0.016994337209396942,
+              "baselineChangePercent": 0.0
+            }
+          }
+        },
+        "131072": {
+          "samples": 3,
+          "tokenHashMatches": true,
+          "metrics": {
+            "prefillTokensPerSecond": {
+              "median": 976.0786459232038,
+              "baselineChangePercent": 0.0
+            },
+            "decodeTokensPerSecond": {
+              "median": 59.85396082170285,
+              "baselineChangePercent": 0.0
+            },
+            "ttftSeconds": {
+              "median": 134.2842613630055,
+              "baselineChangePercent": 0.0
+            },
+            "tpotSeconds": {
+              "median": 0.016707332084151788,
+              "baselineChangePercent": 0.0
+            }
+          }
+        }
+      },
+      "standard-performance": {
+        "8192": {
+          "samples": 3,
+          "tokenHashMatches": false,
+          "metrics": {
+            "prefillTokensPerSecond": {
+              "median": 1282.2717991448167,
+              "baselineChangePercent": 0.830628279392176
+            },
+            "decodeTokensPerSecond": {
+              "median": 65.77952336265768,
+              "baselineChangePercent": 4.839439503784826
+            },
+            "ttftSeconds": {
+              "median": 6.3886611289926805,
+              "baselineChangePercent": -0.8237856825513035
+            },
+            "tpotSeconds": {
+              "median": 0.015202299270044408,
+              "baselineChangePercent": -4.616048623199786
+            }
+          }
+        },
+        "32768": {
+          "samples": 3,
+          "tokenHashMatches": false,
+          "metrics": {
+            "prefillTokensPerSecond": {
+              "median": 1209.024962457001,
+              "baselineChangePercent": 0.43671555271671547
+            },
+            "decodeTokensPerSecond": {
+              "median": 64.46386006127089,
+              "baselineChangePercent": 9.552057570061345
+            },
+            "ttftSeconds": {
+              "median": 27.10283163501299,
+              "baselineChangePercent": -0.4348166408204457
+            },
+            "tpotSeconds": {
+              "median": 0.01551256780232414,
+              "baselineChangePercent": -8.719195040177642
+            }
+          }
+        },
+        "131072": {
+          "samples": 3,
+          "tokenHashMatches": false,
+          "metrics": {
+            "prefillTokensPerSecond": {
+              "median": 977.8046594763332,
+              "baselineChangePercent": 0.17683140188944346
+            },
+            "decodeTokensPerSecond": {
+              "median": 53.012622539552055,
+              "baselineChangePercent": -11.430051057991387
+            },
+            "ttftSeconds": {
+              "median": 134.047223778005,
+              "baselineChangePercent": -0.176519260406649
+            },
+            "tpotSeconds": {
+              "median": 0.01886343199214324,
+              "baselineChangePercent": 12.905111942059744
+            }
+          }
+        }
+      }
+    },
+    "scope": "Only these samples; caller must verify identical hardware, runtime arguments and clock/cache conditions."
+  },
+  "threeImageComparison": {
+    "baseline": "baseline-performance",
+    "throughputTolerancePercent": 5.0,
+    "passed": false,
+    "errors": [
+      "standard-performance/8192: output token mismatch",
+      "standard-performance/32768: output token mismatch",
+      "standard-performance/131072: output token mismatch",
+      "standard-performance/131072: decodeTokensPerSecond regressed -11.43%",
+      "ultra-performance/8192: output token mismatch",
+      "ultra-performance/32768: output token mismatch",
+      "ultra-performance/131072: output token mismatch"
+    ],
+    "results": {
+      "baseline-performance": {
+        "8192": {
+          "samples": 3,
+          "tokenHashMatches": true,
+          "metrics": {
+            "prefillTokensPerSecond": {
+              "median": 1271.7086276520686,
+              "baselineChangePercent": 0.0
+            },
+            "decodeTokensPerSecond": {
+              "median": 62.74310858012834,
+              "baselineChangePercent": 0.0
+            },
+            "ttftSeconds": {
+              "median": 6.441727155004628,
+              "baselineChangePercent": 0.0
+            },
+            "tpotSeconds": {
+              "median": 0.01593800534640253,
+              "baselineChangePercent": 0.0
+            }
+          }
+        },
+        "32768": {
+          "samples": 3,
+          "tokenHashMatches": true,
+          "metrics": {
+            "prefillTokensPerSecond": {
+              "median": 1203.7679207285648,
+              "baselineChangePercent": 0.0
+            },
+            "decodeTokensPerSecond": {
+              "median": 58.843130372101506,
+              "baselineChangePercent": 0.0
+            },
+            "ttftSeconds": {
+              "median": 27.221193915989716,
+              "baselineChangePercent": 0.0
+            },
+            "tpotSeconds": {
+              "median": 0.016994337209396942,
+              "baselineChangePercent": 0.0
+            }
+          }
+        },
+        "131072": {
+          "samples": 3,
+          "tokenHashMatches": true,
+          "metrics": {
+            "prefillTokensPerSecond": {
+              "median": 976.0786459232038,
+              "baselineChangePercent": 0.0
+            },
+            "decodeTokensPerSecond": {
+              "median": 59.85396082170285,
+              "baselineChangePercent": 0.0
+            },
+            "ttftSeconds": {
+              "median": 134.2842613630055,
+              "baselineChangePercent": 0.0
+            },
+            "tpotSeconds": {
+              "median": 0.016707332084151788,
+              "baselineChangePercent": 0.0
+            }
+          }
+        }
+      },
+      "standard-performance": {
+        "8192": {
+          "samples": 3,
+          "tokenHashMatches": false,
+          "metrics": {
+            "prefillTokensPerSecond": {
+              "median": 1282.2717991448167,
+              "baselineChangePercent": 0.830628279392176
+            },
+            "decodeTokensPerSecond": {
+              "median": 65.77952336265768,
+              "baselineChangePercent": 4.839439503784826
+            },
+            "ttftSeconds": {
+              "median": 6.3886611289926805,
+              "baselineChangePercent": -0.8237856825513035
+            },
+            "tpotSeconds": {
+              "median": 0.015202299270044408,
+              "baselineChangePercent": -4.616048623199786
+            }
+          }
+        },
+        "32768": {
+          "samples": 3,
+          "tokenHashMatches": false,
+          "metrics": {
+            "prefillTokensPerSecond": {
+              "median": 1209.024962457001,
+              "baselineChangePercent": 0.43671555271671547
+            },
+            "decodeTokensPerSecond": {
+              "median": 64.46386006127089,
+              "baselineChangePercent": 9.552057570061345
+            },
+            "ttftSeconds": {
+              "median": 27.10283163501299,
+              "baselineChangePercent": -0.4348166408204457
+            },
+            "tpotSeconds": {
+              "median": 0.01551256780232414,
+              "baselineChangePercent": -8.719195040177642
+            }
+          }
+        },
+        "131072": {
+          "samples": 3,
+          "tokenHashMatches": false,
+          "metrics": {
+            "prefillTokensPerSecond": {
+              "median": 977.8046594763332,
+              "baselineChangePercent": 0.17683140188944346
+            },
+            "decodeTokensPerSecond": {
+              "median": 53.012622539552055,
+              "baselineChangePercent": -11.430051057991387
+            },
+            "ttftSeconds": {
+              "median": 134.047223778005,
+              "baselineChangePercent": -0.176519260406649
+            },
+            "tpotSeconds": {
+              "median": 0.01886343199214324,
+              "baselineChangePercent": 12.905111942059744
+            }
+          }
+        }
+      },
+      "ultra-performance": {
+        "8192": {
+          "samples": 3,
+          "tokenHashMatches": false,
+          "metrics": {
+            "prefillTokensPerSecond": {
+              "median": 1281.3353512439512,
+              "baselineChangePercent": 0.7569912936469025
+            },
+            "decodeTokensPerSecond": {
+              "median": 60.492542681866894,
+              "baselineChangePercent": -3.586953131892223
+            },
+            "ttftSeconds": {
+              "median": 6.39333020200138,
+              "baselineChangePercent": -0.7513039878699002
+            },
+            "tpotSeconds": {
+              "median": 0.016530963250446368,
+              "baselineChangePercent": 3.720402215686791
+            }
+          }
+        },
+        "32768": {
+          "samples": 3,
+          "tokenHashMatches": false,
+          "metrics": {
+            "prefillTokensPerSecond": {
+              "median": 1207.6168948669329,
+              "baselineChangePercent": 0.31974387023359085
+            },
+            "decodeTokensPerSecond": {
+              "median": 63.46702759199937,
+              "baselineChangePercent": 7.858006857653743
+            },
+            "ttftSeconds": {
+              "median": 27.134433229017304,
+              "baselineChangePercent": -0.3187247673271498
+            },
+            "tpotSeconds": {
+              "median": 0.01575621291780899,
+              "baselineChangePercent": -7.285510910677573
+            }
+          }
+        },
+        "131072": {
+          "samples": 3,
+          "tokenHashMatches": false,
+          "metrics": {
+            "prefillTokensPerSecond": {
+              "median": 978.0801202110157,
+              "baselineChangePercent": 0.20505256376333048
+            },
+            "decodeTokensPerSecond": {
+              "median": 58.729952484505056,
+              "baselineChangePercent": -1.8779180554918784
+            },
+            "ttftSeconds": {
+              "median": 134.00947150599677,
+              "baselineChangePercent": -0.20463295863534237
+            },
+            "tpotSeconds": {
+              "median": 0.01702708682190461,
+              "baselineChangePercent": 1.9138587546011276
+            }
+          }
+        }
+      }
+    },
+    "scope": "Only these samples; caller must verify identical hardware, runtime arguments and clock/cache conditions."
+  },
+  "standardToUltraComparison": {
+    "baseline": "standard-performance",
+    "throughputTolerancePercent": 5.0,
+    "passed": false,
+    "errors": [
+      "ultra-performance/8192: output token mismatch",
+      "ultra-performance/8192: decodeTokensPerSecond regressed -8.04%",
+      "ultra-performance/32768: output token mismatch",
+      "ultra-performance/131072: output token mismatch"
+    ],
+    "results": {
+      "standard-performance": {
+        "8192": {
+          "samples": 3,
+          "tokenHashMatches": true,
+          "metrics": {
+            "prefillTokensPerSecond": {
+              "median": 1282.2717991448167,
+              "baselineChangePercent": 0.0
+            },
+            "decodeTokensPerSecond": {
+              "median": 65.77952336265768,
+              "baselineChangePercent": 0.0
+            },
+            "ttftSeconds": {
+              "median": 6.3886611289926805,
+              "baselineChangePercent": 0.0
+            },
+            "tpotSeconds": {
+              "median": 0.015202299270044408,
+              "baselineChangePercent": 0.0
+            }
+          }
+        },
+        "32768": {
+          "samples": 3,
+          "tokenHashMatches": true,
+          "metrics": {
+            "prefillTokensPerSecond": {
+              "median": 1209.024962457001,
+              "baselineChangePercent": 0.0
+            },
+            "decodeTokensPerSecond": {
+              "median": 64.46386006127089,
+              "baselineChangePercent": 0.0
+            },
+            "ttftSeconds": {
+              "median": 27.10283163501299,
+              "baselineChangePercent": 0.0
+            },
+            "tpotSeconds": {
+              "median": 0.01551256780232414,
+              "baselineChangePercent": 0.0
+            }
+          }
+        },
+        "131072": {
+          "samples": 3,
+          "tokenHashMatches": true,
+          "metrics": {
+            "prefillTokensPerSecond": {
+              "median": 977.8046594763332,
+              "baselineChangePercent": 0.0
+            },
+            "decodeTokensPerSecond": {
+              "median": 53.012622539552055,
+              "baselineChangePercent": 0.0
+            },
+            "ttftSeconds": {
+              "median": 134.047223778005,
+              "baselineChangePercent": 0.0
+            },
+            "tpotSeconds": {
+              "median": 0.01886343199214324,
+              "baselineChangePercent": 0.0
+            }
+          }
+        }
+      },
+      "ultra-performance": {
+        "8192": {
+          "samples": 3,
+          "tokenHashMatches": false,
+          "metrics": {
+            "prefillTokensPerSecond": {
+              "median": 1281.3353512439512,
+              "baselineChangePercent": -0.07303037479963193
+            },
+            "decodeTokensPerSecond": {
+              "median": 60.492542681866894,
+              "baselineChangePercent": -8.037426254432468
+            },
+            "ttftSeconds": {
+              "median": 6.39333020200138,
+              "baselineChangePercent": 0.07308374813481677
+            },
+            "tpotSeconds": {
+              "median": 0.016530963250446368,
+              "baselineChangePercent": 8.739888333997259
+            }
+          }
+        },
+        "32768": {
+          "samples": 3,
+          "tokenHashMatches": false,
+          "metrics": {
+            "prefillTokensPerSecond": {
+              "median": 1207.6168948669329,
+              "baselineChangePercent": -0.11646307014262502
+            },
+            "decodeTokensPerSecond": {
+              "median": 63.46702759199937,
+              "baselineChangePercent": -1.5463431267132677
+            },
+            "ttftSeconds": {
+              "median": 27.134433229017304,
+              "baselineChangePercent": 0.11659886476027559
+            },
+            "tpotSeconds": {
+              "median": 0.01575621291780899,
+              "baselineChangePercent": 1.5706304629227619
+            }
+          }
+        },
+        "131072": {
+          "samples": 3,
+          "tokenHashMatches": false,
+          "metrics": {
+            "prefillTokensPerSecond": {
+              "median": 978.0801202110157,
+              "baselineChangePercent": 0.028171346087679794
+            },
+            "decodeTokensPerSecond": {
+              "median": 58.729952484505056,
+              "baselineChangePercent": 10.784846459326491
+            },
+            "ttftSeconds": {
+              "median": 134.00947150599677,
+              "baselineChangePercent": -0.028163412075388194
+            },
+            "tpotSeconds": {
+              "median": 0.01702708682190461,
+              "baselineChangePercent": -9.73494733621899
+            }
+          }
+        }
+      }
+    },
+    "scope": "Only these samples; caller must verify identical hardware, runtime arguments and clock/cache conditions."
+  },
+  "standardUltraConditions": {
+    "identicalEngineArgs": true,
+    "profileSettingsMatchEffective": true,
+    "cacheDirectoryDifferences": {
+      "CUDA_CACHE_PATH": {
+        "standard": "/data/cache/cuda",
+        "ultra": "/root/.nv/ComputeCache"
+      },
+      "TORCHINDUCTOR_CACHE_DIR": {
+        "standard": "/data/cache/inductor",
+        "ultra": "/root/.cache/torchinductor"
+      },
+      "TORCH_EXTENSIONS_DIR": {
+        "standard": "/data/cache/torch_extensions",
+        "ultra": "/root/.cache/torch_extensions"
+      },
+      "FLASHINFER_WORKSPACE_BASE": {
+        "standard": "/data/cache/flashinfer-home",
+        "ultra": "/data/cache/shared/flashinfer-home"
+      },
+      "VLLM_CACHE_ROOT": {
+        "standard": "/data/cache/vllm",
+        "ultra": "/root/.cache/vllm"
+      }
+    },
+    "otherConditionDifferences": [
+      "Ultra manager/P-State supervisor remain running; active setting 16 restores driver control, idle 1800 seconds prevents transitions during samples.",
+      "Ultra VLLM_MONITOR=0 hides engine HTML; management monitor remains available.",
+      "Only same-version compiled FlashInfer libraries were copied; GPU/CPU KV were fresh. No cold-start timing claim."
+    ],
+    "interpretation": "CLI and reviewed numerical settings match. Different continuation token hashes and draft acceptance prevent attributing decode throughput delta to the console alone. Cause of cross-process token differences is not established."
+  },
+  "upstreamAudit": {
+    "checkedAt": "2026-09-23T08:06:55.8884045Z",
+    "pullRequests": [
+      {
+        "url": "https://github.com/LMCache/LMCache/pull/4731",
+        "state": "open",
+        "merged": false,
+        "head": "f180b9ffce7df45ce3037011d95a22db947fefcb",
+        "updatedAt": "2026-08-25T09:59:35Z"
+      },
+      {
+        "url": "https://github.com/vllm-project/vllm/pull/51620",
+        "state": "open",
+        "merged": false,
+        "head": "e5ff049bb18b49039708cac3d7285a778f0deaaf",
+        "updatedAt": "2026-09-01T06:44:14Z"
+      },
+      {
+        "url": "https://github.com/vllm-project/vllm/pull/53122",
+        "state": "open",
+        "merged": false,
+        "head": "647fb1d0cb524734bdf5e73ea9d924df3204729c",
+        "updatedAt": "2026-09-16T17:55:13Z"
+      },
+      {
+        "url": "https://github.com/vllm-project/vllm/pull/53376",
+        "state": "open",
+        "merged": false,
+        "head": "6abd7633bede2b611be1c6337d535e624615f8cd",
+        "updatedAt": "2026-09-16T23:35:21Z"
+      }
+    ],
+    "harness": {
+      "tag": "dsh-v0.1.7-alpha.2",
+      "prerelease": true,
+      "publishedAt": "2026-09-22T15:49:49Z",
+      "url": "https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v0.1.7-alpha.2"
+    }
+  },
+  "lmcacheFullImage": {
+    "status": "passed",
+    "imageId": "sha256:6c550dc42f8659d357a92b7907289771870f3d01536a33a1cafc53517f9033d1",
+    "buildSourceRevision": "9e041764374fc2c60ffab37291566717de67c74d",
+    "entrypoint": "actual Ultra Node manager; profile start/stop APIs",
+    "configuration": {
+      "target": "Qwen3.8-27B-FP8",
+      "tensorParallel": 4,
+      "gpuKvBytesPerCard": 1073741824,
+      "cpuL1GiBTotal": 2,
+      "chunkTokens": 1568,
+      "maxBatchedTokens": 3135,
+      "maxModelLen": 16384,
+      "maxNumSeqs": 4,
+      "kvDtype": "fp8_e4m3",
+      "speculation": false,
+      "nativeCpuConnector": false,
+      "expandableSegments": false,
+      "marlinAtomicAdd": false,
+      "diskBackend": "FSL2Adapter; use_odirect=false"
+    },
+    "cases": [
+      {
+        "phase": "cold",
+        "inputTokens": 8192,
+        "passed": true,
+        "cachedTokens": 0,
+        "tokenHash": "d6b5d295d6d23ebadb2ced13822762b0a080f2a8e150d4c67975b82a132482de",
+        "ttftSeconds": 6.7926545170194,
+        "elapsedSeconds": 8.6741135980119,
+        "hitSource": null,
+        "error": null
+      },
+      {
+        "phase": "gpu-reset-l1",
+        "inputTokens": 8192,
+        "passed": true,
+        "cachedTokens": 7840,
+        "tokenHash": "d6b5d295d6d23ebadb2ced13822762b0a080f2a8e150d4c67975b82a132482de",
+        "ttftSeconds": 0.38031074797618203,
+        "elapsedSeconds": 2.2560607159975916,
+        "hitSource": null,
+        "error": null
+      },
+      {
+        "phase": "gpu-and-l1-reset-disk",
+        "inputTokens": 8192,
+        "passed": true,
+        "cachedTokens": 7840,
+        "tokenHash": "d6b5d295d6d23ebadb2ced13822762b0a080f2a8e150d4c67975b82a132482de",
+        "ttftSeconds": 0.6595652370015159,
+        "elapsedSeconds": 2.531477957003517,
+        "hitSource": null,
+        "error": null
+      },
+      {
+        "phase": "salt-b-miss",
+        "inputTokens": 8192,
+        "passed": true,
+        "cachedTokens": 0,
+        "tokenHash": "d6b5d295d6d23ebadb2ced13822762b0a080f2a8e150d4c67975b82a132482de",
+        "ttftSeconds": 6.525352697004564,
+        "elapsedSeconds": 8.408911606005859,
+        "hitSource": null,
+        "error": null
+      },
+      {
+        "phase": "fork-b-cold-reference",
+        "inputTokens": 8191,
+        "passed": true,
+        "cachedTokens": 0,
+        "tokenHash": "24811f5bcb83ed5982a238d8519c2976af7eddfd5f366e4dc6c432a65b4ea0b4",
+        "ttftSeconds": 6.531365885981359,
+        "elapsedSeconds": 8.362955178978154,
+        "hitSource": "cold: distinct cache salt",
+        "error": null
+      },
+      {
+        "phase": "fork-b-shared-prefix-disk",
+        "inputTokens": 8191,
+        "passed": true,
+        "cachedTokens": 7840,
+        "tokenHash": "24811f5bcb83ed5982a238d8519c2976af7eddfd5f366e4dc6c432a65b4ea0b4",
+        "ttftSeconds": 1.3239507710095495,
+        "elapsedSeconds": 3.1582406840170734,
+        "hitSource": "filesystem L2: GPU and L1 cleared before request",
+        "error": null
+      },
+      {
+        "phase": "return-a-disk",
+        "inputTokens": 8192,
+        "passed": true,
+        "cachedTokens": 7840,
+        "tokenHash": "d6b5d295d6d23ebadb2ced13822762b0a080f2a8e150d4c67975b82a132482de",
+        "ttftSeconds": 0.7596854049770627,
+        "elapsedSeconds": 2.6371840339852497,
+        "hitSource": "filesystem L2: GPU and L1 cleared before request",
+        "error": null
+      },
+      {
+        "phase": "restart-a-disk",
+        "inputTokens": 8192,
+        "passed": true,
+        "cachedTokens": 7840,
+        "tokenHash": "d6b5d295d6d23ebadb2ced13822762b0a080f2a8e150d4c67975b82a132482de",
+        "ttftSeconds": 1.3812393510015681,
+        "elapsedSeconds": 3.2722580719855614,
+        "hitSource": "filesystem L2: GPU and L1 cleared before request",
+        "error": null
+      }
+    ],
+    "storageLogEvidence": {
+      "file": "mp-complete.log",
+      "sha256": "3fe0e02274632a5a01c465a40dde459bbc4cc638ea7cb960e6b38f1bad7a2b94",
+      "lines": [
+        {
+          "line": 158,
+          "text": "[2026-09-23 08:24:51,503] LMCache INFO: Prefetch request completed (L1+L2): 24/40 retained keys (24 L1, 0 L2) in 2.5 ms (external_request_id=cmpl-afb1ee83c0ac5412-0-996366c6, prefetch_request_id=-1) (storage_manager.py:726:lmcache.v1.distributed.storage_manager)"
+        },
+        {
+          "line": 197,
+          "text": "[2026-09-23 08:24:54,130] LMCache INFO: Prefetch request completed (L1+L2): 24/40 retained keys (0 L1, 24 L2) in 280.3 ms (external_request_id=cmpl-b1cca4b2cc19cbf1-0-bedc35d1, prefetch_request_id=1) (storage_manager.py:726:lmcache.v1.distributed.storage_manager)"
+        },
+        {
+          "line": 325,
+          "text": "[2026-09-23 08:25:15,074] LMCache INFO: Prefetch request completed (L1+L2): 24/40 retained keys (0 L1, 24 L2) in 947.4 ms (external_request_id=cmpl-934e9e1fd2170fdb-0-b6449ddf, prefetch_request_id=4) (storage_manager.py:726:lmcache.v1.distributed.storage_manager)"
+        },
+        {
+          "line": 364,
+          "text": "[2026-09-23 08:25:17,806] LMCache INFO: Prefetch request completed (L1+L2): 24/40 retained keys (0 L1, 24 L2) in 389.1 ms (external_request_id=cmpl-a9af0a7210bdce4f-0-9af00ef0, prefetch_request_id=5) (storage_manager.py:726:lmcache.v1.distributed.storage_manager)"
+        },
+        {
+          "line": 538,
+          "text": "[2026-09-23 08:28:04,820] LMCache INFO: Prefetch request completed (L1+L2): 24/40 retained keys (0 L1, 24 L2) in 904.2 ms (external_request_id=cmpl-8b589d9d3f9ee044-0-ac60dc73, prefetch_request_id=0) (storage_manager.py:726:lmcache.v1.distributed.storage_manager)"
+        }
+      ]
+    },
+    "lifecycle": "{\"started\": true, \"backend\": \"in-container\"}\n{\"ok\": true}\nManaged engine and both LMCache ports stopped\n{\"started\": true, \"backend\": \"in-container\"}\n{\"ok\": true}\nManaged engine and both LMCache ports stopped\n",
+    "limits": [
+      "8K single-request synthetic text; no DFlash or MTP",
+      "FS may be served by OS page cache; not physical-disk latency or throughput benchmark",
+      "Restart persistence verified, not sudden power loss",
+      "No million-token LMCache or remote/distributed tier validation"
+    ]
+  },
+  "draft3Experiment": {
+    "status": "completed-no-decode-improvement",
+    "initialFailure": {
+      "maxModelLen": 262144,
+      "gpuKvBytesPerCard": 3288334336,
+      "kvMemoryRequiredGiB": 3.8,
+      "estimatedMaxModelLen": 184000,
+      "reason": "KV grouping/padding changed with draft3; memory validation refused startup",
+      "warning": "No KV cache group could be identified as the draft model group",
+      "logSha256": "51edcfac2f0eed03b2df40dc04cfece0475782da496d695dfd8552c52a6e4d95"
+    },
+    "retry": "both target and draft max lengths reduced to 163840; three measured 128K/512 requests valid",
+    "scope": "The retry also lowers the advertised context limit; not a direct 256K replacement or a single-variable ablation.",
+    "samples": [
+      {
+        "contract": "sm75-release-v2",
+        "label": "v016-full-draft3-160k",
+        "model": "sm75-release-test",
+        "benchmarkSha256": "40006f79dcc5f8151b9f1bc87d624a0b69aa92d46531caa040231923e8aaa2cc",
+        "protocolSha256": "022328f1533568eeed78b0da139a5ef3dd27c881957536d19cf6ea807f9053a0",
+        "inputTokens": 131072,
+        "outputTokens": 512,
+        "repeat": 1,
+        "promptTokenHash": "6ad21d98f5de93246f3d80566bae14eca547f48752e6f82ca3a92f505a394262",
+        "tokenHash": "d1cddc08814e4f8458eba8ecccb4d3f59d4db88413531d5e6d53fec08b1d6cd5",
+        "ttftSeconds": 133.62982925900724,
+        "prefillTokensPerSecond": 980.8588451157149,
+        "decodeTokensPerSecond": 52.851254995496284,
+        "tpotSeconds": 0.018921026569477205,
+        "firstEmissionTokens": 1,
+        "decodeWindowSeconds": 9.668644577002851,
+        "speculativeCounters": {
+          "drafts": 207.0,
+          "draftTokens": 621.0,
+          "acceptedTokens": 307.0
+        },
+        "speculativeMetricsValid": true,
+        "acceptanceRate": 0.4943639291465378,
+        "elapsedSeconds": 143.29874698299682,
+        "cachedTokens": 0,
+        "preemptions": 0.0,
+        "retrievalPassed": true,
+        "complete": true,
+        "hostMinimumAvailableBytes": 4896223232,
+        "valid": true
+      },
+      {
+        "contract": "sm75-release-v2",
+        "label": "v016-full-draft3-160k",
+        "model": "sm75-release-test",
+        "benchmarkSha256": "40006f79dcc5f8151b9f1bc87d624a0b69aa92d46531caa040231923e8aaa2cc",
+        "protocolSha256": "022328f1533568eeed78b0da139a5ef3dd27c881957536d19cf6ea807f9053a0",
+        "inputTokens": 131072,
+        "outputTokens": 512,
+        "repeat": 2,
+        "promptTokenHash": "6ad21d98f5de93246f3d80566bae14eca547f48752e6f82ca3a92f505a394262",
+        "tokenHash": "d1cddc08814e4f8458eba8ecccb4d3f59d4db88413531d5e6d53fec08b1d6cd5",
+        "ttftSeconds": 133.76175868799328,
+        "prefillTokensPerSecond": 979.8914225233291,
+        "decodeTokensPerSecond": 52.81149015750257,
+        "tpotSeconds": 0.0189352733092296,
+        "firstEmissionTokens": 1,
+        "decodeWindowSeconds": 9.675924661016325,
+        "speculativeCounters": {
+          "drafts": 207.0,
+          "draftTokens": 621.0,
+          "acceptedTokens": 307.0
+        },
+        "speculativeMetricsValid": true,
+        "acceptanceRate": 0.4943639291465378,
+        "elapsedSeconds": 143.43808941700263,
+        "cachedTokens": 0,
+        "preemptions": 0.0,
+        "retrievalPassed": true,
+        "complete": true,
+        "hostMinimumAvailableBytes": 4908949504,
+        "valid": true
+      },
+      {
+        "contract": "sm75-release-v2",
+        "label": "v016-full-draft3-160k",
+        "model": "sm75-release-test",
+        "benchmarkSha256": "40006f79dcc5f8151b9f1bc87d624a0b69aa92d46531caa040231923e8aaa2cc",
+        "protocolSha256": "022328f1533568eeed78b0da139a5ef3dd27c881957536d19cf6ea807f9053a0",
+        "inputTokens": 131072,
+        "outputTokens": 512,
+        "repeat": 3,
+        "promptTokenHash": "6ad21d98f5de93246f3d80566bae14eca547f48752e6f82ca3a92f505a394262",
+        "tokenHash": "d1cddc08814e4f8458eba8ecccb4d3f59d4db88413531d5e6d53fec08b1d6cd5",
+        "ttftSeconds": 133.79284651600756,
+        "prefillTokensPerSecond": 979.6637369869993,
+        "decodeTokensPerSecond": 53.15571753024907,
+        "tpotSeconds": 0.018812651704512025,
+        "firstEmissionTokens": 1,
+        "decodeWindowSeconds": 9.613265021005645,
+        "speculativeCounters": {
+          "drafts": 207.0,
+          "draftTokens": 621.0,
+          "acceptedTokens": 307.0
+        },
+        "speculativeMetricsValid": true,
+        "acceptanceRate": 0.4943639291465378,
+        "elapsedSeconds": 143.40648294001585,
+        "cachedTokens": 0,
+        "preemptions": 0.0,
+        "retrievalPassed": true,
+        "complete": true,
+        "hostMinimumAvailableBytes": 4911968256,
+        "valid": true
+      }
+    ],
+    "medians": {
+      "prefillTokensPerSecond": 979.8914225233291,
+      "decodeTokensPerSecond": 52.851254995496284,
+      "acceptanceRate": 0.4943639291465378,
+      "ttftSeconds": 133.76175868799328
+    },
+    "allSamplesValid": true,
+    "repeatedOutputStable": true,
+    "targetMaxTokens": 163840,
+    "draftMaxTokens": 163840,
+    "graphCaptureSizes": [
+      4
+    ],
+    "numSpeculativeTokens": 3,
+    "conclusion": "Not recommended as a replacement for draft7 at 256K. Same 3.06 GiB/GPU KV fails the 256K startup capacity check; 160K retry completes 128K but does not improve decode. Draft length, graph size and max length all changed, so this is not a single-variable ablation."
+  },
+  "dependencyMetadata": {
+    "status": "pip-check-failed-known-fixed-stack-differences",
+    "standard": [
+      "torch 2.13.0+cu129 has requirement nvidia-nccl-cu12==2.29.7; platform_system == \"Linux\", but you have nvidia-nccl-cu12 2.30.7.",
+      "lmcache 0.5.5 has requirement cuda-python<14,>=13, but you have cuda-python 12.9.7.",
+      "vllm 0.30.0+cu129 has requirement flashinfer-python==0.6.18.post1, but you have flashinfer-python 0.6.18."
+    ],
+    "ultra": [
+      "torch 2.13.0+cu129 has requirement nvidia-nccl-cu12==2.29.7; platform_system == \"Linux\", but you have nvidia-nccl-cu12 2.30.7.",
+      "vllm 0.30.0+cu129 has requirement flashinfer-python==0.6.18.post1, but you have flashinfer-python 0.6.18."
+    ],
+    "interpretation": "Real core GPU checks and full Ultra LMCache acceptance passed; this does not satisfy all upstream package metadata constraints. Standard upstream-base LMCache is not the project-pinned cu129 extension and must not be enabled directly."
+  },
+  "hostChecks": {
+    "status": "passed",
+    "total": 25,
+    "suites": {
+      "release_scripts": 8,
+      "build_contract": 10,
+      "regression_comparison": 4,
+      "release_stream_timing": 3
+    },
+    "scope": "host command construction, source build contract and benchmark tools; does not override GPU regression failures"
+  },
+  "measuredDflashRuntime": {
+    "source": "actual full-ultra engine process; CLI matched standard process",
+    "argv": [
+      "/usr/bin/python3",
+      "/usr/local/bin/vllm",
+      "serve",
+      "/root/.cache/modelscope/hub/models/Qwen/Qwen3___8-27B-FP8",
+      "--served-model-name",
+      "sm75-release-test",
+      "--gpu-memory-utilization",
+      "0.92",
+      "--tensor-parallel-size",
+      "4",
+      "--max-model-len",
+      "262144",
+      "--kv-cache-dtype",
+      "fp8_e4m3",
+      "--max-num-seqs",
+      "4",
+      "--max-num-batched-tokens",
+      "8192",
+      "--attention-config",
+      "{\"backend\":\"FLASHINFER\"}",
+      "--host",
+      "0.0.0.0",
+      "--port",
+      "8000",
+      "--dtype",
+      "float16",
+      "--hf-overrides",
+      "{\"dtype\":\"float16\"}",
+      "--generation-config",
+      "vllm",
+      "--async-scheduling",
+      "--enable-prefix-caching",
+      "--enable-prompt-tokens-details",
+      "--disable-custom-all-reduce",
+      "--enable-auto-tool-choice",
+      "--mamba-cache-mode",
+      "align",
+      "--mm-encoder-attn-backend",
+      "TORCH_SDPA",
+      "--tool-call-parser",
+      "qwen3_coder",
+      "--reasoning-parser",
+      "qwen3",
+      "--no-disable-hybrid-kv-cache-manager",
+      "--kv-transfer-config",
+      "{\"kv_connector\":\"OffloadingConnector\",\"kv_role\":\"kv_both\",\"kv_connector_extra_config\":{\"spec_name\":\"CPUOffloadingSpec\",\"cpu_bytes_to_use\":8589934592}}",
+      "--compilation-config",
+      "{\"cudagraph_mode\":\"FULL_AND_PIECEWISE\",\"cudagraph_capture_sizes\":[8]}",
+      "--gdn-prefill-backend",
+      "flashqla_sm75",
+      "--block-size",
+      "32",
+      "--speculative-config",
+      "{\"method\":\"dflash\",\"model\":\"/root/.cache/huggingface/hub/models/incoai/Qwen3___8-27B-DFlash2\",\"num_speculative_tokens\":7,\"draft_tensor_parallel_size\":4,\"max_model_len\":262144,\"kv_cache_dtype\":\"auto\",\"attention_backend\":\"FLASHINFER\",\"draft_sample_method\":\"probabilistic\"}",
+      "--kv-cache-memory-bytes",
+      "3288334336",
+      "--scheduler-cls",
+      "vllm.v1.core.sched.scheduler_sm75.SM75Scheduler"
+    ],
+    "numericalAndCommunicationEnvironment": {
+      "FLASH_QLA_SM75_ALLOW_JIT": "0",
+      "FLASH_QLA_SM75_PREBUILT_EXTENSION_PATH": "/opt/vllm-sm75/extensions/flash_qla_sm75_gdn.so",
+      "GLOO_SOCKET_IFNAME": "lo",
+      "MAX_JOBS": "1",
+      "NCCL_BUFFSIZE": "4194304",
+      "NCCL_DEBUG": "WARN",
+      "NCCL_GIN_ENABLE": "0",
+      "NCCL_IB_DISABLE": "0",
+      "NCCL_IGNORE_CPU_AFFINITY": "1",
+      "NCCL_NET": "Socket",
+      "NCCL_P2P_DISABLE": "0",
+      "NCCL_P2P_LEVEL": "SYS",
+      "NCCL_SOCKET_IFNAME": "lo",
+      "NVCC_THREADS": "1",
+      "OMP_NUM_THREADS": "2",
+      "PYTORCH_ALLOC_CONF": "expandable_segments:True",
+      "SM75_FA2_SMALLQ_GRAPH": "1",
+      "SM75_GDN_B1_METADATA": "1",
+      "TORCHINDUCTOR_COMPILE_THREADS": "1",
+      "VLLM_ALLREDUCE_USE_FLASHINFER": "0",
+      "VLLM_ALLREDUCE_USE_SYMM_MEM": "0",
+      "VLLM_FIREFLY": "auto",
+      "VLLM_GDN_DECODE_KERNEL": "triton",
+      "VLLM_MARLIN_USE_ATOMIC_ADD": "1",
+      "VLLM_USE_FLASHINFER_SAMPLER": "0",
+      "VLLM_USE_NCCL_SYMM_MEM": "0"
+    },
+    "network": "isolated network namespace and network=none container; TP4 communicates through loopback",
+    "credentialFields": "excluded",
+    "scope": "audit record; not an importable Ultra profile or a general cluster networking recommendation"
+  },
+  "modelFiles": {
+    "recordSha256": "3b642bd4c3b04dfdbaf18808cfc742e824edc0370a74b8e1de63142b2e7d1247",
+    "record": {
+      "target_fp8": {
+        "directory": "Qwen/Qwen3___8-27B-FP8",
+        "architectures": [
+          "Qwen3_5ForConditionalGeneration"
+        ],
+        "textConfig": {
+          "dtype": "bfloat16",
+          "head_dim": 256,
+          "hidden_size": 5120,
+          "layer_types": [
+            "linear_attention",
+            "linear_attention",
+            "linear_attention",
+            "full_attention",
+            "linear_attention",
+            "linear_attention",
+            "linear_attention",
+            "full_attention",
+            "linear_attention",
+            "linear_attention",
+            "linear_attention",
+            "full_attention",
+            "linear_attention",
+            "linear_attention",
+            "linear_attention",
+            "full_attention",
+            "linear_attention",
+            "linear_attention",
+            "linear_attention",
+            "full_attention",
+            "linear_attention",
+            "linear_attention",
+            "linear_attention",
+            "full_attention",
+            "linear_attention",
+            "linear_attention",
+            "linear_attention",
+            "full_attention",
+            "linear_attention",
+            "linear_attention",
+            "linear_attention",
+            "full_attention",
+            "linear_attention",
+            "linear_attention",
+            "linear_attention",
+            "full_attention",
+            "linear_attention",
+            "linear_attention",
+            "linear_attention",
+            "full_attention",
+            "linear_attention",
+            "linear_attention",
+            "linear_attention",
+            "full_attention",
+            "linear_attention",
+            "linear_attention",
+            "linear_attention",
+            "full_attention",
+            "linear_attention",
+            "linear_attention",
+            "linear_attention",
+            "full_attention",
+            "linear_attention",
+            "linear_attention",
+            "linear_attention",
+            "full_attention",
+            "linear_attention",
+            "linear_attention",
+            "linear_attention",
+            "full_attention",
+            "linear_attention",
+            "linear_attention",
+            "linear_attention",
+            "full_attention"
+          ],
+          "max_position_embeddings": 262144,
+          "model_type": "qwen3_5_text",
+          "num_attention_heads": 24,
+          "num_hidden_layers": 64,
+          "num_key_value_heads": 4,
+          "partial_rotary_factor": 0.25,
+          "rope_parameters": {
+            "mrope_interleaved": true,
+            "mrope_section": [
+              11,
+              11,
+              10
+            ],
+            "partial_rotary_factor": 0.25,
+            "rope_theta": 10000000,
+            "rope_type": "default"
+          }
+        },
+        "configFiles": {
+          "config.json": {
+            "sha256": "74227dd615bf1ea975aa676bdf355a0379858c12f394b5365cd9dfa5fc2c70bc",
+            "bytes": 51350
+          },
+          "tokenizer.json": {
+            "sha256": "0997f410c57a1f4e53b09e4be8f4a172d90edd9564368fb0847030937229b9f3",
+            "bytes": 12809320
+          },
+          "tokenizer_config.json": {
+            "sha256": "b11349aafa7cdc6a320767cf7ceb29ed82f7eda5d65e8e0819e76f0ce947bf27",
+            "bytes": 17928
+          },
+          "generation_config.json": {
+            "sha256": "e70c136c1b78ddc1fb0905bac8e733a4dc448d4f852a5dd75143fffc70be550e",
+            "bytes": 202
+          },
+          "model.safetensors.index.json": {
+            "sha256": "f0838c766951bdfe76d6afbdb2771a8f67aaa2231dedb3d33cebd817729843a2",
+            "bytes": 137335
+          }
+        },
+        "weightFiles": [
+          {
+            "name": "layers-0.safetensors",
+            "bytes": 383865448,
+            "mtimeNs": 1786719987078058335
+          },
+          {
+            "name": "layers-1.safetensors",
+            "bytes": 383865448,
+            "mtimeNs": 1786719979856137764
+          },
+          {
+            "name": "layers-10.safetensors",
+            "bytes": 383865472,
+            "mtimeNs": 1786719982453109174
+          },
+          {
+            "name": "layers-11.safetensors",
+            "bytes": 372313760,
+            "mtimeNs": 1786719974274199329
+          },
+          {
+            "name": "layers-12.safetensors",
+            "bytes": 383865472,
+            "mtimeNs": 1786719991431010579
+          },
+          {
+            "name": "layers-13.safetensors",
+            "bytes": 383865472,
+            "mtimeNs": 1786719991980004562
+          },
+          {
+            "name": "layers-14.safetensors",
+            "bytes": 383865472,
+            "mtimeNs": 1786719995548965482
+          },
+          {
+            "name": "layers-15.safetensors",
+            "bytes": 372313760,
+            "mtimeNs": 1786719974995191368
+          },
+          {
+            "name": "layers-16.safetensors",
+            "bytes": 383865472,
+            "mtimeNs": 1786719996190958458
+          },
+          {
+            "name": "layers-17.safetensors",
+            "bytes": 383865472,
+            "mtimeNs": 1786719995972960842
+          },
+          {
+            "name": "layers-18.safetensors",
+            "bytes": 383865472,
+            "mtimeNs": 1786720002462889938
+          },
+          {
+            "name": "layers-19.safetensors",
+            "bytes": 372313760,
+            "mtimeNs": 1786720007756832238
+          },
+          {
+            "name": "layers-2.safetensors",
+            "bytes": 383865448,
+            "mtimeNs": 1786720006193849260
+          },
+          {
+            "name": "layers-20.safetensors",
+            "bytes": 383865472,
+            "mtimeNs": 1786720016423738038
+          },
+          {
+            "name": "layers-21.safetensors",
+            "bytes": 383865472,
+            "mtimeNs": 1786720023530661028
+          },
+          {
+            "name": "layers-22.safetensors",
+            "bytes": 383865472,
+            "mtimeNs": 1786720021597681953
+          },
+          {
+            "name": "layers-23.safetensors",
+            "bytes": 372313760,
+            "mtimeNs": 1786720029956591575
+          },
+          {
+            "name": "layers-24.safetensors",
+            "bytes": 383865472,
+            "mtimeNs": 1786720016220740240
+          },
+          {
+            "name": "layers-25.safetensors",
+            "bytes": 383865472,
+            "mtimeNs": 1786720040152481712
+          },
+          {
+            "name": "layers-26.safetensors",
+            "bytes": 383865472,
+            "mtimeNs": 1786720032286566434
+          },
+          {
+            "name": "layers-27.safetensors",
+            "bytes": 372313760,
+            "mtimeNs": 1786720034882538446
+          },
+          {
+            "name": "layers-28.safetensors",
+            "bytes": 383865472,
+            "mtimeNs": 1786720038725497064
+          },
+          {
+            "name": "layers-29.safetensors",
+            "bytes": 383865472,
+            "mtimeNs": 1786720039961483766
+          },
+          {
+            "name": "layers-3.safetensors",
+            "bytes": 372313744,
+            "mtimeNs": 1786720044204438163
+          },
+          {
+            "name": "layers-30.safetensors",
+            "bytes": 383865472,
+            "mtimeNs": 1786720046236416347
+          },
+          {
+            "name": "layers-31.safetensors",
+            "bytes": 372313760,
+            "mtimeNs": 1786720053821335048
+          },
+          {
+            "name": "layers-32.safetensors",
+            "bytes": 383865472,
+            "mtimeNs": 1786720058084289448
+          },
+          {
+            "name": "layers-33.safetensors",
+            "bytes": 383865472,
+            "mtimeNs": 1786720062890238117
+          },
+          {
+            "name": "layers-34.safetensors",
+            "bytes": 383865472,
+            "mtimeNs": 1786720069486167801
+          },
+          {
+            "name": "layers-35.safetensors",
+            "bytes": 372313760,
+            "mtimeNs": 1786720063629230232
+          },
+          {
+            "name": "layers-36.safetensors",
+            "bytes": 383865472,
+            "mtimeNs": 1786720063739229058
+          },
+          {
+            "name": "layers-37.safetensors",
+            "bytes": 383865472,
+            "mtimeNs": 1786720068767175457
+          },
+          {
+            "name": "layers-38.safetensors",
+            "bytes": 383865472,
+            "mtimeNs": 1786720076633091777
+          },
+          {
+            "name": "layers-39.safetensors",
+            "bytes": 372313760,
+            "mtimeNs": 1786720074389115628
+          },
+          {
+            "name": "layers-4.safetensors",
+            "bytes": 383865448,
+            "mtimeNs": 1786720093656911362
+          },
+          {
+            "name": "layers-40.safetensors",
+            "bytes": 383865472,
+            "mtimeNs": 1786720089505955268
+          },
+          {
+            "name": "layers-41.safetensors",
+            "bytes": 383865472,
+            "mtimeNs": 1786720084314010261
+          },
+          {
+            "name": "layers-42.safetensors",
+            "bytes": 383865472,
+            "mtimeNs": 1786720092179926978
+          },
+          {
+            "name": "layers-43.safetensors",
+            "bytes": 372313760,
+            "mtimeNs": 1786720098917855792
+          },
+          {
+            "name": "layers-44.safetensors",
+            "bytes": 383865472,
+            "mtimeNs": 1786720089003960581
+          },
+          {
+            "name": "layers-45.safetensors",
+            "bytes": 383865472,
+            "mtimeNs": 1786720104856793163
+          },
+          {
+            "name": "layers-46.safetensors",
+            "bytes": 383865472,
+            "mtimeNs": 1786720107205768420
+          },
+          {
+            "name": "layers-47.safetensors",
+            "bytes": 372313760,
+            "mtimeNs": 1786720097411871691
+          },
+          {
+            "name": "layers-48.safetensors",
+            "bytes": 383865472,
+            "mtimeNs": 1786720106887771769
+          },
+          {
+            "name": "layers-49.safetensors",
+            "bytes": 383865472,
+            "mtimeNs": 1786720125424577057
+          },
+          {
+            "name": "layers-5.safetensors",
+            "bytes": 383865448,
+            "mtimeNs": 1786720130327525716
+          },
+          {
+            "name": "layers-50.safetensors",
+            "bytes": 383865472,
+            "mtimeNs": 1786720121412619116
+          },
+          {
+            "name": "layers-51.safetensors",
+            "bytes": 372313760,
+            "mtimeNs": 1786720117162663720
+          },
+          {
+            "name": "layers-52.safetensors",
+            "bytes": 383865472,
+            "mtimeNs": 1786720133807489315
+          },
+          {
+            "name": "layers-53.safetensors",
+            "bytes": 383865472,
+            "mtimeNs": 1786720131289515651
+          },
+          {
+            "name": "layers-54.safetensors",
+            "bytes": 383865472,
+            "mtimeNs": 1786720127356556819
+          },
+          {
+            "name": "layers-55.safetensors",
+            "bytes": 372313760,
+            "mtimeNs": 1786720122204610810
+          },
+          {
+            "name": "layers-56.safetensors",
+            "bytes": 383865472,
+            "mtimeNs": 1786720137830447275
+          },
+          {
+            "name": "layers-57.safetensors",
+            "bytes": 383865472,
+            "mtimeNs": 1786720162040195149
+          },
+          {
+            "name": "layers-58.safetensors",
+            "bytes": 383865472,
+            "mtimeNs": 1786720157742239803
+          },
+          {
+            "name": "layers-59.safetensors",
+            "bytes": 372313760,
+            "mtimeNs": 1786720145329369023
+          },
+          {
+            "name": "layers-6.safetensors",
+            "bytes": 383865448,
+            "mtimeNs": 1786720146967351949
+          },
+          {
+            "name": "layers-60.safetensors",
+            "bytes": 383865472,
+            "mtimeNs": 1786720158320233796
+          },
+          {
+            "name": "layers-61.safetensors",
+            "bytes": 383865472,
+            "mtimeNs": 1786720172658085020
+          },
+          {
+            "name": "layers-62.safetensors",
+            "bytes": 383865472,
+            "mtimeNs": 1786720150112319186
+          },
+          {
+            "name": "layers-63.safetensors",
+            "bytes": 372313760,
+            "mtimeNs": 1786720161030205639
+          },
+          {
+            "name": "layers-7.safetensors",
+            "bytes": 372313744,
+            "mtimeNs": 1786720169524117499
+          },
+          {
+            "name": "layers-8.safetensors",
+            "bytes": 383865448,
+            "mtimeNs": 1786720181726991160
+          },
+          {
+            "name": "layers-9.safetensors",
+            "bytes": 383865448,
+            "mtimeNs": 1786720167413139388
+          },
+          {
+            "name": "mtp.safetensors",
+            "bytes": 477202224,
+            "mtimeNs": 1786720191986885190
+          },
+          {
+            "name": "outside.safetensors",
+            "bytes": 6007102112,
+            "mtimeNs": 1786720477724918178
+          }
+        ]
+      },
+      "draft": {
+        "directory": "incoai/Qwen3___8-27B-DFlash2",
+        "architectures": [
+          "DFlash2DraftModel"
+        ],
+        "textConfig": {
+          "dtype": "bfloat16",
+          "head_dim": 128,
+          "hidden_size": 5120,
+          "layer_types": [
+            "sliding_attention",
+            "sliding_attention",
+            "sliding_attention",
+            "sliding_attention",
+            "sliding_attention"
+          ],
+          "max_position_embeddings": 262144,
+          "model_type": "qwen3",
+          "num_attention_heads": 32,
+          "num_hidden_layers": 5,
+          "num_key_value_heads": 8,
+          "rope_parameters": {
+            "rope_theta": 10000000,
+            "rope_type": "default"
+          }
+        },
+        "configFiles": {
+          "config.json": {
+            "sha256": "873e3556509b0da06e29654ba00d4944888d4b5e8a33afde25f7eb27d321e980",
+            "bytes": 1239
+          }
+        },
+        "weightFiles": [
+          {
+            "name": "model.safetensors",
+            "bytes": 3848817896,
+            "mtimeNs": 1788242091499709977
+          }
+        ]
+      },
+      "target_awq": {
+        "directory": "cyankiwi/Qwen3___8-27B-AWQ-INT4",
+        "architectures": [
+          "Qwen3_5ForConditionalGeneration"
+        ],
+        "textConfig": {
+          "dtype": "bfloat16",
+          "head_dim": 256,
+          "hidden_size": 5120,
+          "layer_types": [
+            "linear_attention",
+            "linear_attention",
+            "linear_attention",
+            "full_attention",
+            "linear_attention",
+            "linear_attention",
+            "linear_attention",
+            "full_attention",
+            "linear_attention",
+            "linear_attention",
+            "linear_attention",
+            "full_attention",
+            "linear_attention",
+            "linear_attention",
+            "linear_attention",
+            "full_attention",
+            "linear_attention",
+            "linear_attention",
+            "linear_attention",
+            "full_attention",
+            "linear_attention",
+            "linear_attention",
+            "linear_attention",
+            "full_attention",
+            "linear_attention",
+            "linear_attention",
+            "linear_attention",
+            "full_attention",
+            "linear_attention",
+            "linear_attention",
+            "linear_attention",
+            "full_attention",
+            "linear_attention",
+            "linear_attention",
+            "linear_attention",
+            "full_attention",
+            "linear_attention",
+            "linear_attention",
+            "linear_attention",
+            "full_attention",
+            "linear_attention",
+            "linear_attention",
+            "linear_attention",
+            "full_attention",
+            "linear_attention",
+            "linear_attention",
+            "linear_attention",
+            "full_attention",
+            "linear_attention",
+            "linear_attention",
+            "linear_attention",
+            "full_attention",
+            "linear_attention",
+            "linear_attention",
+            "linear_attention",
+            "full_attention",
+            "linear_attention",
+            "linear_attention",
+            "linear_attention",
+            "full_attention",
+            "linear_attention",
+            "linear_attention",
+            "linear_attention",
+            "full_attention"
+          ],
+          "max_position_embeddings": 262144,
+          "model_type": "qwen3_5_text",
+          "num_attention_heads": 24,
+          "num_hidden_layers": 64,
+          "num_key_value_heads": 4,
+          "partial_rotary_factor": 0.25,
+          "rope_parameters": {
+            "mrope_interleaved": true,
+            "mrope_section": [
+              11,
+              11,
+              10
+            ],
+            "partial_rotary_factor": 0.25,
+            "rope_theta": 10000000,
+            "rope_type": "default"
+          }
+        },
+        "configFiles": {
+          "config.json": {
+            "sha256": "fece2915d4c8ad4c10877622f04ea5e01cd3ae38768ce5c1edb700dd1de290f6",
+            "bytes": 20927
+          },
+          "tokenizer.json": {
+            "sha256": "0997f410c57a1f4e53b09e4be8f4a172d90edd9564368fb0847030937229b9f3",
+            "bytes": 12809320
+          },
+          "tokenizer_config.json": {
+            "sha256": "b11349aafa7cdc6a320767cf7ceb29ed82f7eda5d65e8e0819e76f0ce947bf27",
+            "bytes": 17928
+          },
+          "generation_config.json": {
+            "sha256": "e70c136c1b78ddc1fb0905bac8e733a4dc448d4f852a5dd75143fffc70be550e",
+            "bytes": 202
+          },
+          "model.safetensors.index.json": {
+            "sha256": "82b1bf79f5b61333e83da17ec3bf89c9f178e29395a14c6b3ce3bbc474e1ead8",
+            "bytes": 241486
+          }
+        },
+        "weightFiles": [
+          {
+            "name": "model-00001-of-00005.safetensors",
+            "bytes": 2542796928,
+            "mtimeNs": 1787297415733566406
+          },
+          {
+            "name": "model-00002-of-00005.safetensors",
+            "bytes": 4967650936,
+            "mtimeNs": 1787297537727382345
+          },
+          {
+            "name": "model-00003-of-00005.safetensors",
+            "bytes": 4996718528,
+            "mtimeNs": 1787297357369611510
+          },
+          {
+            "name": "model-00004-of-00005.safetensors",
+            "bytes": 4976405864,
+            "mtimeNs": 1787297358584589751
+          },
+          {
+            "name": "model-00005-of-00005.safetensors",
+            "bytes": 3534428672,
+            "mtimeNs": 1787297314267383397
+          }
+        ]
+      }
+    },
+    "weightIntegrityScope": "Config, tokenizer and index files have SHA256; weight shards record names, sizes and mtimes, not full weight-file SHA256. Model directory names do not independently establish official checkpoint identity."
+  },
+  "hostCleanup": {
+    "status": "passed",
+    "record": "final-host-state.log",
+    "mainDockerPid": 7892,
+    "formalContainerState": "stopped-as-before",
+    "temporaryDaemonStopped": true,
+    "gpuMemoryReleased": true
+  }
+}

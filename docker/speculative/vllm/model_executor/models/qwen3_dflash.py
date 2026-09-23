@@ -23,6 +23,7 @@ from vllm.model_executor.layers.linear import (
     QKVParallelLinear,
     ReplicatedLinear,
     RowParallelLinear,
+    UnquantizedLinearMethod,
 )
 from vllm.model_executor.layers.logits_processor import LogitsProcessor
 from vllm.model_executor.layers.quantization.base_config import QuantizationConfig
@@ -32,6 +33,7 @@ from vllm.model_executor.layers.vocab_parallel_embedding import (
     VocabParallelEmbedding,
 )
 from vllm.multimodal.inputs import NestedTensors
+from vllm.platforms import current_platform
 from vllm.transformers_utils.config import set_default_rope_theta
 from vllm.transformers_utils.repo_utils import get_hf_file_bytes
 from vllm.v1.attention.backend import AttentionType
@@ -72,6 +74,19 @@ def dflash_has_any_non_causal(config: Qwen3Config) -> bool:
     (config mirror of the model's ``get_draft_attn_causal``, usable pre-build)."""
     return not all(
         _dflash_layer_causal(config, i) for i in range(config.num_hidden_layers)
+    )
+
+
+def _can_fuse_context_kv(projections: Iterable[nn.Module]) -> bool:
+    """Raw weight fusion is valid only for unquantized projection modules.
+
+    Quantized weights carry scales or kernel-specific packing. Reading them
+    directly bypasses the quantization method and can silently corrupt a draft.
+    Adapted from upstream PR #51620 (e5ff049bb18b49039708cac3d7285a778f0deaaf).
+    """
+    return all(
+        isinstance(projection.quant_method, UnquantizedLinearMethod)
+        for projection in projections
     )
 
 
@@ -489,14 +504,25 @@ class DFlashQwen3Model(nn.Module):
     ) -> None:
         self._hidden_norm_weight = self.hidden_norm.weight.data
 
-        # KV projection weights: [num_layers * 2 * kv_size, hidden_size]
-        kv_weights = [a.qkv_proj.weight[a.q_size :] for a in layers_attn]
-        self._fused_kv_weight = torch.cat(kv_weights, dim=0)
-        if has_bias:
-            kv_biases = [a.qkv_proj.bias[a.q_size :] for a in layers_attn]
-            self._fused_kv_bias: torch.Tensor | None = torch.cat(kv_biases, dim=0)
+        self._fuse_context_kv = _can_fuse_context_kv(
+            attn.qkv_proj for attn in layers_attn
+        )
+        if self._fuse_context_kv:
+            # KV projection weights: [num_layers * 2 * kv_size, hidden_size]
+            kv_weights = [a.qkv_proj.weight[a.q_size :] for a in layers_attn]
+            self._fused_kv_weight = torch.cat(kv_weights, dim=0)
+            if has_bias:
+                kv_biases = [a.qkv_proj.bias[a.q_size :] for a in layers_attn]
+                self._fused_kv_bias: torch.Tensor | None = torch.cat(kv_biases, dim=0)
+            else:
+                self._fused_kv_bias = None
         else:
-            self._fused_kv_bias = None
+            # Retain modules, not raw tensors: Marlin repacks them after loading.
+            self._kv_projections = [(a.qkv_proj, a.q_size) for a in layers_attn]
+            # Drop buffers left by an earlier unquantized load, if any.
+            for name in ("_fused_kv_weight", "_fused_kv_bias"):
+                if hasattr(self, name):
+                    delattr(self, name)
 
         # K-norm weights stacked into one contiguous [num_layers, head_dim]
         # tensor so the per-layer K-norm runs as a single grouped kernel.
@@ -547,6 +573,23 @@ class DFlashQwen3Model(nn.Module):
         # References to inner Attention layers for direct cache writes
         self._attn_layers = [layer.self_attn.attn for layer in self.layers]
 
+    def _project_context_kv_per_layer(self, normed: torch.Tensor) -> torch.Tensor:
+        """Apply each quantization method before slicing its rank-local K/V.
+
+        Projection outputs have their logical layout even when weights have
+        been repacked. This path runs during context precompute, outside the
+        draft decode loop. Preserve both linear return conventions and bias.
+        """
+        outputs = []
+        for projection, q_size in self._kv_projections:
+            result = projection(normed)
+            if isinstance(result, tuple):
+                result, bias = result
+                if bias is not None:
+                    result = result + bias
+            outputs.append(result[..., q_size:])
+        return torch.cat(outputs, dim=-1)
+
     def _project_context_kv(
         self,
         context_states: torch.Tensor,
@@ -555,12 +598,15 @@ class DFlashQwen3Model(nn.Module):
         num_kv_heads: int,
         head_dim: int,
     ) -> tuple[torch.Tensor, torch.Tensor]:
-        # --- Fused KV projection (one GEMM for all layers) ---
+        # Unquantized projections retain the fused GEMM fast path.
         # Route through the model override so BF16-range emulation is applied.
         normed_context_states = self._normalize_context_states(context_states)
-        all_kv_flat = F.linear(
-            normed_context_states, self._fused_kv_weight, self._fused_kv_bias
-        )
+        if self._fuse_context_kv:
+            all_kv_flat = F.linear(
+                normed_context_states, self._fused_kv_weight, self._fused_kv_bias
+            )
+        else:
+            all_kv_flat = self._project_context_kv_per_layer(normed_context_states)
         # Single contiguous copy that separates K/V and transposes to
         # layer-major layout.  Result: [2, L, num_ctx, nkv, hd] contiguous.
         # Indexing dim-0 gives contiguous [L, num_ctx, nkv, hd] for K and V.
@@ -593,6 +639,8 @@ class DFlashQwen3Model(nn.Module):
         return all_k_normed
 
     def _normalize_context_k(self, all_k: torch.Tensor) -> torch.Tensor:
+        if current_platform.is_xpu():
+            return self._normalize_context_k_per_layer(all_k)
         # Verify the loaded binary once with nonzero inputs, outside graphs.
         # Our base image passed this check: retain its grouped fast path.
         verified = getattr(self, "_batched_k_norm_runtime_verified", None)
@@ -740,9 +788,7 @@ class DFlashQwen3ForCausalLM(Qwen3ForCausalLM):
         self.config = self.draft_model_config.hf_config
         if getattr(self.config, "draft_vocab_size", None) is None:
             self.config.draft_vocab_size = getattr(self.config, "vocab_size", None)
-        target_layer_num = vllm_config.model_config.get_num_layers(
-            vllm_config.parallel_config
-        )
+        target_layer_num = vllm_config.model_config.get_total_num_hidden_layers()
         self.model = self.model_cls(
             vllm_config=vllm_config,
             prefix=maybe_prefix(prefix, "model"),

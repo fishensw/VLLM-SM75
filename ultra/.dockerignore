@@ -3,3 +3,8 @@
 **/*.log
 **/__pycache__
 **/*.pyc
+
+**/.env
+**/.env.*
+**/.pytest_cache
+**/.ruff_cache

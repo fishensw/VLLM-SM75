@@ -33,7 +33,7 @@ if [[ -n "${MODEL_ROOT:-}" ]]; then
   [[ "$MODEL_ROOT" == /* && -d "$MODEL_ROOT" ]] || { echo 'MODEL_ROOT must be an existing absolute directory' >&2; exit 2; }
   mounts+=(--volume "$MODEL_ROOT:/models:ro")
 fi
-seq=4; batch=8192; util=0.87; length=auto
+seq=4; batch=8192; util=0.87; length=auto; kv=0
 [[ "$FORMAT" != awq ]] || { seq=8; batch=16384; }
 VERSION="$(tr -d ' \r\n' < "$SCRIPT_DIR/VERSION")"
 image="vllm-sm75:v${VERSION}"
@@ -101,14 +101,29 @@ elif [[ "$VARIANT" == dflash2 ]]; then
   [[ "$DRAFT_MODEL" != *'"'* && "$DRAFT_MODEL" != *'\'* ]] || exit 2
   kv=3288334336; util=0.92; length=262144
   [[ "$FORMAT" != awq ]] || { kv=4294967296; util=0.87; length=auto; }
-  extra+=(--kv-cache-memory-bytes "$kv" --speculative-config "{\"method\":\"dflash\",\"model\":\"$DRAFT_MODEL\",\"num_speculative_tokens\":7,\"draft_tensor_parallel_size\":4,\"max_model_len\":262144,\"kv_cache_dtype\":\"auto\",\"attention_backend\":\"FLASHINFER\",\"draft_sample_method\":\"probabilistic\"}" --scheduler-cls "$SCHED_CLS")
+  extra+=(--speculative-config "{\"method\":\"dflash\",\"model\":\"$DRAFT_MODEL\",\"num_speculative_tokens\":7,\"draft_tensor_parallel_size\":4,\"max_model_len\":262144,\"kv_cache_dtype\":\"auto\",\"attention_backend\":\"FLASHINFER\",\"draft_sample_method\":\"probabilistic\"}" --scheduler-cls "$SCHED_CLS")
   graph='{"cudagraph_mode":"FULL_AND_PIECEWISE","cudagraph_capture_sizes":[8]}'
 fi
+
+# Public tuning knobs use engine-native units. Zero CPU KV disables offload.
+CPU_KV_GIB="${CPU_KV_GIB:-8}"
+[[ "$CPU_KV_GIB" =~ ^(0|[1-9][0-9]{0,5})$ ]] || { echo 'CPU_KV_GIB must be a non-negative integer' >&2; exit 2; }
+kv="${GPU_KV_BYTES:-${kv:-0}}"
+[[ "$kv" =~ ^(0|[1-9][0-9]*)$ ]] || { echo 'GPU_KV_BYTES must be a non-negative integer' >&2; exit 2; }
+[[ "$kv" == 0 ]] || extra+=(--kv-cache-memory-bytes "$kv")
+if (( CPU_KV_GIB > 0 )); then
+  cpu_bytes=$((CPU_KV_GIB * 1073741824))
+  extra+=(--kv-transfer-config "{\"kv_connector\":\"OffloadingConnector\",\"kv_role\":\"kv_both\",\"kv_connector_extra_config\":{\"spec_name\":\"CPUOffloadingSpec\",\"cpu_bytes_to_use\":$cpu_bytes}}")
+fi
+hf_overrides="${HF_OVERRIDES:-}"
+[[ -n "$hf_overrides" ]] || hf_overrides='{"dtype":"float16"}'
+
 docker run --detach --name "${CONTAINER_NAME:-vllm-sm75-$VARIANT-$FORMAT}" \
   --gpus all --shm-size 16g --ulimit nofile=1048576:1048576 \
   --publish "${PORT:-8000}:8000" "${mounts[@]}" \
   --env VLLM_USE_MODELSCOPE=true --env MODELSCOPE_CACHE=/root/.cache/modelscope/hub \
   --env VLLM_GDN_DECODE_KERNEL=triton --env VLLM_USE_FLASHINFER_SAMPLER=0 \
+  --env VLLM_MARLIN_USE_ATOMIC_ADD="${VLLM_MARLIN_USE_ATOMIC_ADD:-0}" \
   --env VLLM_USE_NCCL_SYMM_MEM=0 --env VLLM_ALLREDUCE_USE_SYMM_MEM=0 \
   --env TRITON_CACHE_DIR=/root/.triton/cache --env TORCH_EXTENSIONS_DIR=/root/.cache/torch_extensions \
   --env VLLM_ALLREDUCE_USE_FLASHINFER="${VLLM_ALLREDUCE_USE_FLASHINFER:-0}" \
@@ -119,11 +134,10 @@ docker run --detach --name "${CONTAINER_NAME:-vllm-sm75-$VARIANT-$FORMAT}" \
   "${pstate_env[@]}" "${entrypoint[@]}" "$image" "$MODEL" --served-model-name "$SERVE_NAME" \
   --host 0.0.0.0 --port 8000 --api-key "$VLLM_API_KEY" \
   --tensor-parallel-size 4 --disable-custom-all-reduce \
-  --max-num-seqs "$seq" --max-num-batched-tokens "$batch" \
-  --gpu-memory-utilization "$util" --max-model-len "$length" \
+  --max-num-seqs "${MAX_NUM_SEQS:-$seq}" --max-num-batched-tokens "${MAX_NUM_BATCHED_TOKENS:-$batch}" \
+  --gpu-memory-utilization "${GPU_MEMORY_UTILIZATION:-$util}" --max-model-len "${MAX_MODEL_LEN:-$length}" \
   --attention-config '{"backend":"FLASHINFER"}' --gdn-prefill-backend flashqla_sm75 \
   --kv-cache-dtype fp8_e4m3 --block-size 32 --dtype float16 \
-  --hf-overrides '{"dtype":"float16"}' --generation-config vllm \
+  --hf-overrides "$hf_overrides" --generation-config vllm \
   --enable-prefix-caching --async-scheduling --compilation-config "$graph" \
-  --kv-transfer-config '{"kv_connector":"OffloadingConnector","kv_role":"kv_both","kv_connector_extra_config":{"cpu_bytes_to_use":8589934592}}' \
-  "${extra[@]}"
+  "${extra[@]}" "$@"

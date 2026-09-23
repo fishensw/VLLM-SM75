@@ -57,3 +57,16 @@ test('bounded failed login attempts are rate limited and recover', () => {
   assert.equal(auth.login(auth.key, request()).status, 429);
   now = 60001; assert.equal(auth.login(auth.key, request()).status, 200);
 });
+
+
+test('upgrade preserves a pre-account session file without policyHash',()=>{
+ const root=temp();
+ try {
+  const old=new Auth(root),cookie=old.login(old.key,request()).cookie.split(';')[0];
+  const saved=JSON.parse(fs.readFileSync(old.file,'utf8'));delete saved.policyHash;
+  fs.writeFileSync(old.file,JSON.stringify(saved));
+  const upgraded=new Auth(root);
+  assert.equal(upgraded.key,old.key);
+  assert.equal(upgraded.principal(request({cookie})).id,'local-admin');
+ }finally{fs.rmSync(root,{recursive:true,force:true});}
+});

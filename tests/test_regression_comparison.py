@@ -34,6 +34,21 @@ class ComparisonTests(unittest.TestCase):
         for candidate in ([], rows[:-1], rows + rows[:1]):
             self.assertFalse(module.compare({'base': self.samples(), 'candidate': candidate})['passed'])
 
+    def test_cli_three_repeat_contract(self):
+        import json
+        import subprocess
+        import sys
+        import tempfile
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for label in ('base', 'candidate'):
+                (root / (label + '.jsonl')).write_text(''.join(json.dumps(row) + "\n" for row in self.samples()[:3]))
+            result = subprocess.run([sys.executable, str(Path(module.__file__)),
+                str(root / 'base.jsonl'), str(root / 'candidate.jsonl'),
+                '--repeats', '3', '--output', str(root / 'result.json')], capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertTrue(json.loads((root / 'result.json').read_text())['passed'])
+
 
 if __name__ == '__main__':
     unittest.main()

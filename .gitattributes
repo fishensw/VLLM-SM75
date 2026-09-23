@@ -9,3 +9,12 @@ Dockerfile* text eol=lf
 *.css text eol=lf
 *.html text eol=lf
 *.svg text eol=lf
+
+# Vendored unified diffs have meaningful single-space context lines.
+ultra/source/lmcache/patches/packed4d.patch text eol=lf -whitespace
+ultra/source/lmcache/patches/LICENSE text eol=lf
+
+# Keep publication filters consistent across Windows and Linux.
+.gitattributes text eol=lf
+.gitignore text eol=lf
+.dockerignore text eol=lf

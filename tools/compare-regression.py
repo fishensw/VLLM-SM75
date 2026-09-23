@@ -49,10 +49,13 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('files', nargs='+', type=Path, help='Baseline first, then candidates')
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--repeats', type=int, default=5, help='Required samples per input length in every file')
     args = parser.parse_args()
+    if args.repeats < 1:
+        parser.error('Repeat count must be positive')
     if len(args.files) < 2 or len({p.stem for p in args.files}) != len(args.files):
         parser.error('Supply a baseline and candidates with distinct file names')
-    result = compare({p.stem: [json.loads(line) for line in p.read_text().splitlines() if line.strip()] for p in args.files})
+    result = compare({p.stem: [json.loads(line) for line in p.read_text().splitlines() if line.strip()] for p in args.files}, repeats=args.repeats)
     args.output.write_text(json.dumps(result, indent=2) + '\n', encoding='utf-8')
     print(json.dumps(result, indent=2))
     raise SystemExit(not result['passed'])

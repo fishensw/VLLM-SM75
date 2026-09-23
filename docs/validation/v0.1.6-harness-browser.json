@@ -1,0 +1,762 @@
+{
+  "mode": "audit",
+  "checks": [
+    {
+      "name": "previous synthetic home preserved",
+      "destination": "/dsh/browser-home-2026-09-23T02-03-09-767Z"
+    },
+    {
+      "name": "real manager and Harness started with synthetic profile"
+    },
+    {
+      "name": "native page loaded",
+      "title": "工作台",
+      "fontSize": "24px"
+    },
+    {
+      "name": "legacy 24px theme and token usage preserved"
+    },
+    {
+      "name": "native Models writes provider; legacy provider and theme survive; stale effort cleared"
+    },
+    {
+      "name": "default workspace path and title survive restart",
+      "paths": [
+        "/dsh/workspace/deepseek-harness/Default workspace"
+      ]
+    },
+    {
+      "name": "Harness restart recovers the same page and preserves native model edits",
+      "websocketGenerations": 7
+    },
+    {
+      "name": "Watcher displays the settled model and opaque light/dark panels",
+      "themes": [
+        "light",
+        "dark"
+      ]
+    },
+    {
+      "name": "real UI conversation completes against mock SSE with saved sampling parameters",
+      "requests": 2
+    },
+    {
+      "name": "V4 session contributes to the embedded token usage dashboard",
+      "logs": 1,
+      "totalTokens": 20
+    },
+    {
+      "name": "native resources, RPC and WebSocket pass; expected restart handshake errors recorded"
+    },
+    {
+      "name": "CPU-only hardware limit recorded",
+      "hardwareProbe": 400,
+      "gpuInferenceTested": false
+    }
+  ],
+  "errors": [
+    {
+      "kind": "console",
+      "message": "Failed to load resource: the server responded with a status of 400 (Bad Request)",
+      "location": "http://127.0.0.1:1616/console-api/hardware",
+      "restarting": false
+    },
+    {
+      "kind": "console",
+      "message": "WebSocket connection to 'ws://127.0.0.1:1616/dsh/api/remote.mux' failed: Connection closed before receiving a handshake response",
+      "location": "http://127.0.0.1:1616/dsh/plugins/??@deepseek-ai/dsh-client-ui-open-in-app/client.js,@deepseek-ai/dsh-api-gateway/client.js,@deepseek-ai/dsh-api-job-controller/client.js,@deepseek-ai/dsh-api-terminal-controller/client.js,@deepseek-ai/dsh-api-workspace-files/client.js,@deepseek-ai/dsh-client-ui-settings-account/client.js,@deepseek-ai/dsh-client-hmr/client.js,@deepseek-ai/dsh-cordis-client-runner/client.js,@deepseek-ai/dsh-client-ui-theme/client.js,@deepseek-ai/dsh-client-locale/client.js,@deepseek-ai/dsh-client-ui-layout/client.js,@deepseek-ai/dsh-client-ui-renderer/client.js,@deepseek-ai/dsh-client-ui-session/client.js,@deepseek-ai/dsh-client-resources/client.js,@deepseek-ai/dsh-client-ui-sidebar/client.js,@deepseek-ai/dsh-client-ui-sidebar-right/client.js,@deepseek-ai/dsh-client-ui-sidebar-documentpreview/client.js,@deepseek-ai/dsh-client-ui-sidebar-terminal/client.js,@deepseek-ai/dsh-client-ui-sidebar-files/client.js,@deepseek-ai/dsh-client-ui-settings/client.js,@deepseek-ai/dsh-client-ui-settings-general/client.js,@deepseek-ai/dsh-client-ui-settings-models/client.js,@deepseek-ai/dsh-client-ui-plugin-manager/client.js,@deepseek-ai/dsh-client-ui-settings-plugin-inventory/client.js,@deepseek-ai/dsh-client-ui-conversation/client.js,@deepseek-ai/dsh-client-ui-approval/client.js,@deepseek-ai/dsh-client-ui-chat/client.js,@deepseek-ai/dsh-client-ui-attachment/client.js,@deepseek-ai/dsh-client-ui-tool/client.js,@deepseek-ai/dsh-client-ui-cordis/client.js,@deepseek-ai/dsh-client-ui-workspace/client.js,@deepseek-ai/dsh-client-ui-workflow-run/client.js,@deepseek-ai/dsh-client-ui-input-trigger/client.js,@deepseek-ai/dsh-client-ui-commands/client.js,@deepseek-ai/dsh-client-ui-skill/client.js,@deepseek-ai/dsh-client-ui-subagent/client.js,@deepseek-ai/dsh-client-ui-reference/client.js,@deepseek-ai/dsh-client-ui-jobs/client.js,@deepseek-ai/dsh-client-ui-goal/client.js,@deepseek-ai/dsh-client-ui-message-feedback/client.js,@deepseek-ai/dsh-client-ui-model-selection/client.js,@deepseek-ai/dsh-client-ui-permission-presets/client.js,@deepseek-ai/dsh-client-ui-agent-preset/client.js,@deepseek-ai/dsh-client-ui-settings-plugins/client.js,@deepseek-ai/dsh-client-ui-settings-shell/client.js,@deepseek-ai/dsh-client-ui-settings-agent-loop/client.js,@deepseek-ai/dsh-client-ui-settings-subagent/client.js,@deepseek-ai/dsh-client-ui-settings-web-search/client.js,@deepseek-ai/dsh-client-ui-plan/client.js,@deepseek-ai/dsh-client-ui-user-questions/client.js,@deepseek-ai/dsh-client-ui-trajectory/client.js,sm75-workbench/client.js,sm75-brand/client.js,@deepseek-ai/dsh-client-ui-token-usage/client.js,@deepseek-ai/dsh-session-log-export/client.js,@deepseek-ai/dsh-client-file-upload/client.js,@deepseek-ai/dsh-client-ui-deliverables/client.js,@deepseek-ai/dsh-api-remotes/client.js,@deepseek-ai/dsh-typert-registry/client.js&rev=4e16e4b28341",
+      "restarting": true
+    },
+    {
+      "kind": "console",
+      "message": "WebSocket connection to 'ws://127.0.0.1:1616/dsh/api/remote.mux' failed: Connection closed before receiving a handshake response",
+      "location": "http://127.0.0.1:1616/dsh/plugins/??@deepseek-ai/dsh-client-ui-open-in-app/client.js,@deepseek-ai/dsh-api-gateway/client.js,@deepseek-ai/dsh-api-job-controller/client.js,@deepseek-ai/dsh-api-terminal-controller/client.js,@deepseek-ai/dsh-api-workspace-files/client.js,@deepseek-ai/dsh-client-ui-settings-account/client.js,@deepseek-ai/dsh-client-hmr/client.js,@deepseek-ai/dsh-cordis-client-runner/client.js,@deepseek-ai/dsh-client-ui-theme/client.js,@deepseek-ai/dsh-client-locale/client.js,@deepseek-ai/dsh-client-ui-layout/client.js,@deepseek-ai/dsh-client-ui-renderer/client.js,@deepseek-ai/dsh-client-ui-session/client.js,@deepseek-ai/dsh-client-resources/client.js,@deepseek-ai/dsh-client-ui-sidebar/client.js,@deepseek-ai/dsh-client-ui-sidebar-right/client.js,@deepseek-ai/dsh-client-ui-sidebar-documentpreview/client.js,@deepseek-ai/dsh-client-ui-sidebar-terminal/client.js,@deepseek-ai/dsh-client-ui-sidebar-files/client.js,@deepseek-ai/dsh-client-ui-settings/client.js,@deepseek-ai/dsh-client-ui-settings-general/client.js,@deepseek-ai/dsh-client-ui-settings-models/client.js,@deepseek-ai/dsh-client-ui-plugin-manager/client.js,@deepseek-ai/dsh-client-ui-settings-plugin-inventory/client.js,@deepseek-ai/dsh-client-ui-conversation/client.js,@deepseek-ai/dsh-client-ui-approval/client.js,@deepseek-ai/dsh-client-ui-chat/client.js,@deepseek-ai/dsh-client-ui-attachment/client.js,@deepseek-ai/dsh-client-ui-tool/client.js,@deepseek-ai/dsh-client-ui-cordis/client.js,@deepseek-ai/dsh-client-ui-workspace/client.js,@deepseek-ai/dsh-client-ui-workflow-run/client.js,@deepseek-ai/dsh-client-ui-input-trigger/client.js,@deepseek-ai/dsh-client-ui-commands/client.js,@deepseek-ai/dsh-client-ui-skill/client.js,@deepseek-ai/dsh-client-ui-subagent/client.js,@deepseek-ai/dsh-client-ui-reference/client.js,@deepseek-ai/dsh-client-ui-jobs/client.js,@deepseek-ai/dsh-client-ui-goal/client.js,@deepseek-ai/dsh-client-ui-message-feedback/client.js,@deepseek-ai/dsh-client-ui-model-selection/client.js,@deepseek-ai/dsh-client-ui-permission-presets/client.js,@deepseek-ai/dsh-client-ui-agent-preset/client.js,@deepseek-ai/dsh-client-ui-settings-plugins/client.js,@deepseek-ai/dsh-client-ui-settings-shell/client.js,@deepseek-ai/dsh-client-ui-settings-agent-loop/client.js,@deepseek-ai/dsh-client-ui-settings-subagent/client.js,@deepseek-ai/dsh-client-ui-settings-web-search/client.js,@deepseek-ai/dsh-client-ui-plan/client.js,@deepseek-ai/dsh-client-ui-user-questions/client.js,@deepseek-ai/dsh-client-ui-trajectory/client.js,sm75-workbench/client.js,sm75-brand/client.js,@deepseek-ai/dsh-client-ui-token-usage/client.js,@deepseek-ai/dsh-session-log-export/client.js,@deepseek-ai/dsh-client-file-upload/client.js,@deepseek-ai/dsh-client-ui-deliverables/client.js,@deepseek-ai/dsh-api-remotes/client.js,@deepseek-ai/dsh-typert-registry/client.js&rev=4e16e4b28341",
+      "restarting": true
+    },
+    {
+      "kind": "console",
+      "message": "WebSocket connection to 'ws://127.0.0.1:1616/dsh/api/remote.mux' failed: Connection closed before receiving a handshake response",
+      "location": "http://127.0.0.1:1616/dsh/plugins/??@deepseek-ai/dsh-client-ui-open-in-app/client.js,@deepseek-ai/dsh-api-gateway/client.js,@deepseek-ai/dsh-api-job-controller/client.js,@deepseek-ai/dsh-api-terminal-controller/client.js,@deepseek-ai/dsh-api-workspace-files/client.js,@deepseek-ai/dsh-client-ui-settings-account/client.js,@deepseek-ai/dsh-client-hmr/client.js,@deepseek-ai/dsh-cordis-client-runner/client.js,@deepseek-ai/dsh-client-ui-theme/client.js,@deepseek-ai/dsh-client-locale/client.js,@deepseek-ai/dsh-client-ui-layout/client.js,@deepseek-ai/dsh-client-ui-renderer/client.js,@deepseek-ai/dsh-client-ui-session/client.js,@deepseek-ai/dsh-client-resources/client.js,@deepseek-ai/dsh-client-ui-sidebar/client.js,@deepseek-ai/dsh-client-ui-sidebar-right/client.js,@deepseek-ai/dsh-client-ui-sidebar-documentpreview/client.js,@deepseek-ai/dsh-client-ui-sidebar-terminal/client.js,@deepseek-ai/dsh-client-ui-sidebar-files/client.js,@deepseek-ai/dsh-client-ui-settings/client.js,@deepseek-ai/dsh-client-ui-settings-general/client.js,@deepseek-ai/dsh-client-ui-settings-models/client.js,@deepseek-ai/dsh-client-ui-plugin-manager/client.js,@deepseek-ai/dsh-client-ui-settings-plugin-inventory/client.js,@deepseek-ai/dsh-client-ui-conversation/client.js,@deepseek-ai/dsh-client-ui-approval/client.js,@deepseek-ai/dsh-client-ui-chat/client.js,@deepseek-ai/dsh-client-ui-attachment/client.js,@deepseek-ai/dsh-client-ui-tool/client.js,@deepseek-ai/dsh-client-ui-cordis/client.js,@deepseek-ai/dsh-client-ui-workspace/client.js,@deepseek-ai/dsh-client-ui-workflow-run/client.js,@deepseek-ai/dsh-client-ui-input-trigger/client.js,@deepseek-ai/dsh-client-ui-commands/client.js,@deepseek-ai/dsh-client-ui-skill/client.js,@deepseek-ai/dsh-client-ui-subagent/client.js,@deepseek-ai/dsh-client-ui-reference/client.js,@deepseek-ai/dsh-client-ui-jobs/client.js,@deepseek-ai/dsh-client-ui-goal/client.js,@deepseek-ai/dsh-client-ui-message-feedback/client.js,@deepseek-ai/dsh-client-ui-model-selection/client.js,@deepseek-ai/dsh-client-ui-permission-presets/client.js,@deepseek-ai/dsh-client-ui-agent-preset/client.js,@deepseek-ai/dsh-client-ui-settings-plugins/client.js,@deepseek-ai/dsh-client-ui-settings-shell/client.js,@deepseek-ai/dsh-client-ui-settings-agent-loop/client.js,@deepseek-ai/dsh-client-ui-settings-subagent/client.js,@deepseek-ai/dsh-client-ui-settings-web-search/client.js,@deepseek-ai/dsh-client-ui-plan/client.js,@deepseek-ai/dsh-client-ui-user-questions/client.js,@deepseek-ai/dsh-client-ui-trajectory/client.js,sm75-workbench/client.js,sm75-brand/client.js,@deepseek-ai/dsh-client-ui-token-usage/client.js,@deepseek-ai/dsh-session-log-export/client.js,@deepseek-ai/dsh-client-file-upload/client.js,@deepseek-ai/dsh-client-ui-deliverables/client.js,@deepseek-ai/dsh-api-remotes/client.js,@deepseek-ai/dsh-typert-registry/client.js&rev=4e16e4b28341",
+      "restarting": true
+    },
+    {
+      "kind": "console",
+      "message": "WebSocket connection to 'ws://127.0.0.1:1616/dsh/api/remote.mux' failed: Connection closed before receiving a handshake response",
+      "location": "http://127.0.0.1:1616/dsh/plugins/??@deepseek-ai/dsh-client-ui-open-in-app/client.js,@deepseek-ai/dsh-api-gateway/client.js,@deepseek-ai/dsh-api-job-controller/client.js,@deepseek-ai/dsh-api-terminal-controller/client.js,@deepseek-ai/dsh-api-workspace-files/client.js,@deepseek-ai/dsh-client-ui-settings-account/client.js,@deepseek-ai/dsh-client-hmr/client.js,@deepseek-ai/dsh-cordis-client-runner/client.js,@deepseek-ai/dsh-client-ui-theme/client.js,@deepseek-ai/dsh-client-locale/client.js,@deepseek-ai/dsh-client-ui-layout/client.js,@deepseek-ai/dsh-client-ui-renderer/client.js,@deepseek-ai/dsh-client-ui-session/client.js,@deepseek-ai/dsh-client-resources/client.js,@deepseek-ai/dsh-client-ui-sidebar/client.js,@deepseek-ai/dsh-client-ui-sidebar-right/client.js,@deepseek-ai/dsh-client-ui-sidebar-documentpreview/client.js,@deepseek-ai/dsh-client-ui-sidebar-terminal/client.js,@deepseek-ai/dsh-client-ui-sidebar-files/client.js,@deepseek-ai/dsh-client-ui-settings/client.js,@deepseek-ai/dsh-client-ui-settings-general/client.js,@deepseek-ai/dsh-client-ui-settings-models/client.js,@deepseek-ai/dsh-client-ui-plugin-manager/client.js,@deepseek-ai/dsh-client-ui-settings-plugin-inventory/client.js,@deepseek-ai/dsh-client-ui-conversation/client.js,@deepseek-ai/dsh-client-ui-approval/client.js,@deepseek-ai/dsh-client-ui-chat/client.js,@deepseek-ai/dsh-client-ui-attachment/client.js,@deepseek-ai/dsh-client-ui-tool/client.js,@deepseek-ai/dsh-client-ui-cordis/client.js,@deepseek-ai/dsh-client-ui-workspace/client.js,@deepseek-ai/dsh-client-ui-workflow-run/client.js,@deepseek-ai/dsh-client-ui-input-trigger/client.js,@deepseek-ai/dsh-client-ui-commands/client.js,@deepseek-ai/dsh-client-ui-skill/client.js,@deepseek-ai/dsh-client-ui-subagent/client.js,@deepseek-ai/dsh-client-ui-reference/client.js,@deepseek-ai/dsh-client-ui-jobs/client.js,@deepseek-ai/dsh-client-ui-goal/client.js,@deepseek-ai/dsh-client-ui-message-feedback/client.js,@deepseek-ai/dsh-client-ui-model-selection/client.js,@deepseek-ai/dsh-client-ui-permission-presets/client.js,@deepseek-ai/dsh-client-ui-agent-preset/client.js,@deepseek-ai/dsh-client-ui-settings-plugins/client.js,@deepseek-ai/dsh-client-ui-settings-shell/client.js,@deepseek-ai/dsh-client-ui-settings-agent-loop/client.js,@deepseek-ai/dsh-client-ui-settings-subagent/client.js,@deepseek-ai/dsh-client-ui-settings-web-search/client.js,@deepseek-ai/dsh-client-ui-plan/client.js,@deepseek-ai/dsh-client-ui-user-questions/client.js,@deepseek-ai/dsh-client-ui-trajectory/client.js,sm75-workbench/client.js,sm75-brand/client.js,@deepseek-ai/dsh-client-ui-token-usage/client.js,@deepseek-ai/dsh-session-log-export/client.js,@deepseek-ai/dsh-client-file-upload/client.js,@deepseek-ai/dsh-client-ui-deliverables/client.js,@deepseek-ai/dsh-api-remotes/client.js,@deepseek-ai/dsh-typert-registry/client.js&rev=4e16e4b28341",
+      "restarting": true
+    },
+    {
+      "kind": "console",
+      "message": "WebSocket connection to 'ws://127.0.0.1:1616/dsh/api/remote.mux' failed: Connection closed before receiving a handshake response",
+      "location": "http://127.0.0.1:1616/dsh/plugins/??@deepseek-ai/dsh-client-ui-open-in-app/client.js,@deepseek-ai/dsh-api-gateway/client.js,@deepseek-ai/dsh-api-job-controller/client.js,@deepseek-ai/dsh-api-terminal-controller/client.js,@deepseek-ai/dsh-api-workspace-files/client.js,@deepseek-ai/dsh-client-ui-settings-account/client.js,@deepseek-ai/dsh-client-hmr/client.js,@deepseek-ai/dsh-cordis-client-runner/client.js,@deepseek-ai/dsh-client-ui-theme/client.js,@deepseek-ai/dsh-client-locale/client.js,@deepseek-ai/dsh-client-ui-layout/client.js,@deepseek-ai/dsh-client-ui-renderer/client.js,@deepseek-ai/dsh-client-ui-session/client.js,@deepseek-ai/dsh-client-resources/client.js,@deepseek-ai/dsh-client-ui-sidebar/client.js,@deepseek-ai/dsh-client-ui-sidebar-right/client.js,@deepseek-ai/dsh-client-ui-sidebar-documentpreview/client.js,@deepseek-ai/dsh-client-ui-sidebar-terminal/client.js,@deepseek-ai/dsh-client-ui-sidebar-files/client.js,@deepseek-ai/dsh-client-ui-settings/client.js,@deepseek-ai/dsh-client-ui-settings-general/client.js,@deepseek-ai/dsh-client-ui-settings-models/client.js,@deepseek-ai/dsh-client-ui-plugin-manager/client.js,@deepseek-ai/dsh-client-ui-settings-plugin-inventory/client.js,@deepseek-ai/dsh-client-ui-conversation/client.js,@deepseek-ai/dsh-client-ui-approval/client.js,@deepseek-ai/dsh-client-ui-chat/client.js,@deepseek-ai/dsh-client-ui-attachment/client.js,@deepseek-ai/dsh-client-ui-tool/client.js,@deepseek-ai/dsh-client-ui-cordis/client.js,@deepseek-ai/dsh-client-ui-workspace/client.js,@deepseek-ai/dsh-client-ui-workflow-run/client.js,@deepseek-ai/dsh-client-ui-input-trigger/client.js,@deepseek-ai/dsh-client-ui-commands/client.js,@deepseek-ai/dsh-client-ui-skill/client.js,@deepseek-ai/dsh-client-ui-subagent/client.js,@deepseek-ai/dsh-client-ui-reference/client.js,@deepseek-ai/dsh-client-ui-jobs/client.js,@deepseek-ai/dsh-client-ui-goal/client.js,@deepseek-ai/dsh-client-ui-message-feedback/client.js,@deepseek-ai/dsh-client-ui-model-selection/client.js,@deepseek-ai/dsh-client-ui-permission-presets/client.js,@deepseek-ai/dsh-client-ui-agent-preset/client.js,@deepseek-ai/dsh-client-ui-settings-plugins/client.js,@deepseek-ai/dsh-client-ui-settings-shell/client.js,@deepseek-ai/dsh-client-ui-settings-agent-loop/client.js,@deepseek-ai/dsh-client-ui-settings-subagent/client.js,@deepseek-ai/dsh-client-ui-settings-web-search/client.js,@deepseek-ai/dsh-client-ui-plan/client.js,@deepseek-ai/dsh-client-ui-user-questions/client.js,@deepseek-ai/dsh-client-ui-trajectory/client.js,sm75-workbench/client.js,sm75-brand/client.js,@deepseek-ai/dsh-client-ui-token-usage/client.js,@deepseek-ai/dsh-session-log-export/client.js,@deepseek-ai/dsh-client-file-upload/client.js,@deepseek-ai/dsh-client-ui-deliverables/client.js,@deepseek-ai/dsh-api-remotes/client.js,@deepseek-ai/dsh-typert-registry/client.js&rev=4e16e4b28341",
+      "restarting": true
+    }
+  ],
+  "requests": [
+    {
+      "path": "/dsh/",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/dsh/plugins/",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/dsh/plugins/",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/dsh/plugins/",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/dsh/assets/vendor-BNsW4eBh.css",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/dsh/assets/index-_cEEwzoK.css",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/dsh/assets/index-bRoh_x8K.js",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/dsh/assets/vendor-CCJJTK99.js",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/app.js",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/dsh/api/settings/describe",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/dsh/open-in-app/apps",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/brand/favicon.svg",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/dsh/api/dynamicCordisRunner/syncInspectManifest",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/dsh/api/credentials/describe",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/dsh/api/dynamicCordisRunner/inventory",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/dsh/api/session/modelCatalog",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/console-api/session/stream",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/console-api/session",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/dsh/plugins/events",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/dsh/api/agentPresets/list",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/live-summary.js",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/dsh/api/credentials/describe",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/dsh/api/permissionPresets/catalog",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/dsh/api/dynamicCordisRunner/inventory",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/dsh/api/agentPresets/list",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/dsh/api/session/list",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/dsh/api/agentPresets/list",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/dsh/api/session/modelCatalog",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/dsh/api/settings/describe",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/dsh/api/dynamicCordisRunner/syncInspectManifest",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/dsh/api/credentials/describe",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/dsh/api/workspace/initializeDefault",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/dsh/api/session/create",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/dsh/api/agentPresets/list",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/dsh/api/commands/list",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/dsh/api/skills/list",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/dsh/api/session/modelCatalog",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/dsh/api/settings/describe",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/dsh/api/settings/mutate",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/dsh/api/credentials/describe",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/dsh/api/llm/listProviders",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/dsh/api/llm/listConfigurableProviders",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/dsh/api/credentials/describe",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/console-ui",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/style.css",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/console-api/session",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/console-api/profiles",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/console-api/settings",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/console-api/models",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/console-api/security",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/console-api/live-summary",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/console-api/sampling",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/console-api/templates",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/console-api/chats/audit",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/console-api/hardware",
+      "status": 400,
+      "restarting": false
+    },
+    {
+      "path": "/dsh/api/llm/discoverModels",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/dsh/api/credentials/describe",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/console-api/system",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/console-api/profiles/audit/status",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/console-api/profiles/audit/preview",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/console-api/jobs",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/dsh/api/settings/mutate",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/dsh/api/llm/listProviders",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/dsh/api/llm/listConfigurableProviders",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/dsh/api/llm/listProviders",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/dsh/api/session/modelCatalog",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/dsh/api/llm/listConfigurableProviders",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/dsh/api/session/modelCatalog",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/dsh/api/llm/listProviders",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/dsh/api/llm/listConfigurableProviders",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/dsh/api/session/modelCatalog",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/dsh/api/settings/describe",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/dsh/api/llm/listProviders",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/dsh/api/llm/listConfigurableProviders",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/dsh/api/credentials/describe",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/dsh/api/credentials/describe",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/dsh/api/credentials/describe",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/dsh/api/credentials/describe",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/dsh/api/credentials/describe",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/console-api/session",
+      "status": 200,
+      "restarting": true
+    },
+    {
+      "path": "/console-api/session",
+      "status": 200,
+      "restarting": true
+    },
+    {
+      "path": "/console-api/session",
+      "status": 200,
+      "restarting": true
+    },
+    {
+      "path": "/console-api/session",
+      "status": 200,
+      "restarting": true
+    },
+    {
+      "path": "/dsh/api/permissionPresets/catalog",
+      "status": 200,
+      "restarting": true
+    },
+    {
+      "path": "/dsh/api/llm/listProviders",
+      "status": 200,
+      "restarting": true
+    },
+    {
+      "path": "/dsh/api/llm/listConfigurableProviders",
+      "status": 200,
+      "restarting": true
+    },
+    {
+      "path": "/dsh/api/dynamicCordisRunner/inventory",
+      "status": 200,
+      "restarting": true
+    },
+    {
+      "path": "/dsh/api/agentPresets/list",
+      "status": 200,
+      "restarting": true
+    },
+    {
+      "path": "/dsh/api/agentPresets/list",
+      "status": 200,
+      "restarting": true
+    },
+    {
+      "path": "/dsh/api/agentPresets/list",
+      "status": 200,
+      "restarting": true
+    },
+    {
+      "path": "/dsh/api/session/modelCatalog",
+      "status": 200,
+      "restarting": true
+    },
+    {
+      "path": "/dsh/api/session/list",
+      "status": 200,
+      "restarting": true
+    },
+    {
+      "path": "/dsh/api/settings/describe",
+      "status": 200,
+      "restarting": true
+    },
+    {
+      "path": "/dsh/api/credentials/describe",
+      "status": 200,
+      "restarting": true
+    },
+    {
+      "path": "/dsh/api/dynamicCordisRunner/syncInspectManifest",
+      "status": 200,
+      "restarting": true
+    },
+    {
+      "path": "/dsh/api/credentials/describe",
+      "status": 200,
+      "restarting": true
+    },
+    {
+      "path": "/dsh/api/commands/list",
+      "status": 200,
+      "restarting": true
+    },
+    {
+      "path": "/dsh/api/session/create",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/dsh/api/agentPresets/list",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/dsh/api/session/prompt",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/console-api/session",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/dsh/api/settings/mutate",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/dsh/api/llm/listProviders",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/dsh/api/llm/listConfigurableProviders",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/dsh/api/session/modelCatalog",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/token-usage",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/token-usage.json",
+      "status": 200,
+      "restarting": false
+    },
+    {
+      "path": "/dsh/api/settings/describe",
+      "status": 200,
+      "restarting": false
+    }
+  ],
+  "transportFailures": [],
+  "ws": [
+    {
+      "path": "/dsh/api/remote.mux",
+      "receivedFrames": 16,
+      "closed": true,
+      "errors": []
+    },
+    {
+      "path": "/dsh/api/remote.mux",
+      "receivedFrames": 0,
+      "closed": true,
+      "errors": [
+        "Connection closed before receiving a handshake response"
+      ]
+    },
+    {
+      "path": "/dsh/api/remote.mux",
+      "receivedFrames": 0,
+      "closed": true,
+      "errors": [
+        "Connection closed before receiving a handshake response"
+      ]
+    },
+    {
+      "path": "/dsh/api/remote.mux",
+      "receivedFrames": 0,
+      "closed": true,
+      "errors": [
+        "Connection closed before receiving a handshake response"
+      ]
+    },
+    {
+      "path": "/dsh/api/remote.mux",
+      "receivedFrames": 0,
+      "closed": true,
+      "errors": [
+        "Connection closed before receiving a handshake response"
+      ]
+    },
+    {
+      "path": "/dsh/api/remote.mux",
+      "receivedFrames": 0,
+      "closed": true,
+      "errors": [
+        "Connection closed before receiving a handshake response"
+      ]
+    },
+    {
+      "path": "/dsh/api/remote.mux",
+      "receivedFrames": 67,
+      "closed": false,
+      "errors": []
+    }
+  ],
+  "mockCalls": [
+    {
+      "model": "audit-model",
+      "stream": true,
+      "messages": 3,
+      "temperature": 0.37,
+      "top_k": 17,
+      "max_tokens": 128,
+      "tools": 26,
+      "auditNonce": true
+    },
+    {
+      "model": "audit-model",
+      "stream": true,
+      "messages": 2,
+      "temperature": 0.37,
+      "top_k": 17,
+      "max_tokens": 128,
+      "tools": 0,
+      "auditNonce": true
+    }
+  ],
+  "watcherVisuals": [
+    {
+      "theme": "light",
+      "model": "audit-model",
+      "surfaces": [
+        {
+          "surface": "QCz6mq_menu",
+          "color": "rgb(233, 236, 242)",
+          "alpha": 1,
+          "opacity": 1,
+          "overlay": "#e9ecf2"
+        },
+        {
+          "surface": "QCz6mq_workPicture",
+          "color": "rgb(233, 236, 242)",
+          "alpha": 1,
+          "opacity": 1,
+          "overlay": "#e9ecf2"
+        }
+      ]
+    },
+    {
+      "theme": "dark",
+      "model": "audit-model",
+      "surfaces": [
+        {
+          "surface": "QCz6mq_menu",
+          "color": "rgb(97, 102, 107)",
+          "alpha": 1,
+          "opacity": 1,
+          "overlay": "#61666b"
+        },
+        {
+          "surface": "QCz6mq_workPicture",
+          "color": "rgb(97, 102, 107)",
+          "alpha": 1,
+          "opacity": 1,
+          "overlay": "#61666b"
+        }
+      ]
+    }
+  ],
+  "hardwareFailure": {
+    "path": "/console-api/hardware",
+    "status": 400,
+    "reason": "Command failed: python3 /opt/sm75-workbench/console/hardware.py\nTraceback (most recent call last):\n  File \"/opt/sm75-workbench/console/hardware.py\", line 6, in <module>\n    import pynvml as n\nModuleNotFoundError: No module named 'pynvml'\n"
+  },
+  "limitation": "Synthetic CPU-only browser and mock API audit; no model or GPU inference. The CPU-only container lacks the production CUDA/NVML environment; the exact hardware endpoint failure is recorded and is not a passing hardware check."
+}

@@ -1,119 +1,117 @@
-# vLLM-SM75
+# vLLM-SM75 v0.1.6
 
-![VLLM-SM75](ultra/source/console/branding/icon-64.png)
+[English](README.en.md) · [发布说明](docs/releases/v0.1.6.md) · [参数模板](docs/configuration-v0.1.6.md) · [完整构建](docker/BUILD.md)
 
-[简体中文](README.md) | [English](README.en.md)
+## 1. 简要说明
 
-面向 Turing SM75 的 vLLM 0.29.0 适配，保留 FlashQLA GDN prefill、Triton decode、FlashInfer 0.6.18、Marlin FP8、Firefly AWQ prefill、FP8 all-reduce、MTP/DFlash2、CPU KV offload 和持久编译缓存。
+面向 NVIDIA Turing / SM75（Tesla T4、T10 等）的 vLLM 0.30.0 适配，保留 GDN、FP8/AWQ、FP8 KV、MTP/DFlash2、Firefly、CPU KV、自动休眠和监控等功能。标准版提供推理 API；Ultra 在相同推理核心上提供 Web 管理、快速会话和工作台。
 
-当前源码版本为 **v0.1.5**，源码与更新说明见 [GitHub Release](https://github.com/fishensw/VLLM-SM75/releases/tag/v0.1.5)。Docker 镜像需按下文自行构建，尚未提供公开镜像。标准版提供推理 API 和 `/monitor`；ultra 在相同推理基础上增加 Web 控制台、工作台、随机 token 登录、模型/配置管理及实时监控。
+## 2. 更新说明
 
-QQ 交流群：**878924874**
+本版主要更新如下；推理及缓存相关功能由标准版和 Ultra 共用。
 
-## v0.1.5 更新说明
+- **引擎适配**：适配 vLLM 0.30.0，保留 SM75、GDN、FP8 KV、Firefly、自动休眠和监控等原有功能。
+- **DFlash2 修复**：修复量化 context KV、草稿权重映射和 CUTLASS 能力判断；SM75 避开 Humming 提前溢出的路径，回退到 Marlin。
+- **编译缓存隔离**：更新内部编译标识，避免复用不匹配的内核和权重布局缓存。
+- **长上下文配置**：新增 YaRN 1M、每卡 GPU KV 和整组 CPU KV 的独立设置，保留模型原生位置编码字段。
+- **LMCache 分层缓存**：可选 CPU L1、磁盘 L2 与重启复用，默认不安装本项目固定扩展、不启用。
+- **Ultra 工作台**：升级到 Harness 0.1.7-alpha.2，固定 Node 22.23.2 和 pnpm 11.7.0。
+- **Ultra 面板**：新增上下文与缓存配置区，支持选择默认 CPU KV 或 LMCache。
 
-本次新增运行中投机解码开关，默认采用常驻 P-State 省电，并推出 ultra 版本。主要更新如下；前三项标准版与 ultra 均包含。
+详细修复来源、PR 状态和验收边界见 [版本说明](docs/releases/v0.1.6.md)。[issue #13](https://github.com/fishensw/VLLM-SM75/issues/13) 的原始 checkpoint 尚未完全确认；不将局部算子修复或短请求通过表述为所有 DFlash2 问题已解决。
 
-- **运行中切换投机解码**：通过 `/monitor` 查看状态、开关草稿计算，无需重启；需预先配置草稿及 SM75Scheduler，关闭不卸载草稿或释放其显存。
-- **P-State 常驻省电**：新增 `POWER_MODE=pstate`，空闲进入 P8，有请求或负载时恢复驱动自动性能状态，模型保持加载；需匹配的 NVAPI 驱动库。
-- **监控缓存修复**：启用监控看板不再使推理编译缓存失效。
-- **新增 ultra 版本**：在标准版推理服务上增加 Web 管理、快速会话和工作台。
+## 3. 标准版与 Ultra 功能对比
 
-[版本更新与选择](docs/releases/v0.1.5.zh-CN.md) · [版本验证记录](docs/validation/v0.1.5.md)
+| 功能 | 标准版 | Ultra |
+| --- | --- | --- |
+| OpenAI 兼容 API、SM75 推理核心 | 有 | 相同核心 |
+| 普通推理 / MTP / DFlash2 | 启动参数 | 面板配置及启动参数 |
+| 引擎监控、投机开关 | `:8000/monitor`，需按引擎鉴权 | 工作台集成，确认实际生效状态 |
+| P-State 常驻省电 / 自动休眠 | 环境变量 | 每个运行配置的电源设置 |
+| 模型、启动参数、编译缓存管理 | 命令行 | Web 管理、模板、导入导出 |
+| YaRN、GPU KV、CPU KV | 显式参数 | 可视化配置并校验 |
+| LMCache CPU＋磁盘 | 可选扩展层；同容器管理缓存服务 | 可选安装；面板管理进程与缓存目录 |
+| 对话、图片附件、工具工作区 | 使用外部客户端 | 快速对话＋Harness 工作台 |
+| 管理员登录、网段策略、历史用量 | 由外部管理系统提供 | 内置 |
+| 默认端口 | 推理 8000 | 管理 1615；推理 8000 |
 
-### ultra 新增功能
+选标准版适合已有前端和运维流程；Ultra 适合在一个容器中管理模型与工作台。相同参数下不应把面板本身描述为推理加速。两版不要同时争用同一组 GPU。
 
-ultra 包含标准版推理服务，并增加以下功能：
+## 4. 性能参考
 
-- 新增 Web 管理、快速会话和 DSH 工作台的统一使用入口。
-- 首次随机 token、持久 Web 会话，修复导航及刷新过程的登录界面闪跳。
-- 快速会话/工作台共用即时显示的页头：运行与 P-State、GPU 温度/功耗/核心/显存、P/D、KV、命中；性能监控页避免重复。
-- 完善配置草稿、进程清理和 DSH 降权；账户登录、客户端网段白名单仍为后续功能。
+本轮完整镜像实测：4×T10 16 GiB、PCIe 3.0 ×8、TP4、同一 FP8 目标和 DFlash2 draft7、CPU KV 8 GiB、每卡 GPU KV 约 3.06 GiB。固定输入、三位置检索＋长篇续写、输出 512 token，各项预热后三次中位数。全部 27 个性能样本完成检索和输出，零缓存命中、零抢占。
 
-[ultra 发布说明](docs/releases/v0.1.5-ultra.zh-CN.md) · [登录、升级与回退](ultra/README.md)
+| 输入 | v0.1.5 Ultra Prefill / Decode | v0.1.6 标准版 Prefill / Decode | v0.1.6 Ultra Prefill / Decode |
+| --- | ---: | ---: | ---: |
+| 8192 | 1271.71 / 62.74 | 1282.27 / 65.78 | 1281.34 / 60.49 |
+| 32768 | 1203.77 / 58.84 | 1209.02 / 64.46 | 1207.62 / 63.47 |
+| 131072 | 976.08 / 59.85 | 977.80 / 53.01 | 978.08 / 58.73 |
 
-## 版本选择
+单位为 tok/s。Prefill 是输入/TTFT；decode 扣除首批流式 token，详见 [完整条件、接受率及证据](docs/validation/v0.1.6-full-images.md)。标准版 128K decode 比旧版低 11.43%；Ultra 各长度与旧版差值均未越过 5%吞吐容差。**跨版本以及标准版/Ultra 之间的续写 token 哈希不同，严格等价验收未通过**，不能承诺无损替换或把差值归因于面板本身。
 
-**只需要推理 API，或已有聊天客户端/管理平台，选标准版；希望在浏览器中管理模型、直接聊天和使用工作台，选 ultra。**
+标准版和 Ultra 均两次通过 261632 输入＋512 输出的 256K 持续生成，零抢占，四次输出 token 一致；重复请求没有 CPU KV 回读，仍重新 prefill。旧[FP8](docs/validation/v0.1.4.md)/[AWQ](docs/validation/v0.1.4-awq.md)表采用不同工作负载和计时口径，不与本表混用。
 
-| 项目 | 标准版 v0.1.5 | v0.1.5-ultra |
-|---|---|---|
-| 定位 | 推理服务 | 推理服务 + 一体化 Web 管理与工作台 |
-| SM75 推理、FP8/AWQ、MTP/DFlash2、CPU KV | 支持 | 相同推理基座 |
-| 运行中投机开关、P-State / 可选 sleep | 支持 | 支持 |
-| 配置方式 | 启动脚本、环境变量和命令行参数 | Web 模型库与运行配置 |
-| 监控 | 引擎 `/monitor` | 引擎监控 + 管理页实时状态 |
-| Web token 登录、会话恢复 | 不包含 | 包含 |
-| 快速会话、DSH 工作台 | 不包含 | 包含 |
-| 默认端口 | 推理 API / monitor：8000 | 管理 / 聊天 / 工作台：1615；推理 API：8000 |
-| 本地构建镜像 | `vllm-sm75:v0.1.5` | `vllm-sm75:v0.1.5-ultra` |
+**上下文口径：** `max-model-len` 包含输入＋输出。YaRN1M 是位置编码及配置能力；CPU KV / LMCache 复用前缀，不增加活动请求可用的 GPU 注意力容量。实际完成生成且通过内容检查的长度才记为实测通过。
 
-ultra 增加管理和交互功能，不代表推理内核更快。两版按需要选择一个部署即可；标准版不需要安装 ultra 才能提供推理 API。
+## 5. 快速构建与启动
 
-## 性能参考
+### 依赖与构建流程
 
-以下为 **v0.1.4 历史实测**，供参考，不是 v0.1.5/ultra 新实测。PCIe 3.0 ×8，4× Tesla T10 16 GiB、TP4、DFlash2 draft7，单轮 512 输出、无前缀命中。
+- Linux x86_64、Bash、Git、Docker / BuildKit；构建机需访问 Docker Hub、PyPI、PyTorch wheel 索引、FlashInfer 和 npm。宿主不需要安装 PyTorch/CUDA 编译工具；隔离流程的源码打包另需 Python 3（仅标准库）。
+- 运行机需兼容 Turing 的 NVIDIA 驱动与 NVIDIA Container Toolkit，先确认容器能访问 GPU。本轮宿主驱动为 610.43.02，这不是最低版本声明。
+- 镜像内部固定 vLLM 0.30.0、Torch 2.13.0、CUDA 12.9、Transformers 5.15.1、FlashInfer 0.6.18；移除不适用于 SM75 的 FlashInfer JIT cache。完整清单见 [版本清单](docs/releases/v0.1.6-release-manifest.json)。
+- 标准版：官方固定摘要基座 → 编译 SM75 FlashQLA → 安装适配 → 构建检查。Ultra：相同标准版 → 锁定 Harness/Node 依赖 → 控制台与插件。
+- 全量构建需要保存数十 GiB 的基础层、缓存和产物，建议预留 **200 GiB** 空间；本轮隔离 worker 使用 **8 GiB RAM、2 CPU、MAX_JOBS=1**。这不是模型推理的内存预算。
 
-补充参考：据群友实测反馈，PCIe 3.0 ×16 下 Prefill 极限约 **1800 tok/s**。
-
-| 配置 | 输入 | Prefill tok/s | Decode tok/s | TTFT 秒 |
-|---|---:|---:|---:|---:|
-| FP8 DFlash2 | 32K | 1205.85 | 179.12 | 27.17 |
-| FP8 DFlash2 | 128K | 978.19 | 166.39 | 133.99 |
-| AWQ DFlash2 | 32K | 1433.67 | 215.57 | 22.86 |
-| AWQ DFlash2 | 128K | 1124.88 | 198.40 | 116.52 |
-
-重复文本的高接受率不代表日常聊天速度；FP8/AWQ 参数不同。详见 [历史 FP8](docs/validation/v0.1.4.md)、[历史 AWQ](docs/validation/v0.1.4-awq.md)、[本版验证记录](docs/validation/v0.1.5.md)。
-
-## 快速复现
-
-唯一版本源是 `docker/VERSION`，公共入口只有 `docker/build.sh` 和 `docker/run.sh`。Linux x86_64、Docker、Bash；运行另需 NVIDIA 驱动及 Container Toolkit。
+本地正式 Ultra 镜像标签为 `vllm-sm75:v0.1.6-ultra`。以下是从发布源码完整构建的流程；在独立 Linux 构建机确认版本号后执行：
 
 ```bash
-# 标准版；在独立构建机执行完整构建
-bash docker/build.sh
-# ultra 复用刚构建的标准版
+git clone https://github.com/fishensw/VLLM-SM75.git
+cd VLLM-SM75
+# 使用本次发布源码或已核对的提交；确认 docker/VERSION 为 0.1.6。
+cat docker/VERSION
+MAX_JOBS=1 bash docker/build.sh
 EDITION=ultra bash docker/build.sh
-
-# 标准版推理，模型目录和缓存目录替换为实际绝对路径
-export VLLM_API_KEY='replace-with-your-api-key'
-export VLLM_SM75_CACHE_ROOT=/path/to/cache
-VARIANT=base FORMAT=fp8 bash docker/run.sh
-
-# ultra 首次安装：使用独立持久数据目录，不自动切换现有生产服务
-ULTRA_DATA_ROOT=/path/to/ultra MODEL_ROOT=/path/to/models \
-  EDITION=ultra bash docker/run.sh
+# 若需要 LMCache，第二步改用：
+# EDITION=ultra INSTALL_LMCACHE=1 bash docker/build.sh
 ```
 
-镜像分别为 `vllm-sm75:v$(cat docker/VERSION)`、`vllm-sm75:v$(cat docker/VERSION)-ultra`，是本地构建标签，不表示已公开发布。`IMAGE` 可指定独立候选标签。ultra 默认控制台端口 1615、推理端口 8000；首次启动在持久目录生成 token，获取与登录见 [ultra 指南](ultra/README.md)。
+得到 `vllm-sm75:v0.1.6` 和 `vllm-sm75:v0.1.6-ultra`。构建不会自动启动模型。若复用本轮验收归档，标签为 `local/vllm-sm75:v0.1.6-rc1` / `local/vllm-sm75:v0.1.6-ultra-rc1`，用 `IMAGE` 覆盖启动标签，见 [归档校验与导入](docs/validation/v0.1.6-full-images.md#构建与产物)。生产 Unraid 的未隔离完整导出入口仍被拦截；使用 [隔离构建流程](docker/BUILD.md#隔离完整构建) 保留宿主资源保护。
 
-**ultra 首次登录**：在 Docker 宿主机终端执行以下命令，复制输出的一整行 token，打开 `http://<局域网IP>:1615` 粘贴登录：
+### 标准版：先验证基本推理
+
+先将完整目标模型和匹配草稿下载到宿主模型目录；下列路径均需替换。启动脚本的默认模板按 **4 卡 T10、TP4** 编写。
 
 ```bash
+export MODEL_ROOT=/srv/models
+export MODEL=/models/Qwen3.8-27B-FP8
+export VLLM_SM75_CACHE_ROOT=/srv/vllm-sm75/cache
+export VLLM_SM75_MODEL_CACHE_ROOT=/srv/vllm-sm75/downloads
+export VLLM_API_KEY='replace-with-your-api-key'
+export PSTATE_NVAPI_LIB=/usr/lib64/libnvidia-api.so.1  # 换成实际驱动库路径
+VARIANT=base POWER_MODE=pstate MAX_MODEL_LEN=32768 CPU_KV_GIB=2 bash docker/run.sh
+curl --fail http://localhost:8000/health
+curl --fail http://localhost:8000/v1/models -H "Authorization: Bearer $VLLM_API_KEY"
+```
+
+首次启动会加载权重、编译和捕获 CUDA Graph；以 `/health` 和实际生成成功判断就绪。接入 DFlash2、256K、YaRN、CPU KV、LMCache 的可复制参数与效果见 [配置推荐模板](docs/configuration-v0.1.6.md)。
+
+### Ultra：面板与首次登录
+
+```bash
+ULTRA_DATA_ROOT=/srv/vllm-sm75/ultra MODEL_ROOT=/srv/models \
+  PSTATE_NVAPI_LIB=/usr/lib64/libnvidia-api.so.1 \
+  EDITION=ultra bash docker/run.sh
+# 在宿主终端读取首次自动生成的 Web 登录 token：
 docker exec vllm-sm75-ultra node /opt/sm75-workbench/console/auth-cli.mjs show
 ```
 
-自定义容器名时替换 `vllm-sm75-ultra`。token 位于容器 `/data/key`，对应宿主机 `<ULTRA_DATA_ROOT>/console/key`；它与模型 API key 分开。Unraid 容器 Console 内的命令及更多说明见 [首次登录](ultra/README.md#首次登录自动密钥在哪里怎么看)。
+打开 `http://<局域网IP>:1615` 登录，在面板登记 `/models` 下模型，创建运行配置，再启动推理。Web token 位于 `<ULTRA_DATA_ROOT>/console/key`，与模型 API key 分开。默认只启动管理服务。
 
-- [统一构建/运行指南](docker/BUILD.md)：FP8/AWQ、普通/MTP/DFlash2、缓存、电源、fast 与 UI 迭代。
-- [目录约定](docker/README.md)：版本不进入脚本文件名，历史实现通过 Git 获取。
-- [当前发布状态与门禁](docs/releases/v0.1.5.md)：源码、线上热修复、完整构建候选分别说明。
-- [机器可读版本清单](docs/releases/v0.1.5-release-manifest.json)。
+**P-State 必备：** 匹配宿主驱动的 NVAPI `libnvidia-api.so.1`，以及由 NVIDIA Toolkit `utility` 提供的 NVML。标准启动脚本默认空闲 1800 秒、确认 60 秒、低态 8、高态 **16（恢复驱动自动控制，不是硬件 P16）**。Ultra 未设置电源项时的默认空闲为 1 秒、确认 60 秒；每份配置独立保存；当前“导入配置”不会带入电源字段，会回到上述默认值，保存前请在电源区重新填写。保留原数据目录升级的既有配置不受此导入行为影响。一个 GPU 只使用一个 P-State 控制器；不要设为 0/0。完整参数和单位见 [电源模板](docs/configuration-v0.1.6.md#电源模式与单位)。
 
-## Firefly
+升级 Ultra 保留原 `/data`、`/data/cache`、`/dsh/home`、`/dsh/workspace`；先用独立目录验收，再按 [升级与回退](ultra/README.md#首次使用与升级) 切换。首次安装命令不能用来覆盖现有数据。
 
-沿用 AWQ INT4 prefill 和 FP8 all-reduce；FP8 线性计算仍走 Marlin。默认及关闭开关见 [构建运行指南](docker/BUILD.md)，AWQ 历史配置见 [推荐配置](docs/recommended-awq-dflash2.md)。本轮不新增 AWQ 性能提升声明。
+---
 
-## `/monitor` 监控看板
-
-标准引擎访问 `http://<主机>:8000/monitor`；ultra 另提供 1615 管理界面的性能监控。ultra Web 登录与引擎端点的访问控制范围不同，不能把 Web 登录当作整个推理端口的保护。
-
-## 空闲自动休眠
-
-默认使用常驻 P-State：空闲 P8，负载恢复高态 16（交还驱动自动控制）。自动休眠 exit 保留为可选配置，选择 `POWER_MODE=sleep` 后默认空闲 30 分钟退出引擎；下一请求重建并复用编译缓存，不保存对话 KV 或内存快照。模式条件、CPU 内存预算和回退见 [休眠与缓存](docs/sleep-and-cache.md)、[构建运行](docker/BUILD.md)。
-
-## 历史与许可
-
-[v0.1.4 发布说明](docs/releases/v0.1.4.zh-CN.md) · [v0.1.3](docs/releases/v0.1.3.zh-CN.md) · [v0.1.2](docs/releases/v0.1.2.zh-CN.md) · [开发验收历史](docs/releases/v0.1.5-ultra-rc.md)
-
-保留 [LICENSE](LICENSE) 及第三方许可。图标以 vLLM 为主体、闪电表示本分支加速适配，不表示上游官方背书。
+[历史发布](docs/releases/v0.1.5-ultra.zh-CN.md) · [休眠与缓存](docs/sleep-and-cache.md) · [LMCache 详细说明](docs/lmcache.md) · [LICENSE](LICENSE)

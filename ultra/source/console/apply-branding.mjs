@@ -1,180 +1,81 @@
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
-const assets = path.join(
-  path.dirname(fileURLToPath(import.meta.url)),
-  "branding",
-);
-export function applyBranding(base = "/opt/harness/node_modules") {
+import { fileURLToPath, pathToFileURL } from "node:url";
+
+const here = path.dirname(fileURLToPath(import.meta.url));
+export const supportedHarnessVersion = "0.1.7-alpha.2";
+
+export function harnessVersion(base = "/opt/harness/node_modules") {
+  try { return JSON.parse(fs.readFileSync(path.join(base, "@deepseek-ai/dsh/package.json"), "utf8")).version; }
+  catch { return null; }
+}
+
+export function assertHarnessVersion(base) {
+  const version = harnessVersion(base);
+  if (version !== supportedHarnessVersion)
+    throw Error(`Harness adaptation requires ${supportedHarnessVersion}; installed ${version ?? "unknown"}`);
+}
+
+export function applyBranding(base = "/opt/harness/node_modules", consoleRoot = here) {
+  assertHarnessVersion(base);
   const pkg = (name) => path.join(base, "@deepseek-ai", name);
-  const replace = (file, before, after) => {
-    const text = fs
-      .readFileSync(file, "utf8")
-      .replaceAll("VLLM-SM75 模型工作台", "工作台")
-      .replaceAll("VLLM-SM75 Workbench", "Workbench");
-    if (!text.includes(before) && !text.includes(after))
-      throw Error("品牌适配位置发生变化: " + file);
-    fs.writeFileSync(file, text.replaceAll(before, after));
-  };
+  for (const name of ["dsh-client-ui-layout", "dsh-llm-pi-ai"]) {
+    const version = JSON.parse(fs.readFileSync(path.join(pkg(name), "package.json"), "utf8")).version;
+    if (version !== supportedHarnessVersion)
+      throw Error(`Harness ${name} adaptation requires ${supportedHarnessVersion}; installed ${version}`);
+  }
   const dist = path.join(pkg("dsh-web-frontend"), "dist");
-  replace(
-    path.join(dist, "index.html"),
-    "<title>DeepSeek Harness</title>",
-    "<title>工作台</title>",
-  );
-  fs.copyFileSync(
-    path.join(assets, "favicon.svg"),
-    path.join(dist, "favicon.svg"),
-  );
   const index = path.join(dist, "index.html");
-  fs.writeFileSync(
-    index,
-    fs
-      .readFileSync(index, "utf8")
-      .replace(
-        /(?:\/brand\/|\.\/|\/)?favicon\.svg(?:\?v=[^"'\s>]*)?/g,
-        "/brand/favicon.svg",
-      ),
-  );
-  const file = path.join(dist, "manifest.webmanifest"),
-    manifest = JSON.parse(fs.readFileSync(file));
-  manifest.name = "工作台";
-  manifest.short_name = "工作台";
+  let html = fs.readFileSync(index, "utf8");
+  if (!/<title>(DeepSeek Harness|工作台)<\/title>/.test(html))
+    throw Error("Harness HTML title anchor changed");
+  html = html.replace(/<title>(DeepSeek Harness|工作台)<\/title>/, "<title>工作台</title>")
+    .replace(/(?:\/brand\/|\.\/|\/)?favicon\.svg(?:\?v=[^"'\s>]*)?/g, "/brand/favicon.svg");
+  fs.writeFileSync(index, html);
+  fs.copyFileSync(path.join(consoleRoot, "branding/favicon.svg"), path.join(dist, "favicon.svg"));
+  const manifestFile = path.join(dist, "manifest.webmanifest");
+  const manifest = JSON.parse(fs.readFileSync(manifestFile, "utf8"));
+  manifest.name = manifest.short_name = "工作台";
   manifest.icons = [
     { src: "/brand/icon-192.png", sizes: "192x192", type: "image/png" },
     { src: "/brand/icon-512.png", sizes: "512x512", type: "image/png" },
-    {
-      src: "/brand/maskable-512.png",
-      sizes: "512x512",
-      type: "image/png",
-      purpose: "maskable",
-    },
+    { src: "/brand/maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
   ];
-  fs.writeFileSync(file, JSON.stringify(manifest, null, 2));
-  fs.copyFileSync(
-    path.join(assets, "client.js"),
-    path.join(pkg("dsh-client-ui-brand-official"), "lib/client.js"),
-  );
-  replace(
-    path.join(pkg("dsh-client-ui-layout"), "lib/client.js"),
-    'const productTitle = "DeepSeek Harness"',
-    'const productTitle = "工作台"',
-  );
-  replace(
-    path.join(pkg("dsh-client-ui-chat"), "lib/client.js"),
-    "if (stats.steps === 0 && !hasTokens) return null;",
-    'if (stats.steps === 0 && !hasTokens) return (0, react_jsx_runtime.jsx)("div", {className: StatsPills_module_css_default.root, "data-composer-stats": true, children: "用量与耗时统计中 · 首个步骤结束后显示"});',
-  );
-  const conversation = path.join(
-    pkg("dsh-client-ui-conversation"),
-    "lib/client.js",
-  );
-  replace(
-    conversation,
-    '"hero.headline": "探索未至之境"',
-    '"hero.headline": "工作台"',
-  );
-  replace(
-    conversation,
-    '"hero.headline": "Into the Unknown"',
-    '"hero.headline": "Workbench"',
-  );
-  replace(
-    conversation,
-    '"hero.preview": "预览版"',
-    '"hero.preview": "本地开发版"',
-  );
-  const welcome = path.join(
-    pkg("dsh-client-ui-settings-models"),
-    "lib/client.js",
-  );
-  replace(welcome, 'welcomeTitle: "内测声明"', 'welcomeTitle: "工作台"');
-  replace(
-    welcome,
-    'welcomeTitle: "Internal Testing Notice"',
-    'welcomeTitle: "Workbench"',
-  );
-  const copy = fs
-    .readFileSync(welcome, "utf8")
-    .replace(
-      /welcomeBody: "(?:[^"\\]|\\.)*"/g,
-      (match) =>
-        "welcomeBody: " +
-        JSON.stringify(
-          /[\u4e00-\u9fff]/.test(match)
-            ? "下载或导入模型，选择场景参数，即可启动推理、对话与任务。性能、用量和测试统一在工作台查看。Chat / Agent 功能基于 DeepSeek Harness。"
-            : "Download or import a model, choose a configuration, and start inference, chat or tasks. Monitor performance, usage and tests in one workbench. Chat and Agent capabilities are powered by DeepSeek Harness.",
-        ),
-    );
-  const welcomeRegistration =
-    /ctx\.slots\.inject\("settings\.onboarding", \(\) => ctx\.slots\.register\(\{\s*name: "settings\.onboarding",\s*id: "welcome-notice",[\s\S]*?\}, WelcomeNotice\)\);/;
-  const noWelcome =
-    "// SM75: enter the application directly; no welcome notice.";
-  if (!welcomeRegistration.test(copy) && !copy.includes(noWelcome))
-    throw Error("欢迎弹窗注册位置发生变化");
-  fs.writeFileSync(welcome, copy.replace(welcomeRegistration, noWelcome));
+  fs.writeFileSync(manifestFile, JSON.stringify(manifest, null, 2));
 
+  // The official compiled layout bakes DSH_CLIENT_TITLE into one constant.
+  // Replace only that product name; keep DocumentTitle's dynamic session title
+  // and every other native layout feature. Refuse changed or ambiguous output.
+  const layout = path.join(pkg("dsh-client-ui-layout"), "lib/client.js");
+  const nativeTitle = 'const productTitle = "DeepSeek Harness"';
+  const localTitle = 'const productTitle = "工作台"';
+  const layoutSource = fs.readFileSync(layout, "utf8");
+  if (layoutSource.split(nativeTitle).length + layoutSource.split(localTitle).length !== 3)
+    throw Error("Harness layout product title anchor changed or is ambiguous");
+  fs.writeFileSync(layout, layoutSource.replace(nativeTitle, localTitle));
+
+  // One additional server-side sampling seam. No official bundle is replaced;
+  // only the checked title constant above and the call-site below are patched.
+  // pi-ai exposes onPayload, but Harness has no provider setting for the extended
+  // OpenAI sampling fields. Verify the exact release and injection point at build time.
   const llm = path.join(pkg("dsh-llm-pi-ai"), "lib/index.js");
-  let llmText = fs.readFileSync(llm, "utf8");
-  if (!llmText.includes("import {dshSampling}"))
-    llmText =
-      "import {dshSampling} from '/opt/sm75-workbench/console/sampling.mjs';\n" +
-      llmText;
-  const marker =
-    "...options.sessionId === void 0 ? {} : { sessionId: String(options.sessionId) },";
-  if (!llmText.includes("...dshSampling(options.provider, model)")) {
-    if (!llmText.includes(marker)) throw Error("DSH 生成参数适配位置变化");
-    llmText = llmText.replace(
-      marker,
-      marker + "\n ...dshSampling(options.provider, model),",
-    );
+  let source = fs.readFileSync(llm, "utf8");
+  const injection = "...dshSampling(options.provider, model),";
+  const marker = "...options.sessionId === void 0 ? {} : { sessionId: String(options.sessionId) },";
+  const samplingImport = `import {dshSampling} from ${JSON.stringify(pathToFileURL(path.join(consoleRoot, "sampling.mjs")).href)};\n`;
+  if (!source.includes(injection)) {
+    if (source.split(marker).length !== 2) throw Error("Harness sampling adapter anchor changed");
+    source = source.replace(marker, marker + "\n        " + injection);
+    source = samplingImport + source;
+  } else {
+    // Earlier candidates wrote an OS path. Normalize only our own first-line
+    // import so reinstall also repairs Windows drive/UNC paths and relocation.
+    const ownImport = /^import \{dshSampling\} from "(?:[^"\\\r\n]|\\[^\r\n])*";\r?\n/;
+    if (!ownImport.test(source)) throw Error("Harness sampling adapter import anchor changed");
+    source = source.replace(ownImport, () => samplingImport);
   }
-  fs.writeFileSync(llm, llmText);
-  const sidebar = path.join(pkg("dsh-client-ui-sidebar"), "lib/client.js");
-  let nav = fs.readFileSync(sidebar, "utf8");
-  if (!nav.includes("const inWorkbench ="))
-    nav = nav.replace(
-      "const panels = usePanels((snapshot) => snapshot);",
-      'const panels = usePanels((snapshot) => snapshot);\n const inWorkbench = usePanelInfo(info => info.activePanelId === null || info.activePanelId === "conversation");',
-    );
-  nav = nav.replace(
-    'children: renderSlot("sidebar.workspaces", {',
-    'children: inWorkbench && renderSlot("sidebar.workspaces", {',
-  );
-  if (!nav.includes('(id === "conversation" ?'))
-    nav = nav.replace(
-      "info.activePanelId === id",
-      '(id === "conversation" ? info.activePanelId === null || info.activePanelId === id : info.activePanelId === id)',
-    );
-  fs.writeFileSync(sidebar, nav);
-  const settingsClient = path.join(
-    pkg("dsh-client-ui-settings"),
-    "lib/client.js",
-  );
-  fs.writeFileSync(
-    settingsClient,
-    fs
-      .readFileSync(settingsClient, "utf8")
-      .replace(
-        'const persistence = ctx.remote.$host.isLoopback ? \"host\" : \"memory\";',
-        'const persistence = (globalThis.location?.pathname.startsWith(\"/dsh/\") || ctx.remote.$host.isLoopback) ? \"host\" : \"memory\";',
-      ),
-  );
-  const general = path.join(
-    pkg("dsh-client-ui-settings-general"),
-    "lib/client.js",
-  );
-  let generalText = fs
-    .readFileSync(general, "utf8")
-    .replaceAll("系统及设置", "设置");
-  fs.writeFileSync(general, generalText);
-  let hero = fs
-    .readFileSync(conversation, "utf8")
-    .replace(
-      'children: t("hero.preview")',
-      'style: {display:"none"}, children: ""',
-    );
-  fs.writeFileSync(conversation, hero);
+  fs.writeFileSync(llm, source);
 }
-if (process.argv[1] === fileURLToPath(import.meta.url))
+
+if (process.argv[1] && fs.existsSync(process.argv[1]) && fs.realpathSync(process.argv[1]) === fileURLToPath(import.meta.url))
   applyBranding(process.argv[2]);

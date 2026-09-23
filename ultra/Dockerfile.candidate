@@ -1,6 +1,12 @@
 # Incremental verification image: preserve the exact deployed inference runtime.
 # This is not a substitute for the separately documented full source build.
 ARG BASE_IMAGE=local/vllm-sm75:release-base-required
+ARG NODE_IMAGE=node:22.23.2-bookworm-slim@sha256:43aeff40f4afc22e83f7589a2f37e111cff5ca84529571f1c8415bcc5fcc21b2
+FROM ${NODE_IMAGE} AS harness
+WORKDIR /opt/harness
+COPY harness/package.json harness/package-lock.json ./
+RUN npm ci --omit=dev --no-audit --no-fund
+
 FROM ${BASE_IMAGE}
 ARG SOURCE_REVISION=working-tree
 ARG SOURCE_SHA256
@@ -8,9 +14,17 @@ LABEL org.opencontainers.image.title="VLLM-SM75 ultra release candidate" \
       org.opencontainers.image.revision="${SOURCE_REVISION}" \
       io.sm75.console.source-sha256="${SOURCE_SHA256}" \
       io.sm75.release.channel="candidate"
-COPY source/console /opt/sm75-workbench/console
-COPY overlay/dsh-layout/ /opt/harness/node_modules/@deepseek-ai/dsh-client-ui-layout/lib/
-COPY overlay/dsh-preview/ /opt/harness/node_modules/@deepseek-ai/dsh-client-ui-sidebar-documentpreview/lib/
-RUN node /opt/sm75-workbench/console/install-native-plugins.mjs \
+# Remove packages deleted upstream; COPY alone would retain stale modules.
+RUN rm -rf /opt/harness/node_modules
+COPY --from=harness /usr/local/bin/node /usr/local/bin/node
+COPY --from=harness /opt/harness/node_modules /opt/harness/node_modules
+RUN ln -sf /opt/harness/node_modules/pnpm/bin/pnpm.mjs /usr/local/bin/pnpm \
+    && pnpm --version
+COPY overlay/font-scale.py /opt/vllm-sm75/font-scale.py
+COPY source /opt/sm75-workbench
+ARG INSTALL_LMCACHE=0
+RUN if [ "${INSTALL_LMCACHE}" = "1" ]; then python3 /opt/sm75-workbench/lmcache/install.py --install; fi
+RUN python3 /opt/vllm-sm75/font-scale.py \
+    && node /opt/sm75-workbench/console/install-native-plugins.mjs \
     && node --check /opt/sm75-workbench/console/server.mjs \
     && node /opt/sm75-workbench/console/verify-client-bundles.mjs

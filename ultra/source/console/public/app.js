@@ -20,8 +20,12 @@ function installWorkbenchTheme() {
       ink: "#f9fafb",
       muted: "#a6adb8",
       blue: "#679efe",
+      onBlue: "#101820",
       mint: "#4ed17e",
       field: "#353638",
+      active: "#20354d",
+      switchOff: "#697483",
+      switchOn: "#167d5e",
       track: "#253243",
       line2: "#33475e",
       line3: "#58718c",
@@ -42,8 +46,12 @@ function installWorkbenchTheme() {
       ink: "#0b0d0f",
       muted: "#3f4145",
       blue: "#2b4a92",
+      onBlue: "#ffffff",
       mint: "#0e5229",
       field: "#f5f6f7",
+      active: "#e7efff",
+      switchOff: "#7b8796",
+      switchOn: "#167d5e",
       track: "#d9dfe7",
       line2: "rgba(0,0,0,.14)",
       line3: "rgba(0,0,0,.20)",
@@ -59,8 +67,6 @@ function installWorkbenchTheme() {
     },
   };
   function forceTheme(dark) {
-    for (const n of Array.from(doc.body.style))
-      if (n.startsWith("--dsw-")) doc.body.style.removeProperty(n);
     if (dark) doc.body.setAttribute("data-ds-dark-theme", "");
     else doc.body.removeAttribute("data-ds-dark-theme");
   }
@@ -84,6 +90,7 @@ function installWorkbenchTheme() {
   doc.body.append(button);
   let placeMiss = 0;
   function placeThemeButton() {
+    if (doc.getElementById("consoleSidebar")) { button.hidden = true; return; }
     const all = Array.from(doc.querySelectorAll("button[aria-label]"));
     let toggle = all.find((b) =>
       /侧边栏|sidebar|collapse|expand|收起|展开/i.test(
@@ -119,7 +126,7 @@ function installWorkbenchTheme() {
       .join(" ");
     button.hidden = false;
   }
-  function css() {
+  function css(isolatedDocument = false) {
     const p = palettes[mode] || palettes.dark;
     const vars = {
       bg: p.bg,
@@ -132,7 +139,11 @@ function installWorkbenchTheme() {
       mint: p.mint,
       green: p.mint,
       field: p.field,
+      active: p.active,
+      "switch-off": p.switchOff,
+      "switch-on": p.switchOn,
       primary: p.blue,
+      "on-primary": p.onBlue,
       info: p.blue,
       "text-color": p.ink,
       "text-muted": p.muted,
@@ -158,53 +169,184 @@ function installWorkbenchTheme() {
       shadow2: p.shadow2,
       amber: p.amber,
     });
-    const aliases = {
-      "bg-base": p.bg,
-      "bg-layer-1": p.bg,
-      "bg-layer-2": p.card,
-      "bg-layer-3": p.field,
-      "bg-module-platform": p.bg,
-      "label-primary": p.ink,
-      "label-secondary": p.muted,
-      "label-tertiary": p.muted,
-      "label-caption": p.muted,
-      "label-dimmed": p.muted,
-      "brand-primary": p.blue,
-      link: p.blue,
-      "interactive-bg-hover": p.field,
-      "interactive-bg-active": p.field,
-      "markdown-code-block": p.field,
-      "markdown-code-block-banner": p.card,
-      "markdown-inline-code": p.field,
-      "tooltip-bg": p.card,
-    };
-    for (const n of ["l1", "l2", "l3", "l4"]) aliases["border-" + n] = p.line;
-    for (const [k, v] of Object.entries(aliases)) vars["dsw-alias-" + k] = v;
-    for (const n of [
-      "bubble",
-      "bubble-highlight",
-      "input-major",
-      "login-input",
-      "menu",
-      "selector",
-      "sidebar-fill",
-      "sidebar-nav-item-active",
-      "sidebar-nav-item-hover",
-      "tip",
-    ])
-      vars["dsw-specific-" + n] = n === "sidebar-fill" ? p.bg : p.field;
     return (
-      ":root,:host,.dark,.light,*{color-scheme:" +
+      (isolatedDocument ? ":root,:host,.dark,.light,*{color-scheme:" : ":root,:host{color-scheme:") +
       mode +
       ";" +
       Object.entries(vars)
         .map(([k, v]) => "--" + k + ":" + v + "!important")
         .join(";") +
-      "}body{background:var(--bg)!important;color:var(--ink)!important}:host{color:var(--ink)!important}button,select,input,textarea{color:var(--ink)!important}:host button,main button,input,textarea,select,#sm75ThemeToggle{background:var(--field)!important;border-color:var(--line)!important}.card,.profile-card,.hardware-card,.chat-parameter-panel,.message{background:var(--card)!important;color:var(--ink)!important;border-color:var(--line)!important}.message.user{background:var(--field)!important}.chart-tip{background:var(--card)!important;color:var(--ink)!important}body[data-sm75-benchmark]{background:var(--bg)!important;color:var(--ink)!important}body[data-sm75-benchmark] :is(.container,.card,.panel,.config-section,.chart-container,.tab-content,.section,.config-card,#userCodeWidget,table){background:var(--card)!important;color:var(--ink)!important;border-color:var(--line)!important}body[data-sm75-benchmark] :is(h1,h2,h3,h4,label,p,summary){color:var(--ink)!important}body[data-sm75-benchmark] #userCodeWidget *{color:var(--ink)!important}body[data-sm75-benchmark] input,body[data-sm75-benchmark] select{background:var(--field)!important}#sm75ThemeToggle{background:transparent!important;border:0;display:inline-flex;align-items:center;justify-content:center;padding:0;flex-shrink:0}#sm75ThemeToggle:hover{background:var(--field)!important}[class*=collapsed] [class*=logoRow]:has(#sm75ThemeToggle){height:auto;flex-wrap:wrap;overflow:visible}"
+      "}" +
+      (isolatedDocument
+        ? "select,input,textarea{color:var(--ink)!important}"
+        : "@scope (body) to (.dsh-surface, body > :not(aside):not(main):not(script):not(style)) {") +
+      "body{background:var(--bg)!important;color:var(--ink)!important}:host{color:var(--ink)!important}:host button,main button,input,textarea,select,#sm75ThemeToggle{background:var(--field)!important;border-color:var(--line)!important}.card,.profile-card,.hardware-card,.chat-parameter-panel,.message{background:var(--card)!important;color:var(--ink)!important;border-color:var(--line)!important}.message.user{background:var(--field)!important}.chart-tip{background:var(--card)!important;color:var(--ink)!important}body[data-sm75-benchmark]{background:var(--bg)!important;color:var(--ink)!important}body[data-sm75-benchmark] :is(.container,.card,.panel,.config-section,.chart-container,.tab-content,.section,.config-card,#userCodeWidget,table){background:var(--card)!important;color:var(--ink)!important;border-color:var(--line)!important}body[data-sm75-benchmark] :is(h1,h2,h3,h4,label,p,summary){color:var(--ink)!important}body[data-sm75-benchmark] #userCodeWidget *{color:var(--ink)!important}body[data-sm75-benchmark] input,body[data-sm75-benchmark] select{background:var(--field)!important}#sm75ThemeToggle{background:transparent!important;border:0;display:inline-flex;align-items:center;justify-content:center;padding:0;flex-shrink:0}button.primary{background:var(--primary)!important;color:var(--on-primary)!important;border-color:var(--primary)!important}input[role=switch]{background:var(--switch-off)!important}input[role=switch]:checked{background:var(--switch-on)!important}input[role=switch]:before{background:#fff!important}#sm75ThemeToggle[hidden]{display:none!important}#sm75ThemeToggle:hover{background:var(--field)!important}[class*=collapsed] [class*=logoRow]:has(#sm75ThemeToggle){height:auto;flex-wrap:wrap;overflow:visible}" +
+      (isolatedDocument ? `
+        /* These rules belong only to the existing, same-origin test documents.
+           Native DSH buttons in the shared page keep their own component theme. */
+        body[data-sm75-benchmark] :is(.api-description,.history-content,.history-modal-content,.modal-content,.batch-upload-content,.result-section,.comparison-section,.notes-panel,.detail-dialog,.detail-section,.history-record){
+          background:var(--field2)!important;color:var(--ink)!important;border-color:var(--line)!important
+        }
+        body[data-sm75-benchmark] :is(.detail-field-value,.detail-content-block,.detail-concurrent-item){
+          background:var(--card)!important;color:var(--ink)!important;border-color:var(--line)!important
+        }
+        body[data-sm75-benchmark] :is(.history-modal-header,.detail-header){
+          background:var(--field3)!important;color:var(--ink)!important
+        }
+        body[data-sm75-benchmark] :is(.history-modal-close,.history-record-time,.history-record-info,.detail-section-title,.detail-field-label,.detail-block-label,.detail-subsection-title,.detail-concurrent-item-title){
+          color:var(--ink)!important
+        }
+        body[data-sm75-benchmark] :is(.api-option,.btn-secondary,.history-btn-secondary,.history-btn-back){
+          background:var(--field)!important;color:var(--ink)!important;border-color:var(--line)!important
+        }
+        body[data-sm75-benchmark] .api-option.active{
+          background:var(--primary)!important;color:var(--on-primary)!important;border-color:var(--primary)!important
+        }
+        body[data-sm75-benchmark] :is(.api-option:hover:not(.active),.btn-secondary:hover:not(:disabled)){
+          background:var(--field3)!important
+        }
+        body[data-sm75-benchmark] :is(.api-description h3,a){
+          color:var(--blue)!important
+        }
+        body[data-sm75-benchmark] :is(.notes,.model-suggest-status,#selectedCount){
+          color:var(--muted)!important
+        }
+        body[data-sm75-benchmark] :is(.container > div[style*="background: #fffbf0"],[data-sm75-benchmark-notice]){
+          background:var(--chip-wait-bg)!important;color:var(--amber)!important;border-color:var(--amber)!important
+        }
+        body[data-sm75-benchmark] textarea{
+          background:var(--field)!important;color:var(--ink)!important
+        }
+      ` : "}")
     );
   }
+
+  // Child documents do not inherit the shared shell's font multiplier. Keep
+  // their existing hierarchy, and scale only their own absolute font sizes.
+  const frameFonts = new WeakMap();
+  const chartFonts = new WeakMap();
+  const chartFontPaths = new WeakMap();
+  const chartThemes = new WeakMap();
+  let fontScale = 1;
+  function readFontScale() {
+    const value = Number.parseFloat(getComputedStyle(doc.documentElement).getPropertyValue("--ui-fs"));
+    return Number.isFinite(value) && value > 0 ? value : 1;
+  }
+  function scalableFont(value) {
+    if (!value || value.includes("--ui-fs")) return value;
+    return value.replace(/(-?(?:\d+\.?\d*|\.\d+))(px|pt|pc|in|cm|mm|q|vw|vh|vmin|vmax)\b/gi,
+      (_, number, unit) => "calc(" + number + unit + " * var(--ui-fs, 1))");
+  }
+  function scaleDeclaration(style) {
+    const original = style.getPropertyValue("font-size");
+    const value = scalableFont(original);
+    if (value !== original) style.setProperty("font-size", value, style.getPropertyPriority("font-size"));
+  }
+  function scaleRules(rules) {
+    for (const rule of rules || []) {
+      if (rule.style) scaleDeclaration(rule.style);
+      if (rule.cssRules) scaleRules(rule.cssRules);
+    }
+  }
+  function scaleChartFontOptions(value, visited = new WeakSet(), paths = null, parentPath = "") {
+    if (!value || typeof value !== "object" || visited.has(value)) return;
+    visited.add(value);
+    for (const [key, entry] of Object.entries(value)) {
+      if (!entry || typeof entry !== "object") continue;
+      const path = parentPath + "/" + key;
+      if (/font$/i.test(key) && Number.isFinite(entry.size)) {
+        // Chart.js rebuilds scale option objects during update. Their option
+        // paths remain stable, so the original size must survive those copies.
+        const saved = paths ? paths.get(path) : chartFonts.get(entry);
+        const base = saved && entry.size === saved.applied ? saved.base : entry.size;
+        const applied = base * fontScale;
+        entry.size = applied;
+        if (paths) paths.set(path, { base, applied });
+        else chartFonts.set(entry, { base, applied });
+      }
+      scaleChartFontOptions(entry, visited, paths, path);
+    }
+  }
+  function syncFrameCharts(win) {
+    const C = win.Chart;
+    if (!C?.defaults) return;
+    C.defaults.color = palettes[mode].muted;
+    C.defaults.borderColor = palettes[mode].line;
+    scaleChartFontOptions(C.defaults);
+    for (const c of Object.values(C.instances || {})) {
+      const previous = chartThemes.get(c);
+      if (previous?.mode === mode && previous?.scale === fontScale) continue;
+      let paths = chartFontPaths.get(c);
+      if (!paths) { paths = new Map(); chartFontPaths.set(c, paths); }
+      scaleChartFontOptions(c.config?.options || c.options, new WeakSet(), paths);
+      for (const axis of Object.values(c.options?.scales || {})) {
+        if (axis.ticks) axis.ticks.color = palettes[mode].muted;
+        if (axis.grid) axis.grid.color = palettes[mode].line;
+      }
+      if (c.options?.plugins?.legend?.labels) c.options.plugins.legend.labels.color = palettes[mode].ink;
+      chartThemes.set(c, { mode, scale: fontScale });
+      c.update("none");
+    }
+  }
+  function syncFrameFonts(frame) {
+    const child = frame.contentDocument, win = frame.contentWindow;
+    if (!child?.documentElement || !win) return;
+    let state = frameFonts.get(child);
+    if (!state) {
+      state = { rootSize: win.getComputedStyle(child.documentElement).fontSize, scale: null, scheduled: false };
+      frameFonts.set(child, state);
+      state.style = child.createElement("style");
+      state.style.dataset.sm75FontScale = "1";
+      (child.head || child.documentElement).append(state.style);
+      // The monitor draws its own canvas text; test tools use Chart.js options.
+      if (frame.id === "monitorFrame") {
+        const proto = win.CanvasRenderingContext2D?.prototype;
+        const descriptor = proto && Object.getOwnPropertyDescriptor(proto, "font");
+        if (descriptor?.set && descriptor.configurable) {
+          Object.defineProperty(proto, "font", { ...descriptor, set(value) {
+            const scaled = String(value).replace(/(\d+(?:\.\d+)?)px\b/g, (_, px) => String(Number(px) * fontScale) + "px");
+            descriptor.set.call(this, scaled);
+          } });
+        }
+      }
+      const schedule = () => {
+        if (state.scheduled) return;
+        state.scheduled = true;
+        win.setTimeout(() => {
+          state.scheduled = false;
+          if (frame.contentDocument === child) { syncFrameFonts(frame); syncFrameCharts(win); }
+        }, 30);
+      };
+      new win.MutationObserver(records => {
+        if (records.some(record =>
+          (record.type === "attributes" && !record.target.hasAttribute("data-sm75-font-scale")
+            && !record.target.style?.getPropertyValue("font-size").includes("--ui-fs"))
+          || (record.type === "childList" && !record.target.matches?.("style[data-sm75-font-scale],style[data-sm75-theme]")
+            && [...record.addedNodes].some(node => node.nodeType === 1 || record.target.tagName === "STYLE"))))
+          schedule();
+      }).observe(child.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ["style"] });
+      child.addEventListener("load", event => { if (event.target.tagName === "LINK") schedule(); }, true);
+    }
+    for (const sheet of child.styleSheets) {
+      if (sheet.ownerNode?.matches?.("style[data-sm75-font-scale],style[data-sm75-theme]")) continue;
+      try { scaleRules(sheet.cssRules); } catch {}
+    }
+    // CSSOM serializes inline colors when font-size is edited. Keep the
+    // existing benchmark notice theme independent of that serialization.
+    for (const element of child.querySelectorAll(".container > div[style]")) {
+      if (element.style.backgroundColor === "rgb(255, 251, 240)") element.dataset.sm75BenchmarkNotice = "1";
+    }
+    for (const element of child.querySelectorAll("[style]")) scaleDeclaration(element.style);
+    const cssText = ":root{--ui-fs:" + fontScale + "!important;font-size:calc(" + state.rootSize + " * var(--ui-fs, 1))!important}";
+    if (state.style.textContent !== cssText) state.style.textContent = cssText;
+    if (state.scale !== fontScale) {
+      state.scale = fontScale;
+      win.dispatchEvent(new win.Event("resize"));
+    }
+  }
+
   const frames = new WeakSet();
-  let lastCss = "";
+  let lastCss = "", lastFrameCss = "";
   function scan(root) {
     const isFrameDoc = !!(root.defaultView && root.defaultView !== globalThis);
     const inject = !embedded || isFrameDoc;
@@ -215,7 +357,11 @@ function installWorkbenchTheme() {
         style.dataset.sm75Theme = "1";
         (root.head || root).append(style);
       }
-      if (style.textContent !== lastCss) style.textContent = lastCss;
+      // Embedded test/monitor documents own their entire UI. The DSH boundary
+      // only applies to the shared workbench document, not these child pages.
+      const themeCss = isFrameDoc || (root.ownerDocument && root.ownerDocument !== doc)
+        ? lastFrameCss : lastCss;
+      if (style.textContent !== themeCss) style.textContent = themeCss;
     }
     for (const el of root.querySelectorAll("*")) {
       if (el.shadowRoot) scan(el.shadowRoot);
@@ -248,22 +394,10 @@ function installWorkbenchTheme() {
                   st.setItem("sm75-benchmark-defaults-20260913", "1");
                 }
               }
-              const C = el.contentWindow.Chart;
-              if (C && C.__sm75Mode !== mode) {
-                C.__sm75Mode = mode;
-                C.defaults.color = palettes[mode].muted;
-                C.defaults.borderColor = palettes[mode].line;
-                for (const c of Object.values(C.instances || {})) {
-                  for (const a of Object.values(c.options.scales || {})) {
-                    if (a.ticks) a.ticks.color = palettes[mode].muted;
-                    if (a.grid) a.grid.color = palettes[mode].line;
-                  }
-                  if (c.options.plugins?.legend?.labels)
-                    c.options.plugins.legend.labels.color = palettes[mode].ink;
-                  c.update("none");
-                }
-              }
+
             }
+            syncFrameFonts(el);
+            syncFrameCharts(el.contentWindow);
             scan(el.contentDocument);
             el.contentWindow.postMessage(
               { type: "sm75-theme", mode },
@@ -276,7 +410,11 @@ function installWorkbenchTheme() {
   }
   let announcedMode;
   function apply() {
-    lastCss = css();
+    fontScale = readFontScale();
+    if (!lastCss || announcedMode !== mode) {
+      lastCss = css();
+      lastFrameCss = css(true);
+    }
     if (announcedMode !== mode) {
       announcedMode = mode;
       doc.dispatchEvent(new CustomEvent("sm75-theme-mode", { detail: mode }));
@@ -305,6 +443,12 @@ function installWorkbenchTheme() {
     localStorage.setItem(key, mode);
     apply();
   };
+  doc.addEventListener("sm75-set-theme", (e) => {
+    if (embedded || !["light", "dark"].includes(e.detail) || mode === e.detail) return;
+    mode = e.detail;
+    localStorage.setItem(key, mode);
+    apply();
+  });
   window.addEventListener("storage", (e) => {
     if (e.key === key) {
       mode = e.newValue || "dark";
@@ -328,6 +472,9 @@ function installWorkbenchTheme() {
       attributes: true,
       attributeFilter: ["data-ds-dark-theme"],
     });
+  new MutationObserver(() => {
+    if (readFontScale() !== fontScale) apply();
+  }).observe(doc.documentElement, { attributes: true, attributeFilter: ["style"] });
   let scheduled = false;
   new MutationObserver(() => {
     if (scheduled) return;
@@ -338,10 +485,223 @@ function installWorkbenchTheme() {
     }, 100);
   }).observe(doc.body, { childList: true, subtree: true });
   apply();
-  setInterval(placeThemeButton, 600);
+  // The shared shell owns its theme control. Only the legacy standalone view
+  // needs to follow a movable native header button.
+  if (!doc.getElementById("consoleSidebar")) setInterval(placeThemeButton, 600);
 }
+
+
+
 if (globalThis.document?.body) installWorkbenchTheme();
+
 import { mountLiveSummary, metricLevel as gpuLevel } from "/live-summary.js";
+import {readContextSettings, applyContextSettings, argValue as readArgument, setArg, oneMillionContext, retargetContextModel} from "./context-config.js";
+import {validateLMCacheProfile, isLMCacheEnabled} from "./lmcache-config.js";
+
+// The dedicated form edits the argv stored by profiles/templates. This binding
+// can be exercised without mounting the rest of the console or starting an engine.
+export function bindContextEditor(document, {getArgs, setArgs, getMetadata = () => ({}), onApply = () => {}, onDirty = () => {}, run = fn => fn}) {
+  const $ = id => document.getElementById(id);
+  const fields = {maxModelLen: "ctxMaxModelLen", yarnOriginal: "ctxYarnOriginal", yarnFactor: "ctxYarnFactor",
+    gpuKvGiB: "ctxGpuKvGiB", cpuKvMode: "ctxCpuKvMode", cpuKvGiB: "ctxCpuKvGiB"};
+  let dirty = false, editable = true, readError = null;
+  function values() {
+    const value = {...Object.fromEntries(Object.entries(fields).map(([name, id]) => [name, $(id).value])),
+      yarnEnabled: $("ctxYarnEnabled").checked};
+    const mode = $("cacheBackend")?.value;
+    const current = readContextSettings(getArgs()).cpuKvMode;
+    const backend = readArgument(getArgs(), "--kv-offloading-backend");
+    // Hidden CPU fields are a retained draft, not an instruction to rewrite the
+    // connector. LMCache's save validates the full candidate before replacing it.
+    if ((mode && mode !== "default") || current === "custom" || (backend !== null && backend !== "native"))
+      value.cpuKvMode = "custom";
+    return value;
+  }
+  function visibility() {
+    $("ctxYarnFields").hidden = !$("ctxYarnEnabled").checked;
+    $("ctxCpuKvFields").hidden = $("ctxCpuKvMode").value !== "native";
+  }
+  function fill(state) {
+    for (const [name, id] of Object.entries(fields)) $(id).value = state[name] ?? "";
+    $("ctxYarnEnabled").checked = state.yarnEnabled;
+    editable = state.yarnEditable !== false;
+    for (const id of ["ctxYarnEnabled", "ctxYarnOriginal", "ctxYarnFactor", "ctxOneMillion"])
+      $(id).disabled = !editable;
+    const custom = $("ctxCpuKvMode").querySelector('option[value="custom"]');
+    if (custom) custom.disabled = state.cpuKvMode !== "custom";
+    visibility();
+  }
+  function refresh(force = false) {
+    if (dirty && !force && !readError) return;
+    dirty = false;
+    readError = null;
+    const metadata = getMetadata();
+    try {
+      const state = readContextSettings(getArgs(), metadata);
+      fill(state);
+      $("contextWarnings").textContent = state.warnings.join("\n");
+      $("contextMetadata").textContent =
+        "模型原生位置长度：" + (metadata.originalMaxPositionEmbeddings || "未知，可手动填写") +
+        "；模型配置上下文：" + (metadata.maxModelLen || "未知") +
+        (editable ? "。" : "。该模型使用分层 RoPE，请通过高级参数按模型结构配置。");
+    } catch (error) {
+      readError = error;
+      $("contextWarnings").textContent = "无法读取上下文配置：" + error.message + "。请先检查高级参数。";
+    }
+  }
+  function flush() {
+    if (!dirty) return false;
+    if (readError) throw readError;
+    setArgs(applyContextSettings(getArgs(), values(), getMetadata()));
+    refresh(true);
+    return true;
+  }
+  function changed() {dirty = true; onDirty(); visibility();}
+  $("contextSettings").addEventListener("input", changed);
+  $("contextSettings").addEventListener("change", changed);
+  $("nativeCacheFields")?.addEventListener("input", changed);
+  $("nativeCacheFields")?.addEventListener("change", changed);
+  $("cacheBackend")?.addEventListener("change", () => { if ($("cacheBackend").value === "default") changed(); });
+  if ($("ctxApply")) $("ctxApply").onclick = run(() => {dirty = true; flush(); onApply();});
+  $("ctxOneMillion").onclick = run(() => {
+    if (!editable) throw Error("该模型使用分层 RoPE，请通过高级参数配置");
+    fill({...oneMillionContext(values(), getMetadata()), yarnEditable: editable});
+    changed();
+    flush();
+    onApply();
+  });
+  return {refresh, flush};
+}
+
+export function bindLMCacheEditor(document, {getProfile, setProfile, beforeApply = () => {}, onApply = () => {}, onDirty = () => {}, run = fn => fn}) {
+  const $ = id => document.getElementById(id);
+  const fields = {cpuGiB: "lmcacheCpuGiB", chunkSize: "lmcacheChunkSize", diskPath: "lmcacheDiskPath",
+    minFreeDiskGiB: "lmcacheMinFreeDiskGiB", port: "lmcachePort", httpPort: "lmcacheHttpPort"};
+  const defaults = {cpuGiB: 8, chunkSize: "", diskPath: "", minFreeDiskGiB: 4, port: 5555, httpPort: 5556};
+  let dirty = false, selection = "default", nativeDraft = null;
+  const nativeValues = () => ({mode: $("ctxCpuKvMode").value, gib: $("ctxCpuKvGiB").value});
+  function restoreNative() {
+    if (!nativeDraft) return;
+    $("ctxCpuKvMode").value = nativeDraft.mode;
+    $("ctxCpuKvGiB").value = nativeDraft.gib;
+    $("ctxCpuKvFields").hidden = nativeDraft.mode !== "native";
+  }
+  function connectorMode() {
+    const profile = getProfile(), backend = readArgument(profile.args, "--kv-offloading-backend");
+    if (backend !== null && backend !== "native") return "custom";
+    return readContextSettings(profile.args).cpuKvMode;
+  }
+  function values() {
+    const value = {...getProfile().lmcache, enabled: $("cacheBackend").value === "lmcache"};
+    for (const [name, id] of Object.entries(fields)) value[name] = name === "diskPath" ? $(id).value.trim()
+      : $(id).value.trim() === "" ? null : Number($(id).value);
+    return value;
+  }
+  function status() {
+    const backend = $("cacheBackend").value, enabled = backend === "lmcache";
+    $("nativeCacheFields").hidden = backend !== "default";
+    $("lmcacheFields").hidden = !enabled;
+    if ($("lmcacheEnabled")) $("lmcacheEnabled").checked = enabled;
+    if ($("lmcacheReplaceNative")) $("lmcacheReplaceNative").hidden = true;
+    let mode = "custom";
+    try {mode = connectorMode();} catch {}
+    const custom = $("cacheBackend").querySelector('option[value="custom"]');
+    if (custom) custom.disabled = mode !== "custom";
+    const notes = [];
+    if (mode === "custom") notes.push("已有自定义缓存连接器，请在高级参数中修改；切换方案不会删除它。");
+    if (enabled) {
+      if (mode === "native") notes.push("保存时将用 LMCache 替换原生 CPU KV。");
+      if (readArgument(getProfile().args, "--speculative-config") !== null) notes.push("请先关闭 DFlash/MTP 投机解码，再启用 LMCache。");
+      if (getProfile().power?.mode === "sleep") notes.push("请先将电源模式改为 P-State；LMCache 暂不支持释放显存的休眠。");
+      if (notes.length === 0) notes.push("保存后下次启动生效；依赖与缓存服务在启动时检查。");
+    }
+    $("lmcacheStatus").textContent = notes.join("\n");
+  }
+  function refresh(force = false) {
+    if (dirty && !force) {
+      if (selection !== "default") restoreNative();
+      status();
+      return;
+    }
+    const profile = getProfile(), config = profile.lmcache || {};
+    let mode = "custom";
+    try {mode = connectorMode();} catch {}
+    selection = isLMCacheEnabled(profile) ? "lmcache" : mode === "custom" ? "custom" : "default";
+    $("cacheBackend").value = selection;
+    if (force || !nativeDraft || selection === "default") nativeDraft = nativeValues();
+    for (const [name, id] of Object.entries(fields)) $(id).value = String(config[name] ?? defaults[name]);
+    dirty = false;
+    if (selection !== "default") restoreNative();
+    status();
+  }
+  function flush() {
+    if (!dirty) return false;
+    beforeApply();
+    const profile = getProfile(), selected = $("cacheBackend").value, mode = connectorMode();
+    if (!["default", "lmcache", "custom"].includes(selected)) throw Error("缓存方案无效");
+    if (mode === "custom" && selected !== "custom")
+      throw Error("已有自定义缓存连接器，请先在高级参数中明确关闭；切换方案不会删除它");
+    let args = [...profile.args];
+    if (selected === "lmcache" && mode === "native")
+      for (const key of ["--kv-transfer-config", "--kv-offloading-size", "--kv-offloading-backend"]) args = setArg(args, key, null);
+    const next = {...profile, args, lmcache: values()};
+    validateLMCacheProfile(next); // Validate conflicts and sizes before replacing native KV.
+    setProfile(next);
+    dirty = false;
+    if (selection !== "default") restoreNative();
+    status();
+    return true;
+  }
+  function changed() {
+    const next = $("cacheBackend").value;
+    if (next !== selection) {
+      if (selection === "default") nativeDraft = nativeValues();
+      selection = next;
+      if (selection === "default") restoreNative();
+    }
+    dirty = true;
+    onDirty();
+    status();
+  }
+  $("cacheBackend").addEventListener("change", changed);
+  $("lmcacheSettings").addEventListener("input", changed);
+  $("lmcacheSettings").addEventListener("change", changed);
+  $("nativeCacheFields").addEventListener("input", () => {nativeDraft = nativeValues();});
+  $("nativeCacheFields").addEventListener("change", () => {nativeDraft = nativeValues();});
+  if ($("lmcacheApply")) $("lmcacheApply").onclick = run(() => {dirty = true; flush(); onApply();});
+  if ($("lmcacheReplaceNative")) $("lmcacheReplaceNative").onclick = run(() => {
+    $("cacheBackend").value = "lmcache";
+    changed();
+    flush();
+    onApply();
+  });
+  return {refresh, flush};
+}
+// Profiles and personal templates must restore the same power form. Keep the
+// target profile identity separate so loading a template does not rename it.
+export function fillProfilePowerFields(document, profile) {
+  const $ = id => document.getElementById(id);
+  const power = {mode: "pstate", util: 5, confirm: 60, low: 8, high: 16, poll: 5, ...(profile.power || {})};
+  const idleSeconds = Math.max(1, Number(power.idleSeconds ??
+    (power.idleMinutes != null ? power.idleMinutes * 60 : 1)) || 1);
+  $("powerMode").value = power.mode;
+  for (const [id, value] of [
+    ["pstateIdle", idleSeconds], ["pstateUtil", power.util], ["pstateConfirm", power.confirm],
+    ["pstateLow", power.low], ["pstateHigh", power.high], ["pstatePoll", power.poll],
+  ]) $(id).value = value;
+  const sleepIdle = Number(readArgument(profile.args, "--auto-sleep-idle-timeout"));
+  $("sleepIdle").value = sleepIdle > 0 ? sleepIdle : 30;
+  $("sleepTarget").value = readArgument(profile.args, "--auto-sleep-offload-target") || "exit";
+}
+
+export function usesDedicatedCacheField(args, key) {
+  if (["--max-model-len", "--kv-cache-memory-bytes"].includes(key)) return true;
+  if (!["--kv-offloading-size", "--kv-offloading-backend"].includes(key)) return false;
+  const backend = readArgument(args, "--kv-offloading-backend");
+  // Unknown backends have no form of their own. Their advanced rows must stay
+  // visible so the user can edit or remove the connector before switching.
+  return backend === null || backend === "native";
+}
 
 export function mountConsole(document = globalThis.document, options = {}) {
   const $ = (id) => document.getElementById(id);
@@ -382,10 +742,13 @@ export function mountConsole(document = globalThis.document, options = {}) {
     monitor: "性能监控",
     tests: "模型测试",
     settings: "设置",
+    plugins: "插件",
+    usage: "使用统计",
   };
   let editorDirty = false;
   let authState = "checking",
     authGeneration = 0,
+    authEpoch = 0,
     authTask = null,
     disposed = false,
     refreshing = false;
@@ -393,12 +756,50 @@ export function mountConsole(document = globalThis.document, options = {}) {
     enabled: () =>
       !disposed &&
       authState === "authenticated" &&
-      current !== "monitor" &&
       options.isActive?.() !== false,
   });
   const shell = document.querySelector("main");
-  shell.classList.toggle("engine-toolbar", current !== "monitor");
-  $("liveSummary").hidden = current === "monitor";
+  shell.classList.add("engine-toolbar");
+  $("liveSummary").hidden = false;
+  // Reserve metric text at the user's font size. Move auxiliary controls into
+  // the existing sidebar only when their minimum widths no longer fit.
+  // Reserve the same conversation-toolbar space on every page so navigation
+  // cannot relocate the profile selector or add a row above the main links.
+  const header = $("appHeader");
+  const headerAux = [$("active"), $("signout"), $("taskToggle")].map(node => {
+    const anchor = document.createComment("header-" + node.id);
+    node.before(anchor);
+    return { node, anchor };
+  });
+  let headerLayoutFrame = 0;
+  const fitHeader = () => {
+    headerLayoutFrame = 0;
+    if (disposed || header.hidden || !header.clientWidth) return;
+    const toolbar = $("workspaceToolbar");
+    const scale = Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--ui-fs")) || 1;
+    const gap = Number.parseFloat(getComputedStyle(header).gap) || 0;
+    const leading = Math.max(224, Number.parseFloat(getComputedStyle(toolbar).minWidth) || 0);
+    const required = leading + 96 + $("liveSummary").getBoundingClientRect().width
+      + 30 + 30 + (20 + 20.5 * scale) + gap * 6;
+    const compact = required > header.clientWidth;
+    if (header.dataset.auxInSidebar === String(compact)) return;
+    header.dataset.auxInSidebar = String(compact);
+    for (const {node, anchor} of headerAux) {
+      if (compact) $(node.id === "active" ? "sidebarActiveProfile" : "sidebarHeaderActions").append(node);
+      else anchor.after(node);
+    }
+  };
+  const queueHeaderLayout = () => {
+    if (!headerLayoutFrame) headerLayoutFrame = requestAnimationFrame(fitHeader);
+  };
+  const headerSizeObserver = new ResizeObserver(queueHeaderLayout);
+  headerSizeObserver.observe(header);
+  headerSizeObserver.observe($("liveSummary"));
+  const headerContentObserver = new MutationObserver(queueHeaderLayout);
+  headerContentObserver.observe(header, {childList:true, subtree:true, attributes:true, attributeFilter:["hidden"]});
+  const fontScaleObserver = new MutationObserver(queueHeaderLayout);
+  fontScaleObserver.observe(document.documentElement, {attributes:true, attributeFilter:["style"]});
+  queueHeaderLayout();
   shell.classList.toggle("header-only", !!options.headerOnly);
   for (const type of ["input", "change"])
     $("profileEditor").addEventListener(type, () => {
@@ -469,20 +870,33 @@ export function mountConsole(document = globalThis.document, options = {}) {
   };
   globalThis.addEventListener("beforeunload", beforeUnload);
 
+  let accountConfigured = false;
+  function syncLoginMode(configured) {
+    accountConfigured = !!configured;
+    $("loginUsername").hidden = !accountConfigured;
+    $("loginUsernameLabel").hidden = !accountConfigured;
+    $("loginSecretLabel").textContent = accountConfigured ? "密码" : "登录 token";
+    $("token").placeholder = accountConfigured ? "输入管理员密码" : "输入首次启动生成的 token";
+  }
   function setAuth(state, message = "") {
     const changed = authState !== state;
+    if (changed) ++authEpoch;
     authState = state;
     shell.dataset.auth = state;
     if (state !== "authenticated") $("notice").textContent = "";
     const allowed = state === "authenticated";
     document.querySelector("aside").hidden = !allowed;
-    document.querySelector("header").hidden = !allowed;
+    $("appHeader").hidden = !allowed;
     $("login").hidden = allowed || state === "checking";
     $("authPending").hidden = state !== "checking";
     if (!allowed) {
-      for (const section of document.querySelectorAll("main>section"))
+      for (const id of ["adminCurrentPassword", "adminPassword", "adminPasswordConfirm"]) $(id).value = "";
+      for (const section of shell.querySelectorAll(":scope>section"))
         if (section.id !== "login") section.hidden = true;
       $("taskDrawer").hidden = true;
+      $("root").hidden = true;
+      $("workspaceSidebar").hidden = true;
+      if (globalThis.__SM75_WORKBENCH__) location.replace("/");
       abort?.abort();
     }
     $("signin").disabled = state === "checking" || state === "submitting";
@@ -491,13 +905,14 @@ export function mountConsole(document = globalThis.document, options = {}) {
       message ||
       {
         checking: "正在确认登录状态…",
-        anonymous: "输入首次启动时生成的 token",
+        anonymous: accountConfigured ? "使用管理员账号密码登录" : "首次使用 token 登录，然后在设置中创建管理员账号",
         authenticated: "",
         unavailable: "管理服务暂不可用，请重试",
       }[state] ||
       "";
     $("retryAuth").hidden = state !== "unavailable";
     $("token").disabled = state === "checking" || state === "submitting";
+    $("loginUsername").disabled = $("token").disabled;
     if (changed) stopLiveSummary.refresh();
   }
   async function api(url, data) {
@@ -535,17 +950,32 @@ export function mountConsole(document = globalThis.document, options = {}) {
         report(e);
       }
     };
+  const contextEditor = bindContextEditor(document, {
+    getArgs: () => JSON.parse($("args").value),
+    setArgs: args => {$("args").value = JSON.stringify(args, null, 2); editorDirty = true;},
+    getMetadata: () => catalog.find(model => model.path === JSON.parse($("args").value)[0])?.context || {},
+    onApply: () => renderParameters(),
+    onDirty: () => {editorDirty = true;},
+    run,
+  });
+
+  const lmcacheEditor = bindLMCacheEditor(document, {
+    getProfile: () => ({...(editorBase || {}), port: 8000, args: JSON.parse($("args").value),
+      power: {...editorBase?.power, mode: $("powerMode").value}}),
+    setProfile: profile => {
+      editorBase = {...editorBase, lmcache: structuredClone(profile.lmcache)};
+      $("args").value = JSON.stringify(profile.args, null, 2);
+      editorDirty = true;
+      contextEditor.refresh(true);
+    },
+    beforeApply: () => contextEditor.flush(),
+    onApply: () => renderParameters(),
+    onDirty: () => {editorDirty = true;},
+    run,
+  });
   async function enterWorkspace() {
     if (disposed) return;
     setAuth("authenticated");
-    const target = new URLSearchParams(location.search).get("returnTo");
-    if (!options.embedded && target === "/dsh/") {
-      const harness = await api("/console-api/harness");
-      if (harness.running) {
-        location.replace("/dsh/");
-        return;
-      }
-    }
     await load();
   }
   function checkSession() {
@@ -560,6 +990,7 @@ export function mountConsole(document = globalThis.document, options = {}) {
         if (!r.ok) throw Error("登录状态暂不可用");
         const d = await r.json();
         if (disposed || generation !== authGeneration) return;
+        syncLoginMode(d.accountConfigured);
         if (!d.authenticated) setAuth("anonymous");
         else if (authState !== "authenticated") await enterWorkspace();
       } catch (e) {
@@ -587,52 +1018,160 @@ export function mountConsole(document = globalThis.document, options = {}) {
   const onRestore = () => void checkSession();
   globalThis.addEventListener("pageshow", onRestore);
   globalThis.addEventListener("focus", onRestore);
+  let navigationGeneration = 0;
+  const nativeRoutes = new Set(["harness", "usage", "plugins"]);
+  const nativePanelIds = {usage:"sm75-usage", plugins:"plugins"};
+  const onNativeNavigate = () => {void page("harness").catch(report);};
+  const onNativeSettings = event => {
+    selectSettingsTab(event.detail?.id || "connections");
+    void page("settings").catch(report);
+  };
+  document.addEventListener("sm75-native-navigate", onNativeNavigate);
+  document.addEventListener("sm75-native-settings", onNativeSettings);
   function route(action) {
     if (!active) throw Error("请先选择运行配置");
-    return `/console-api/profiles/${active}/${action}`;
+    return "/console-api/profiles/" + active + "/" + action;
   }
   async function page(id, { record = true } = {}) {
-    if (id !== current && current === "profiles" && !(await resolveDraft())) {
-      if (!options.embedded)
-        history.replaceState(null, "", "/?page=" + current);
-      return;
-    }
-    if (!$("login").hidden) return;
     if (id === "overview") id = "monitor";
     if (id === "benchmarks") id = "tests";
     if (!Object.hasOwn(routeTitles, id)) id = "profiles";
+    const navigation = ++navigationGeneration;
+    if (id !== current && current === "profiles" && !(await resolveDraft())) {
+      if (!options.embedded) history.replaceState(null, "", "/?page=" + current);
+      return;
+    }
+    if (authState !== "authenticated" || navigation !== navigationGeneration) return;
+    if (nativeRoutes.has(id) && !options.headerOnly) {
+      const button = document.querySelector('#nav [data-page="' + id + '"]');
+      button?.setAttribute("aria-busy", "true");
+      $("notice").textContent = "正在打开" + routeTitles[id] + "…";
+      try {
+        await openHarness();
+        if (navigation !== navigationGeneration) return;
+        const workbench = globalThis.__SM75_WORKBENCH__;
+        if (id !== "harness") {
+          const findPanel = () => workbench.panels().find(item => item.id === nativePanelIds[id]);
+          const panel = findPanel() || await new Promise((resolve, reject) => {
+            const check = () => {const value = findPanel(); if (value) {cleanup(); resolve(value);}};
+            const timer = setTimeout(() => {cleanup(); reject(Error(routeTitles[id] + "组件尚未就绪"));}, 10000);
+            const cleanup = () => {clearTimeout(timer); document.removeEventListener("sm75-native-panels", check);};
+            document.addEventListener("sm75-native-panels", check);
+            check();
+          });
+          if (navigation !== navigationGeneration) return;
+          workbench.selectPanel(panel.id);
+        } else if (current !== "harness") workbench.selectPanel(null);
+      } catch (error) {
+        if (navigation !== navigationGeneration) return;
+        report(error);
+        return;
+      } finally {
+        button?.removeAttribute("aria-busy");
+      }
+      $("notice").textContent = "";
+    }
+    if (navigation !== navigationGeneration) return;
     current = id;
-    shell.classList.toggle("engine-toolbar", id !== "monitor");
-    $("liveSummary").hidden = id === "monitor";
-    document.querySelector("main").classList.toggle("chat-page", id === "chat");
-    document
-      .querySelector("main")
-      .classList.toggle("monitor-page", id === "monitor");
+    shell.dataset.page = id;
+    document.dispatchEvent(new CustomEvent("sm75-route-change", {detail:{page:id}}));
+    shell.classList.add("engine-toolbar");
+    $("liveSummary").hidden = false;
+    shell.classList.toggle("chat-page", id === "chat");
+    shell.classList.toggle("monitor-page", id === "monitor");
     $("monitorLogs").hidden = id !== "monitor";
     $("monitorControls").hidden = id !== "monitor";
     if (id === "tests") refreshBenchmarks().catch(report);
     if (id === "chat") loadChatControls().catch(report);
     if (id === "profiles") refreshProfileCards().catch(report);
-    if (!options.embedded && record) {
-      const url = "/?page=" + id;
-      if (location.search !== "?page=" + id) history.pushState(null, "", url);
-    }
-    if (id === "harness" && !options.headerOnly) {
-      openHarness().catch(report);
-    }
-    for (const s of document.querySelectorAll("main>section"))
-      s.hidden = s.id !== id;
+    if (!options.embedded && record && location.search !== "?page=" + id)
+      history.pushState(null, "", "/?page=" + id);
+    const content = nativeRoutes.has(id) ? "harness" : id;
+    for (const section of shell.querySelectorAll(":scope>section"))
+      section.hidden = section.id !== content;
     $("title").textContent = routeTitles[id];
-    for (const b of document.querySelectorAll("nav button"))
-      b.classList.toggle("active", b.dataset.page === id);
+    $("title").hidden = id === "harness" && !!globalThis.__SM75_WORKBENCH__?.ready;
+    $("workspaceToolbar").hidden = id !== "harness";
+    $("workspaceSidebar").hidden = id !== "harness";
+    shell.classList.toggle("workspace-page", nativeRoutes.has(id));
+    for (const button of document.querySelectorAll("#nav button"))
+      button.classList.toggle("active", button.dataset.page === id);
+    if (id === "settings") activateSettingsTab().catch(report);
+    else globalThis.__SM75_WORKBENCH__?.selectSettings(null);
     if (id === "monitor" && active) {
       const src = route("monitor");
-      if ($("monitorFrame").getAttribute("src") !== src)
-        $("monitorFrame").src = src;
+      if ($("monitorFrame").getAttribute("src") !== src) $("monitorFrame").src = src;
     }
   }
-  for (const b of document.querySelectorAll("[data-page]"))
-    b.onclick = run(() => page(b.dataset.page));
+  for (const button of document.querySelectorAll("[data-page]"))
+    button.onclick = run(() => page(button.dataset.page));
+
+  let settingsTab = "deployment";
+  let settingsGeneration = 0;
+  const nativeSettingsTabs = new Set(["appearance", "assistant", "connections"]);
+  function selectSettingsTab(id) {
+    const allowed = new Set(["appearance", "assistant", "connections", "sampling", "deployment", "security"]);
+    settingsTab = allowed.has(id) ? id : "deployment";
+    ++settingsGeneration;
+    for (const button of document.querySelectorAll("[data-settings-tab]")) {
+      const selected = button.dataset.settingsTab === settingsTab;
+      button.classList.toggle("selected", selected);
+      button.setAttribute("aria-selected", String(selected));
+      button.tabIndex = selected ? 0 : -1;
+    }
+    for (const panel of document.querySelectorAll("[data-settings-panel]"))
+      panel.hidden = panel.dataset.settingsPanel !== settingsTab;
+    $("nativeSettingsSurface").hidden = !nativeSettingsTabs.has(settingsTab);
+    $("saveUnifiedSettings").hidden = !["deployment", "sampling"].includes(settingsTab);
+    $("settingsSaveHint").textContent = {
+      appearance: "主题和字号调整后立即保存。",
+      assistant: "默认助手选择立即保存；其他配置使用对应的保存操作。",
+      connections: "连接配置在对应表单中校验并保存。",
+      sampling: "保存后用于后续请求；当前会话正在生成的内容不受影响。",
+      deployment: "目录与默认启动配置保存后生效；正在运行的模型保持原配置。",
+      security: "账号与访问网段分别保存；修改已有配置需验证当前密码。",
+    }[settingsTab];
+    try { localStorage.setItem("sm75-settings-tab", settingsTab); } catch {}
+    if (current === "settings" && authState === "authenticated") activateSettingsTab().catch(report);
+  }
+  async function activateSettingsTab() {
+    const generation = settingsGeneration;
+    const native = nativeSettingsTabs.has(settingsTab);
+    if (!native) {globalThis.__SM75_WORKBENCH__?.selectSettings(null); return;}
+    const hint=$("settingsSaveHint").textContent;
+    if(!globalThis.__SM75_WORKBENCH__?.ready)
+      $("settingsSaveHint").textContent="正在加载工作台设置…";
+    try {
+      await openHarness();
+      if (current !== "settings" || generation !== settingsGeneration) return;
+      globalThis.__SM75_WORKBENCH__.selectSettings(settingsTab);
+      $("settingsSaveHint").textContent=hint;
+    } catch (error) {
+      if (current === "settings" && generation === settingsGeneration)
+        $("settingsSaveHint").textContent = error.message + "。部署硬件和账号访问仍可直接配置。";
+    }
+  }
+  $("saveUnifiedSettings").onclick = run(async () => {
+    const target = settingsTab === "sampling" ? "saveModelSampling" : "saveSettings";
+    $("saveUnifiedSettings").disabled = true;
+    try {await $(target).onclick();}
+    finally {$("saveUnifiedSettings").disabled = false;}
+  });
+  const settingsButtons = [...document.querySelectorAll("[data-settings-tab]")];
+  for (const button of settingsButtons) {
+    button.onclick = () => selectSettingsTab(button.dataset.settingsTab);
+    button.onkeydown = event => {
+      if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+      event.preventDefault();
+      const index = settingsButtons.indexOf(button);
+      const next = event.key === "Home" ? 0 : event.key === "End" ? settingsButtons.length - 1
+        : (index + (event.key === "ArrowRight" ? 1 : -1) + settingsButtons.length) % settingsButtons.length;
+      settingsButtons[next].focus();
+      selectSettingsTab(settingsButtons[next].dataset.settingsTab);
+    };
+  }
+  try {selectSettingsTab(localStorage.getItem("sm75-settings-tab") || "deployment");}
+  catch {selectSettingsTab("deployment");}
   function fillProfile(imported = null) {
     const p = imported || profiles.find((p) => p.id === active);
     if (!p) return;
@@ -645,6 +1184,8 @@ export function mountConsole(document = globalThis.document, options = {}) {
     $("apiPort").value = p.port;
     $("cacheRoot").value = globalSettings.cacheRoot || p.cacheRoot;
     $("args").value = JSON.stringify(p.args, null, 2);
+    contextEditor.refresh(true);
+    lmcacheEditor.refresh(true);
     $("binds").value = JSON.stringify(p.binds || [], null, 2);
     const val = (name, fallback) => {
       const i = p.args.indexOf(name);
@@ -664,35 +1205,8 @@ export function mountConsole(document = globalThis.document, options = {}) {
     $("variant").value = spec.method || "base";
     syncModelChoices(p.args[0], spec.model);
     $("draftPath").value = spec.model || "";
-    const kv = JSON.parse(val("--kv-transfer-config", "{}"));
-    $("cpuKv").value =
-      Number(kv.kv_connector_extra_config?.cpu_bytes_to_use ?? 8589934592) /
-      2 ** 30;
-    const pw = {
-      mode: "pstate",
-      util: 5,
-      confirm: 60,
-      low: 8,
-      high: 16,
-      poll: 5,
-      ...(p.power || {}),
-    };
-    const idleSeconds = Math.max(
-      1,
-      Number(
-        pw.idleSeconds ?? (pw.idleMinutes != null ? pw.idleMinutes * 60 : 1),
-      ) || 1,
-    );
-    $("powerMode").value = pw.mode;
-    for (const [id, v] of [
-      ["pstateIdle", idleSeconds],
-      ["pstateUtil", pw.util],
-      ["pstateConfirm", pw.confirm],
-      ["pstateLow", pw.low],
-      ["pstateHigh", pw.high],
-      ["pstatePoll", pw.poll],
-    ])
-      $(id).value = v;
+    $("cpuKv").value = readCpuCompatibility(p.args).cpuKvGiB || "8";
+    fillProfilePowerFields(document, p);
     syncPower();
     renderParameters();
     fillCombo();
@@ -718,9 +1232,11 @@ export function mountConsole(document = globalThis.document, options = {}) {
       ? active
       : profiles[0]?.id || "";
     $("active").value = active;
+    $("active").title = profiles.find(p => p.id === active)?.name || "当前运行配置";
     fillProfile();
     $("login").hidden = true;
-    page(current, { record: false });
+    await page(current, { record: false });
+    if (active && !options.headerOnly) void openHarness().catch(() => {});
     await loadChat();
     await refresh();
   }
@@ -781,7 +1297,9 @@ export function mountConsole(document = globalThis.document, options = {}) {
     const generation = ++authGeneration;
     setAuth("submitting");
     try {
-      await api("/console-api/login", { token: $("token").value });
+      await api("/console-api/login", accountConfigured
+        ? { username: $("loginUsername").value.trim(), password: $("token").value }
+        : { token: $("token").value });
       if (disposed || generation !== authGeneration) return;
       $("token").value = "";
       await enterWorkspace();
@@ -799,6 +1317,7 @@ export function mountConsole(document = globalThis.document, options = {}) {
       $("signin").click();
     }
   };
+  $("loginUsername").onkeydown = $("token").onkeydown;
   const onPop = () =>
     page(new URLSearchParams(location.search).get("page") || "profiles", {
       record: false,
@@ -808,10 +1327,12 @@ export function mountConsole(document = globalThis.document, options = {}) {
     const selected = $("active").value;
     if (!(await resolveDraft())) {
       $("active").value = active;
+    $("active").title = profiles.find(p => p.id === active)?.name || "当前运行配置";
       return;
     }
     if (abort) {
       $("active").value = active;
+    $("active").title = profiles.find(p => p.id === active)?.name || "当前运行配置";
       throw Error("先停止当前回复再切换配置");
     }
     active = selected;
@@ -1006,8 +1527,9 @@ export function mountConsole(document = globalThis.document, options = {}) {
   };
   $("logDialog").addEventListener("close", stopLogs);
   $("save").onclick = run(async () => {
-    await api("/console-api/profiles", editedProfile());
-    active = $("pid").value;
+    const snapshot = editedProfile();
+    profiles = await api("/console-api/profiles", snapshot);
+    active = snapshot.id;
     if ($("profileDefault").checked) {
       globalSettings = await api("/console-api/settings", {
         defaultProfile: active,
@@ -1020,12 +1542,14 @@ export function mountConsole(document = globalThis.document, options = {}) {
       });
     }
     editorDirty = false;
-    closeEditor();
+    // Complete refresh before exposing the cards, so an immediate reopen cannot
+    // restore an old profile while load() is still replacing the editor values.
     await load();
+    closeEditor();
+    await refreshProfileCards();
   });
   $("applyParams").onclick = run(() => {
-    const args = JSON.parse($("args").value);
-    args[0] = $("modelPath").value;
+    const args = contextArgsForModel($("modelPath").value);
     function put(k, v) {
       const i = args.indexOf(k);
       if (i >= 0) args.splice(i, 2);
@@ -1036,41 +1560,10 @@ export function mountConsole(document = globalThis.document, options = {}) {
       ["seq", "--max-num-seqs"],
       ["batch", "--max-num-batched-tokens"],
       ["util", "--gpu-memory-utilization"],
-      ["context", "--max-model-len"],
       ["idle", "--auto-sleep-idle-timeout"],
     ])
       put(flag, $(id).value);
     put("--auto-sleep-offload-target", "exit");
-    const KVDEF = {
-      kv_connector: "OffloadingConnector",
-      kv_role: "kv_both",
-      kv_connector_extra_config: {
-        spec_name: "CPUOffloadingSpec",
-        cpu_bytes_to_use: 8589934592,
-      },
-    };
-    if ($("offloadEnabled").checked) {
-      const ki = args.indexOf("--kv-transfer-config");
-      let kv = {};
-      if (ki >= 0) {
-        try {
-          kv = JSON.parse(args[ki + 1]);
-        } catch {
-          kv = {};
-        }
-      }
-      kv = {
-        ...KVDEF,
-        ...kv,
-        kv_connector_extra_config: {
-          ...KVDEF.kv_connector_extra_config,
-          ...(kv.kv_connector_extra_config || {}),
-        },
-      };
-      kv.kv_connector_extra_config.cpu_bytes_to_use =
-        Math.max(1, Number($("cpuKv").value)) * 2 ** 30;
-      put("--kv-transfer-config", JSON.stringify(kv));
-    } else put("--kv-transfer-config", null);
     const mode = $("variant").value;
     if (mode === "base") {
       put("--speculative-config", null);
@@ -1098,6 +1591,8 @@ export function mountConsole(document = globalThis.document, options = {}) {
       put("--scheduler-cls", "vllm.v1.core.sched.scheduler_sm75.SM75Scheduler");
     }
     $("args").value = JSON.stringify(args, null, 2);
+    contextEditor.refresh(true);
+    renderParameters();
   });
   $("download").onclick = run(async () => {
     if (!downloadSelection) throw Error("请先从搜索结果选择模型");
@@ -1366,9 +1861,9 @@ export function mountConsole(document = globalThis.document, options = {}) {
     $("messages").replaceChildren();
     for (const m of chat) message(m.role, m.content);
   }
-  async function saveChat() {
-    if (active)
-      await api("/console-api/chats/" + active, { messages: chat.slice(-200) });
+  async function saveChat(profileId = active, messages = chat) {
+    if (profileId)
+      await api("/console-api/chats/" + profileId, { messages: messages.slice(-200) });
   }
   $("clearChat").onclick = run(async () => {
     if (abort) throw Error("先停止当前回复");
@@ -1384,19 +1879,32 @@ export function mountConsole(document = globalThis.document, options = {}) {
       $("chatForm").requestSubmit();
     }
   };
+  function messageText(content) {
+    return Array.isArray(content) ? content.filter(x => x.type === "text").map(x => x.text).join("\n") + content.filter(x => x.type === "image").map(() => "[图片]").join(" ") : String(content || "");
+  }
   function message(role, text) {
     const el = document.createElement("div");
     el.className = "message " + role;
-    el.textContent = text.trimStart();
+    el.textContent = messageText(text).trimStart();
     $("messages").append(el);
     el.scrollIntoView({ block: "end" });
     return el;
   }
+  const selectedImages = [];
+  $("pickChatImages").onclick = () => $("chatImages").click();
+  $("chatImages").onchange = () => { selectedImages.splice(0,selectedImages.length,...$("chatImages").files); $("chatImageList").textContent = selectedImages.map(x=>x.name).join("、"); };
   $("chatForm").onsubmit = run(async (e) => {
     e.preventDefault();
     if (abort) throw Error("当前回复尚未完成");
     const text = $("prompt").value.trim();
-    if (!text) return;
+    if (!text && !selectedImages.length) return;
+    const requestProfile = active, requestUrl = route("chat"), requestChat = chat;
+    const images = [...selectedImages];
+    const controller = new AbortController();
+    abort = controller;
+    $("sendChat").hidden = true;
+    $("cancel").hidden = false;
+    try {
     let model = $("model").value;
     if (!model) {
       await loadChatControls();
@@ -1404,9 +1912,13 @@ export function mountConsole(document = globalThis.document, options = {}) {
     }
     if (!model) throw Error("模型尚未就绪");
     const requestOptions = chatRequestOptions();
-    chat.push({ role: "user", content: text });
-    message("user", text);
-    $("prompt").value = "";
+    const imageIds = await uploadChatImages(images, requestProfile, controller.signal);
+    controller.signal.throwIfAborted();
+    if (active !== requestProfile) throw Error("运行配置已变化，请重新发送");
+    const content = imageIds.length ? [{type:"text",text}, ...imageIds.map(attachmentId=>({type:"image",attachmentId}))] : text;
+    requestChat.push({ role: "user", content });
+    message("user", content);
+    $("prompt").value = ""; selectedImages.splice(0); $("chatImages").value = ""; $("chatImageList").textContent = "";
     const out = message("assistant", "等待响应 / 休眠时正在唤醒…");
     const think = document.createElement("details");
     think.className = "thinking";
@@ -1434,9 +1946,6 @@ export function mountConsole(document = globalThis.document, options = {}) {
       );
       return "已思考（用时 " + sec + " 秒）";
     }
-    abort = new AbortController();
-    $("sendChat").hidden = true;
-    $("cancel").hidden = false;
     const start = performance.now();
     let first = null,
       result = "",
@@ -1493,11 +2002,11 @@ export function mountConsole(document = globalThis.document, options = {}) {
     paintStatus();
     const statusTimer = setInterval(paintStatus, 250);
     try {
-      const r = await fetch(route("chat"), {
+      const r = await fetch(requestUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ model, messages: chat, ...requestOptions }),
-        signal: abort.signal,
+        body: JSON.stringify({ model, messages: requestChat, ...requestOptions }),
+        signal: controller.signal,
       });
       if (!r.ok) throw Error(await r.text());
       const decoder = new TextDecoder();
@@ -1534,7 +2043,7 @@ export function mountConsole(document = globalThis.document, options = {}) {
         }
       }
       result = result.replace(/^\s+/, "");
-      chat.push({ role: "assistant", content: result });
+      requestChat.push({ role: "assistant", content: result });
       phase = "已完成";
       if (reason) {
         if (thinkEnd === null) thinkEnd = performance.now();
@@ -1550,41 +2059,144 @@ export function mountConsole(document = globalThis.document, options = {}) {
         if (!think.dataset.touched) think.open = false;
         thinkLabel.textContent = thinkLabelText();
       }
-      if (result) chat.push({ role: "assistant", content: result });
+      if (result) requestChat.push({ role: "assistant", content: result });
     } finally {
       ended = performance.now();
       clearInterval(statusTimer);
       paintStatus();
-      abort = null;
+      await saveChat(requestProfile, requestChat);
+    }
+    } finally {
+      controller.abort();
+      if (abort === controller) abort = null;
       $("sendChat").hidden = false;
       $("cancel").hidden = true;
-      await saveChat();
     }
   });
   $("installHarness").onclick = run(async () => {
     await api("/console-api/harness/install", {});
     $("harnessState").textContent = "正在安装，可在模型库查看后台任务";
   });
-  let harnessOpening = false;
-  async function openHarness() {
-    if (options.onConversation) {
-      options.onConversation();
-      return;
+  let harnessBoot;
+  let nativeScriptsStarted = false;
+  async function resolveHarnessProfile() {
+    if (active && profiles.some(profile => profile.id === active)) return active;
+    const available = await api("/console-api/profiles");
+    const settings = globalSettings.defaultProfile
+      ? globalSettings
+      : await api("/console-api/settings");
+    const selected = available.find(profile => profile.id === active)
+      || available.find(profile => profile.id === settings.defaultProfile)
+      || available[0];
+    if (selected) {
+      profiles = available;
+      active = selected.id;
     }
-    if (harnessOpening) return;
-    harnessOpening = true;
+    return selected?.id || "";
+  }
+  async function loadNativeWorkbench(url) {
+    if (nativeScriptsStarted) throw Error("请刷新页面后重新连接工作台");
+    const entry = new URL(url, location.origin);
+    if (entry.origin !== location.origin || entry.pathname !== "/harness-ui/" ||
+        entry.username || entry.password || entry.search || entry.hash)
+      throw Error("工作台入口必须使用本机已登录的管理通道");
+    if (globalThis.__DSH_TRANSPORT__ !== undefined)
+      throw Error("存在未知工作台连接，请刷新页面后重试");
+    const epoch = authEpoch;
+    const checkIdentity = () => {
+      if (authState !== "authenticated" || epoch !== authEpoch || disposed)
+        throw Error("登录状态已改变，请重新连接工作台");
+    };
+    checkIdentity();
+    const response = await fetch(entry.href, {
+      cache:"no-store", credentials:"same-origin", redirect:"error",
+      signal:AbortSignal.timeout(15000),
+    });
+    if (!response.ok || !response.headers.get("content-type")?.includes("text/html"))
+      throw Error("工作台资源加载失败：" + response.status);
+    const html = new DOMParser().parseFromString(await response.text(), "text/html");
+    checkIdentity();
+    // Official host ownership applies only to this authenticated same-origin loader.
+    // Every subsequent HTTP/RPC/WebSocket request still passes the server's session gate.
+    globalThis.__DSH_TRANSPORT__ = Object.freeze({ownsHost:true});
+    const sameOriginUrl = value => {
+      const resolved = new URL(value, new URL(url, location.origin));
+      if (resolved.origin !== location.origin) throw Error("工作台资源来源不匹配");
+      return resolved.href;
+    };
+    // Use the signed-in, same-origin native boot document as the asset manifest.
+    // No page, navigation, or second document is mounted.
+    for (const node of html.querySelectorAll('link[rel="stylesheet"], style')) {
+      const asset = document.createElement(node.tagName.toLowerCase());
+      if (node.tagName === "LINK") {asset.rel="stylesheet";asset.href=sameOriginUrl(node.getAttribute("href"));}
+      else asset.textContent=node.textContent;
+      asset.dataset.sm75Native="true";
+      document.head.append(asset);
+    }
+    const scripts = [...html.querySelectorAll("script")];
+    nativeScriptsStarted = true;
+    const execute = node => new Promise((resolve,reject) => {
+      checkIdentity();
+      const script=document.createElement("script");
+      if(node.type) script.type=node.type;
+      if(node.src) {
+        script.src=sameOriginUrl(node.getAttribute("src"));
+        script.async=false;
+        const timer=setTimeout(()=>reject(Error("工作台脚本加载超时，请刷新页面重试")),15000);
+        script.onload=()=>{clearTimeout(timer);resolve();};
+        script.onerror=()=>{clearTimeout(timer);reject(Error("工作台脚本加载失败，请刷新页面重试"));};
+      } else script.textContent=node.textContent;
+      document.head.append(script);
+      if(!node.src) resolve();
+    });
+    for(const node of scripts.filter(node=>node.type!=="module")) await execute(node);
+    for(const node of scripts.filter(node=>node.type==="module")) await execute(node);
+    await new Promise((resolve,reject)=>{
+      if(globalThis.__SM75_WORKBENCH__?.ready) {resolve();return;}
+      const ready=()=>{if(!globalThis.__SM75_WORKBENCH__?.ready)return;clearTimeout(timer);document.removeEventListener("sm75-native-ready",ready);resolve();};
+      const timer=setTimeout(()=>{document.removeEventListener("sm75-native-ready",ready);reject(Error("工作台初始化超时，请刷新后重试"));},45000);
+      document.addEventListener("sm75-native-ready",ready);
+    });
+  }
+  async function openHarness() {
+    if (options.onConversation) {options.onConversation();return;}
+    if (globalThis.__SM75_WORKBENCH__?.ready) return;
+    if (!harnessBoot) {
+      $("harnessState").textContent="正在连接工作台…";
+      $("harnessState").hidden=false;
+      $("root").hidden=false;
+      harnessBoot=(async()=>{
+        const profile = await resolveHarnessProfile();
+        if (!profile) throw Error("请先创建运行配置");
+        const data=await api("/console-api/harness/start",{profile});
+        await loadNativeWorkbench(data.url);
+        $("harnessState").hidden=true;
+        $("startHarness").hidden=true;
+      })();
+    }
     try {
-      $("harnessState").textContent = "正在连接 DSH…";
-      const d = await api("/console-api/harness/start", { profile: active });
-      location.assign(d.url);
-    } finally {
-      harnessOpening = false;
+      await harnessBoot;
+      if(!globalThis.__SM75_WORKBENCH__?.ready)
+        throw Error("工作台组件已断开，请刷新页面重新连接");
+    }
+    catch(error) {
+      harnessBoot = undefined;
+      $("harnessState").textContent="工作台连接失败："+error.message;
+      $("harnessState").hidden=false;
+      $("startHarness").hidden=false;
+      throw error;
     }
   }
-  $("startHarness").onclick = run(openHarness);
+  $("startHarness").onclick = run(async () => {
+    if (nativeScriptsStarted && !globalThis.__SM75_WORKBENCH__?.ready) location.reload();
+    else await openHarness();
+  });
   $("stopHarness").onclick = run(async () => {
     await api("/console-api/harness/stop", {});
+    location.replace("/");
+    $("harnessState").hidden = false;
     $("harnessState").textContent = "DSH 已停止";
+    $("startHarness").hidden = false;
   });
   void checkSession();
   const refreshTimer = setInterval(async () => {
@@ -1778,6 +2390,7 @@ export function mountConsole(document = globalThis.document, options = {}) {
         args: [...source.args],
         binds: source.binds || [],
         env,
+        ...(source.lmcache === undefined ? {} : {lmcache: structuredClone(source.lmcache)}),
         port: 8000,
         cacheRoot: globalSettings.cacheRoot,
         backend: "docker",
@@ -1799,6 +2412,7 @@ export function mountConsole(document = globalThis.document, options = {}) {
         const i = p.args.indexOf(flag);
         if (i >= 0) JSON.parse(p.args[i + 1]);
       }
+      validateLMCacheProfile(p);
       closeEditor();
       editProfile(p, false, true);
       $("profileDefault").checked = false;
@@ -1863,6 +2477,7 @@ export function mountConsole(document = globalThis.document, options = {}) {
     if (!imported) {
       active = p.id;
       $("active").value = active;
+    $("active").title = profiles.find(p => p.id === active)?.name || "当前运行配置";
     }
     fillProfile(p);
     featureBackup = {};
@@ -1907,6 +2522,9 @@ export function mountConsole(document = globalThis.document, options = {}) {
         await api("/console-api/profiles/" + p.id + "/status"),
       ]),
     );
+    // A user may reopen the editor while the status requests are in flight.
+    // Replacing its parent card now would detach the live form.
+    if (!$("profileEditor").hidden) return;
     profileState = Object.fromEntries(states);
     const signature = JSON.stringify([profiles, profileState]);
     if (signature === profilesSignature) return;
@@ -1967,10 +2585,10 @@ export function mountConsole(document = globalThis.document, options = {}) {
               await refreshProfileCards();
             },
           ],
-          ["编辑", () => editProfile(p)],
-          ["复制", () => editProfile(p, true)],
-          ["复制完整配置", () => shareProfile(p, false)],
-          ["导出配置", () => shareProfile(p, true)],
+          ["编辑", () => editProfile(profiles.find(row => row.id === p.id))],
+          ["复制", () => editProfile(profiles.find(row => row.id === p.id), true)],
+          ["复制完整配置", () => shareProfile(profiles.find(row => row.id === p.id), false)],
+          ["导出配置", () => shareProfile(profiles.find(row => row.id === p.id), true)],
         ]) {
           const b = document.createElement("button");
           b.textContent = label;
@@ -2006,21 +2624,14 @@ export function mountConsole(document = globalThis.document, options = {}) {
   };
   $("closeLogs").onclick = () => $("logDialog").close();
   function putArg(key, value) {
-    const args = JSON.parse($("args").value),
-      i = args.indexOf(key);
-    if (i >= 0) {
-      let end = i + 1;
-      while (end < args.length && !/^--?[A-Za-z]/.test(args[end])) end++;
-      args.splice(i, end - i);
-    }
-    if (value !== null)
-      args.push(key, ...(value === true ? [] : [String(value)]));
-    $("args").value = JSON.stringify(args);
+    $("args").value = JSON.stringify(setArg(JSON.parse($("args").value), key, value));
   }
   function argValue(key) {
-    const a = JSON.parse($("args").value),
-      i = a.indexOf(key);
-    return i < 0 ? null : a[i + 1];
+    return readArgument(JSON.parse($("args").value), key);
+  }
+  function readCpuCompatibility(args) {
+    try { return readContextSettings(args); }
+    catch { return {cpuKvMode: "custom", cpuKvGiB: ""}; }
   }
   function syncFeatures() {
     const a = JSON.parse($("args").value),
@@ -2037,16 +2648,11 @@ export function mountConsole(document = globalThis.document, options = {}) {
       Number(argValue("--auto-sleep-idle-timeout")) > 0
         ? Number(argValue("--auto-sleep-idle-timeout"))
         : 30;
-    $("offloadBody").hidden = !$("offloadEnabled").checked;
-    try {
-      const kv = JSON.parse(argValue("--kv-transfer-config") || "{}");
-      $("offloadGiB").value = Math.round(
-        (kv.kv_connector_extra_config?.cpu_bytes_to_use ?? 8589934592) /
-          2 ** 30,
-      );
-    } catch {}
+    const contextState = readCpuCompatibility(a);
+    $("offloadEnabled").checked = contextState.cpuKvMode === "native";
+    $("offloadGiB").value = contextState.cpuKvGiB || "8";
+    $("offloadBody").hidden = true;
     $("prefixEnabled").checked = !a.includes("--no-enable-prefix-caching");
-    $("offloadEnabled").checked = !!argValue("--kv-transfer-config");
     const apiUrl = new URL(location.href);
     apiUrl.port = "8000";
     apiUrl.pathname = "/v1";
@@ -2060,12 +2666,25 @@ export function mountConsole(document = globalThis.document, options = {}) {
       "\n" +
       JSON.stringify(a, null, 2);
   }
-  $("mainModelSelect").onchange = () => {
-    const a = JSON.parse($("args").value);
-    a[0] = $("mainModelSelect").value;
-    $("args").value = JSON.stringify(a);
-    renderParameters();
-  };
+  function contextArgsForModel(modelPath) {
+    // Validate/apply a pending form against its original model before changing
+    // paths. The shared retargeter resets the old model-specific RoPE overrides.
+    contextEditor.flush();
+    return retargetContextModel(JSON.parse($("args").value), modelPath,
+      catalog.find(model => model.path === modelPath)?.context || {});
+  }
+  $("mainModelSelect").onchange = run(() => {
+    const previousModel = JSON.parse($("args").value)[0];
+    try {
+      $("args").value = JSON.stringify(contextArgsForModel($("mainModelSelect").value));
+      contextEditor.refresh(true);
+      renderParameters();
+      fillCombo();
+    } catch (error) {
+      $("mainModelSelect").value = previousModel;
+      throw error;
+    }
+  });
   $("chooseMtp").onclick = () => {
     $("variant").value = "mtp";
     $("setAcceleration").click();
@@ -2112,14 +2731,6 @@ export function mountConsole(document = globalThis.document, options = {}) {
   const COMBO_SEQS = { single: 4, coding: 8, multi: 16 };
   const COMBO_UTIL = { fp8: 0.92, awq: 0.9, kat: 0.9 };
   const COMBO_SCHED = "vllm.v1.core.sched.scheduler_sm75.SM75Scheduler";
-  function comboCtxFor(A, scene) {
-    const order = [262144, 131072, 65536, 32768, 16384];
-    let i =
-      A >= 28 ? 0 : A >= 11 ? 1 : A >= 5 ? 2 : A >= 2.5 ? 3 : A >= 2.5 ? 3 : -1;
-    if (i < 0) return 0;
-    if (scene === "multi") i = Math.min(order.length - 1, i + 1);
-    return order[i];
-  }
   function comboModelRows() {
     return (Array.isArray(catalog) ? catalog : []).filter(
       (m) => m.role !== "draft",
@@ -2150,7 +2761,7 @@ export function mountConsole(document = globalThis.document, options = {}) {
     const acc = $("comboAccel").value;
     $("comboMtpRow").hidden = acc !== "mtp";
     $("comboDflashRow").hidden = acc !== "dflash";
-    $("offloadBody").hidden = $("comboCpuKv").value !== "on";
+    $("offloadBody").hidden = true;
   }
   function comboFillModels() {
     const rows = comboModelRows(),
@@ -2204,16 +2815,9 @@ export function mountConsole(document = globalThis.document, options = {}) {
     $("comboDraftTokens").value = String(
       spec.method === "dflash" && tok >= 1 && tok <= 8 ? tok : 7,
     );
-    try {
-      const kv = JSON.parse(argValue("--kv-transfer-config") || "{}");
-      $("comboCpuKv").value = argValue("--kv-transfer-config") ? "on" : "off";
-      const b =
-        kv.kv_connector_extra_config &&
-        kv.kv_connector_extra_config.cpu_bytes_to_use;
-      if (b) $("offloadGiB").value = Math.round(b / 2 ** 30);
-    } catch {
-      $("comboCpuKv").value = "off";
-    }
+    const cpu = readCpuCompatibility(JSON.parse($("args").value));
+    $("comboCpuKv").value = cpu.cpuKvMode === "native" ? "on" : "off";
+    $("offloadGiB").value = cpu.cpuKvGiB || "8";
     syncComboBodies();
     comboDetect();
   }
@@ -2235,66 +2839,27 @@ export function mountConsole(document = globalThis.document, options = {}) {
       vram = Math.max(1, Number($("comboVram").value) || 1);
     const scene = $("comboScene").value,
       accel = $("comboAccel").value,
-      kvq = $("comboKv").value,
-      cpu = $("comboCpuKv").value,
-      gib = Number($("offloadGiB").value) || 8;
+      kvq = $("comboKv").value;
     const m = (catalog || []).find((x) => x.path === $("comboModel").value);
     if (!m)
       throw Error("未选择模型：请先到模型库下载/导入模型，再在组合里选择");
-    const wGiB = Number(m.weightGiB || 0);
-    let draftPath = "",
-      dGiB = 0;
+    let draftPath = "";
     if (accel === "dflash") {
       draftPath = $("draftPath").value;
       const d = (catalog || []).find((x) => x.path === draftPath);
       if (!d) throw Error("请先到模型库下载 DFlash2 草稿模型，并在下方选中");
-      dGiB = Number(d.weightGiB || 0);
     }
-    const A = tp * vram - wGiB - dGiB - 2,
-      ctx = comboCtxFor(A, scene);
-    if (!ctx)
-      throw Error(
-        "显存不足：可用约 " +
-          A.toFixed(1) +
-          " GiB（" +
-          tp +
-          "×" +
-          vram +
-          "G − 权重 " +
-          wGiB +
-          "G" +
-          (dGiB ? " − 草稿 " + dGiB + "G" : "") +
-          " − 2G 余量），请更换量化或调整卡数/上下文",
-      );
     const seqs = COMBO_SEQS[scene],
       util = COMBO_UTIL[m.format === "fp8" ? "fp8" : "awq"],
       batch = 8192;
-    const args = JSON.parse($("args").value);
-    const put = (k, v) => {
-      const i = args.indexOf(k);
-      if (i >= 0) args.splice(i, 2);
-      if (v !== null) args.push(k, String(v));
-    };
-    args[0] = m.path;
+    let args = contextArgsForModel(m.path);
+    const put = (key, value) => {args = setArg(args, key, value);};
+    const previousSpec = JSON.parse(readArgument(args, "--speculative-config", "{}"));
     put("--tensor-parallel-size", tp);
     put("--max-num-seqs", seqs);
     put("--max-num-batched-tokens", batch);
     put("--gpu-memory-utilization", util);
-    put("--max-model-len", ctx);
     put("--kv-cache-dtype", kvq);
-    if (cpu === "on")
-      put(
-        "--kv-transfer-config",
-        JSON.stringify({
-          kv_connector: "OffloadingConnector",
-          kv_role: "kv_both",
-          kv_connector_extra_config: {
-            spec_name: "CPUOffloadingSpec",
-            cpu_bytes_to_use: gib * 2 ** 30,
-          },
-        }),
-      );
-    else put("--kv-transfer-config", null);
     if (accel === "none") {
       put("--speculative-config", null);
       put("--scheduler-cls", null);
@@ -2302,6 +2867,7 @@ export function mountConsole(document = globalThis.document, options = {}) {
       put(
         "--speculative-config",
         JSON.stringify({
+          ...(previousSpec.method === "mtp" ? previousSpec : {}),
           method: "mtp",
           num_speculative_tokens: Number($("comboMtpTokens").value) || 5,
         }),
@@ -2311,11 +2877,11 @@ export function mountConsole(document = globalThis.document, options = {}) {
       put(
         "--speculative-config",
         JSON.stringify({
+          ...(previousSpec.method === "dflash" && previousSpec.model === draftPath ? previousSpec : {}),
           method: "dflash",
           model: draftPath,
           num_speculative_tokens: Number($("comboDraftTokens").value) || 7,
           draft_tensor_parallel_size: tp,
-          max_model_len: ctx,
           kv_cache_dtype: "auto",
           attention_backend: "FLASHINFER",
           draft_sample_method: "probabilistic",
@@ -2325,6 +2891,7 @@ export function mountConsole(document = globalThis.document, options = {}) {
     }
     $("args").value = JSON.stringify(args, null, 2);
     $("format").value = m.format === "fp8" ? "fp8" : "awq";
+    contextEditor.refresh(true);
     renderParameters();
     syncFeatures();
     syncPower();
@@ -2338,8 +2905,8 @@ export function mountConsole(document = globalThis.document, options = {}) {
       m.name +
       " · " +
       { single: "单人", coding: "Coding", multi: "多人" }[scene] +
-      " · ctx " +
-      ctx +
+      " · 上下文保持 " +
+      (readArgument(args, "--max-model-len") || "auto") +
       " · seqs " +
       seqs +
       (accel !== "none" ? " · " + accel.toUpperCase() : "");
@@ -2370,32 +2937,42 @@ export function mountConsole(document = globalThis.document, options = {}) {
     );
     renderParameters();
   };
-  $("offloadEnabled").onchange = () => {
-    if (!$("offloadEnabled").checked) {
-      featureBackup.kv = argValue("--kv-transfer-config");
-      putArg("--kv-transfer-config", null);
-    } else
-      putArg(
-        "--kv-transfer-config",
-        featureBackup.kv ||
-          JSON.stringify({
-            kv_connector: "OffloadingConnector",
-            kv_role: "kv_both",
-            kv_connector_extra_config: {
-              spec_name: "CPUOffloadingSpec",
-              cpu_bytes_to_use: (Number($("offloadGiB").value) || 8) * 2 ** 30,
-            },
-          }),
-      );
-    $("offloadBody").hidden = !$("offloadEnabled").checked;
+  $("offloadEnabled").onchange = run(() => {
+    const args = JSON.parse($("args").value), state = readContextSettings(args);
+    if (state.cpuKvMode === "custom") throw Error("请在高级参数中编辑自定义缓存连接器");
+    $("args").value = JSON.stringify(applyContextSettings(args, {...state,
+      cpuKvMode: $("offloadEnabled").checked ? "native" : "off", cpuKvGiB: $("offloadGiB").value}));
     renderParameters();
-  };
+  });
   $("offloadGiB").onchange = () => {
     if ($("offloadEnabled").checked) $("offloadEnabled").onchange();
   };
 
   let templateData = { recommended: [], personal: [] };
+  function showSecurity(info) {
+    syncLoginMode(info.accountConfigured);
+    $("adminUsername").value = info.username;
+    $("allowedNetworks").value = info.networks.join("\n");
+    $("securityStatus").textContent = info.accountConfigured
+      ? "管理员账号已启用，之后使用账号密码登录。"
+      : "请先创建管理员账号；创建成功后，首次登录 token 将停止用于 Web 登录。";
+    $("saveAdmin").textContent = info.accountConfigured ? "更新管理员账号" : "创建管理员账号";
+    $("networkPeer").textContent = "当前连接地址：" + info.peer + "（白名单必须包含此地址）";
+  }
+  $("saveAdmin").onclick = run(async () => {
+    if ($("adminPassword").value !== $("adminPasswordConfirm").value) throw Error("两次新密码不一致");
+    const info = await api("/console-api/security", { action: "account", username: $("adminUsername").value.trim(), password: $("adminPassword").value, currentPassword: $("adminCurrentPassword").value });
+    showSecurity(info);
+    for (const id of ["adminPassword", "adminPasswordConfirm", "adminCurrentPassword"]) $(id).value = "";
+    $("notice").textContent = "管理员账号已保存；其他登录会话已退出。";
+  });
+  $("saveNetworks").onclick = run(async () => {
+    showSecurity(await api("/console-api/security", { action: "networks", networks: $("allowedNetworks").value.split(/[\n,]+/).map(s => s.trim()).filter(Boolean), currentPassword: $("adminCurrentPassword").value }));
+    $("adminCurrentPassword").value = "";
+    $("notice").textContent = "网段白名单已保存。";
+  });
   async function loadSettings(s) {
+    showSecurity(await api("/console-api/security"));
     await refreshSampling();
     $("provider").value = s.source;
     $("settingModels").value = s.modelRoot;
@@ -2431,7 +3008,9 @@ export function mountConsole(document = globalThis.document, options = {}) {
     await refreshModels();
   });
   function editedProfile() {
-    return {
+    if (contextEditor.flush()) renderParameters();
+    if (lmcacheEditor.flush()) renderParameters();
+    return validateLMCacheProfile({
       ...editorBase,
       name: $("profileName").value,
       id: $("pid").value,
@@ -2451,7 +3030,7 @@ export function mountConsole(document = globalThis.document, options = {}) {
         poll: Number($("pstatePoll").value) || 5,
         gpus: "0,1,2,3",
       },
-    };
+    });
   }
   $("saveTemplate").onclick = run(async () => {
     await api("/console-api/templates", {
@@ -2464,6 +3043,8 @@ export function mountConsole(document = globalThis.document, options = {}) {
   $("applyTemplate").onclick = run(async () => {
     const [kind, id] = $("templateSelect").value.split(":");
     if (kind === "base") {
+      contextEditor.flush();
+      lmcacheEditor.flush();
       $("args").value = JSON.stringify(
         (
           await api("/console-api/templates/apply", {
@@ -2481,7 +3062,11 @@ export function mountConsole(document = globalThis.document, options = {}) {
       $("binds").value = JSON.stringify(p.binds || [], null, 2);
       $("cacheRoot").value = globalSettings.cacheRoot || p.cacheRoot;
       $("format").value = p.format;
+      fillProfilePowerFields(document, p);
+      syncPower();
     }
+    contextEditor.refresh(true);
+    lmcacheEditor.refresh(true);
     renderParameters();
     page("profiles");
     $("notice").textContent = "模板已填入，请检查并保存运行配置。";
@@ -2489,6 +3074,7 @@ export function mountConsole(document = globalThis.document, options = {}) {
 
   // Keep dashboard actions in the page toolbar while retaining their original handlers.
   let monitorControlObserver, monitorSizeObserver;
+  let monitorSpecPending = false;
   $("monitorFrame").addEventListener("load", () => {
     const frame = $("monitorFrame"),
       doc = frame.contentDocument,
@@ -2511,10 +3097,30 @@ export function mountConsole(document = globalThis.document, options = {}) {
             new frame.contentWindow.Event("change", { bubbles: true }),
           );
         };
+      else if (id === "specToggle") proxy.onclick = run(async () => {
+        if (monitorSpecPending) return;
+        const specUrl = route("spec");
+        monitorSpecPending = true;
+        proxy.disabled = true;
+        proxy.textContent = "切换中…";
+        try {
+          const state = await toggleMonitorSpec((payload) => api(specUrl, payload));
+          const enabled = state.desired_enabled ?? state.enabled;
+          original.textContent = (enabled ? "开" : "关") + (state.pending ? " · 待生效" : "");
+          original.title = enabled ? "点击关闭投机解码（不卸显存）" : "点击开启投机解码";
+          $("notice").textContent = state.pending ? "投机切换已提交，等待引擎生效。" : "投机解码已" + (enabled ? "开启。" : "关闭（草稿权重仍驻留显存）。");
+        } catch (error) {
+          throw Error("投机切换失败：" + error.message);
+        } finally {
+          monitorSpecPending = false;
+          sync();
+        }
+      });
       else proxy.onclick = () => original.click();
     }
     const sync = () => {
       for (const id of ["status", "pause", "specToggle"]) {
+        if (id === "specToggle" && monitorSpecPending) continue;
         const original = doc.getElementById(id),
           proxy = controls.querySelector(
             id === "status" ? "#status" : "#monitor-" + id,
@@ -2826,8 +3432,9 @@ export function mountConsole(document = globalThis.document, options = {}) {
     const args = JSON.parse($("args").value),
       rows = [];
     for (let i = 1; i < args.length; ) {
-      const key = args[i++],
-        values = [];
+      const token = args[i++], equal = token.indexOf("="),
+        key = equal > 0 ? token.slice(0, equal) : token,
+        values = equal > 0 ? [token.slice(equal + 1)] : [];
       while (i < args.length && !/^--?[a-zA-Z]/.test(args[i]))
         values.push(args[i++]);
       rows.push({ key, values });
@@ -2869,6 +3476,8 @@ export function mountConsole(document = globalThis.document, options = {}) {
           .filter((r) => !r.disabled)
           .flatMap((r) => [r.key, ...r.values]),
       ]);
+      contextEditor.refresh();
+      lmcacheEditor.refresh();
     };
     const toolKeys = new Set([
       "--enable-auto-tool-choice", "--no-enable-auto-tool-choice",
@@ -3055,7 +3664,7 @@ export function mountConsole(document = globalThis.document, options = {}) {
             const n = Number(input.value);
             if (!input.value.trim() || !Number.isFinite(n) || n < 0)
               throw Error("请填写有效的非负数值");
-            if (!bytes && !/比例/.test(label) && !Number.isInteger(n))
+            if (!bytes && !/比例|factor|theta|partial_rotary/.test(label) && !Number.isInteger(n))
               throw Error("该参数需要整数");
             if (/显存利用比例/.test(label) && (n <= 0 || n > 1))
               throw Error("显存利用比例需要大于 0 且不超过 1");
@@ -3098,7 +3707,9 @@ export function mountConsole(document = globalThis.document, options = {}) {
     }
 
     state.rows.forEach((row) => {
-      if (toolKeys.has(row.key.split("=")[0])) return;
+      const key = row.key.split("=")[0];
+      if (usesDedicatedCacheField(JSON.parse($("args").value), key)) return;
+      if (toolKeys.has(key)) return;
       if (
         [
           "--port",
@@ -3172,6 +3783,8 @@ export function mountConsole(document = globalThis.document, options = {}) {
       target.append(group);
     });
     syncFeatures();
+    contextEditor.refresh();
+    lmcacheEditor.refresh();
   }
   $("addParameter").onclick = run(() => {
     const key = $("newParamKey").value.trim();
@@ -3312,11 +3925,17 @@ export function mountConsole(document = globalThis.document, options = {}) {
   return () => {
     disposed = true;
     stopLiveSummary();
+    headerSizeObserver.disconnect();
+    headerContentObserver.disconnect();
+    fontScaleObserver.disconnect();
+    cancelAnimationFrame(headerLayoutFrame);
     ++authGeneration;
     stopLogs();
     globalThis.removeEventListener("beforeunload", beforeUnload);
     globalThis.removeEventListener("pageshow", onRestore);
     globalThis.removeEventListener("focus", onRestore);
+    document.removeEventListener("sm75-native-settings", onNativeSettings);
+    document.removeEventListener("sm75-native-navigate", onNativeNavigate);
     globalThis.removeEventListener("popstate", onPop);
     monitorSizeObserver?.disconnect();
     monitorControlObserver?.disconnect();
@@ -3325,3 +3944,32 @@ export function mountConsole(document = globalThis.document, options = {}) {
   };
 }
 if (globalThis.document.getElementById("login")) mountConsole();
+
+// Capture the profile and cancellation signal before starting any upload.
+export async function uploadChatImages(files, profile, signal, request = globalThis.fetch) {
+  signal.throwIfAborted();
+  if (files.length > 4) throw Error("每条消息最多发送 4 张图片");
+  if (files.some(file => file.size > 20 * 1024 * 1024)) throw Error("单张图片不能超过 20 MiB");
+  return Promise.all(files.map(async file => {
+    const response = await request("/console-api/attachments?profile=" + encodeURIComponent(profile), {
+      method: "POST", body: file, signal,
+    });
+    const payload = await response.json();
+    if (!response.ok) throw Error(payload.error || "图片上传失败");
+    signal.throwIfAborted();
+    return payload.id;
+  }));
+}
+
+// Read the engine state before toggling; never infer success from a button label.
+export async function toggleMonitorSpec(request) {
+  const before = await request();
+  if (!before.spec_configured) throw Error("引擎未启用可切换的投机配置");
+  if (before.pending) throw Error("上一次切换尚未生效，请稍后再试");
+  const enabled = !(before.desired_enabled ?? before.enabled);
+  await request({ enabled });
+  const after = await request();
+  if ((after.desired_enabled ?? after.enabled) !== enabled)
+    throw Error("引擎状态未改变，请检查引擎日志");
+  return after;
+}

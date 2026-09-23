@@ -1,0 +1,196 @@
+--- a/lmcache/integration/vllm/kv_cache_group_edits.py
++++ b/lmcache/integration/vllm/kv_cache_group_edits.py
+@@ -4,9 +4,9 @@
+ This is needed to mask out attention-specific details while making sure that
+ LMCache can still store / load KV cache correctly.
+ 
+-Currently there are three edits, one per :class:`KVCacheGroupEdit` subclass
+-below. All are for Mamba-hybrid models; the registry is only consulted when
+-``kv_cache_config.has_mamba_layers``. :func:`validate_kv_cache_groups`
++All rules apply only to Mamba-hybrid models. The local packed-4D adaptation
++handles vLLM 0.30 registrations whose logical axes are always [B, H, N, C],
++even when physical storage uses NHD ordering. :func:`validate_kv_cache_groups`
+ additionally rejects, at startup, group specs the transfer path cannot serve
+ correctly yet (see its docstring).
+ 
+@@ -164,6 +164,87 @@
+     return _SYNTHETIC_NUM_HEADS, elems_per_page // denom
+ 
+ 
++def _synthetic_packed_content_size(elems_per_page: int, block_size: int) -> int:
++    """Factor a K/V-packed page's element count into its content size.
++
++    The K/V-packed layouts keep both planes in the trailing content axis
++    (``CS == 2 * head_size``) instead of a separate ``2`` axis, so unlike
++    :func:`_synthetic_attention_shape` there is no factor of two to divide out.
++
++    Args:
++        elems_per_page: Total elements in one page (one logical block).
++        block_size: Logical block size (tokens per page).
++
++    Returns:
++        ``content_size`` such that
++        ``block_size * num_heads * content_size == elems_per_page`` for the
++        synthetic head count.
++
++    Raises:
++        ValueError: If the page size does not factor into the target shape.
++    """
++    denom = block_size * _SYNTHETIC_NUM_HEADS
++    if elems_per_page % denom != 0:
++        raise ValueError(
++            f"page ({elems_per_page} elems) does not factor into "
++            f"(block_size={block_size}, num_heads={_SYNTHETIC_NUM_HEADS}, "
++            f"content_size)"
++        )
++    return elems_per_page // denom
++
++
++def _logical_block_ratio(
++    spec: KVCacheSpec, kv_cache: torch.Tensor, kernel_block_size: int
++) -> int:
++    """Return how many kernel pages tile one logical block, validating the fit.
++
++    Shared by every sub-paged rule: the tensor's leading dim counts kernel
++    pages, and everything after it is one kernel page's payload.
++
++    Args:
++        spec: The layer's vLLM KV cache spec (for the logical block size and
++            page size).
++        kv_cache: The kernel-paged tensor.
++        kernel_block_size: Tokens per kernel page, read from the axis the
++            caller's layout puts them on.
++
++    Returns:
++        ``spec.block_size // kernel_block_size``.
++
++    Raises:
++        ValueError: If the sizes do not divide evenly, the kernel pages of one
++            logical block do not tile its page bytes exactly (which would
++            indicate an undeclared packed layout that must not be edited), or
++            the tensor is not contiguous.
++    """
++    logical_block_size = spec.block_size
++    if logical_block_size % kernel_block_size != 0:
++        raise ValueError(
++            f"logical block size {logical_block_size} is not a multiple of "
++            f"kernel block size {kernel_block_size}"
++        )
++    ratio = logical_block_size // kernel_block_size
++
++    num_kernel_pages = kv_cache.shape[0]
++    if num_kernel_pages % ratio != 0:
++        raise ValueError(
++            f"kernel page count {num_kernel_pages} is not a multiple of "
++            f"the logical/kernel block ratio {ratio}"
++        )
++    kernel_page_bytes = kv_cache.shape[1:].numel() * kv_cache.element_size()
++    if kernel_page_bytes * ratio != spec.page_size_bytes:
++        raise ValueError(
++            f"{ratio} kernel pages ({kernel_page_bytes * ratio} bytes) do "
++            f"not tile the logical page ({spec.page_size_bytes} bytes)"
++        )
++    if not kv_cache.is_contiguous():
++        raise ValueError(
++            "kernel-paged attention KV tensor must be contiguous to "
++            "re-view as logical pages"
++        )
++    return ratio
++
++
+ class KVCacheGroupEdit(ABC):
+     """One structural edit rule for a KV cache group's registered cache.
+ 
+@@ -529,12 +610,92 @@
+         return kv_cache.view(num_kernel_pages // ratio, logical_block_size, -1)
+ 
+ 
++class _SubpagedPackedAttentionViewEdit(KVCacheGroupEdit):
++    """Adapt vLLM 0.30 logical packed views to complete physical pages.
++
++    Local adaptation of LMCache PR #4731: vLLM 0.30's
++    ``create_kv_cache_views`` always registers logical ``[B, H, N, C]``.
++    ``kv_layout`` describes physical strides, not the raw tensor axis order.
++    Normalize only after checking the spec; never infer an axis from its size.
++    This must precede LMCache's later format-detection normalization.
++
++    Kernel pages tile one logical block. The returned view preserves every
++    byte and uses one synthetic head; it is opaque transfer metadata rather
++    than semantic attention content. Already-logical pages keep the existing
++    downstream normalization path.
++    """
++
++    name = "subpaged-packed-attention-view"
++
++    def matches(self, spec: KVCacheSpec, kv_cache: RegisteredKVCache) -> bool:
++        return (
++            get_kv_cache_spec_kind(spec) in _SUBPAGEABLE_ATTENTION_KINDS
++            and not _declares_slot_compression(spec)
++            and isinstance(kv_cache, torch.Tensor)
++            and kv_cache.ndim == 4
++            and kv_cache.shape[1:].numel() * kv_cache.element_size()
++            != spec.page_size_bytes
++        )
++
++    def apply(
++        self,
++        spec: KVCacheSpec,
++        kv_cache: RegisteredKVCache,
++        layout_hints: LayoutHints,
++    ) -> torch.Tensor:
++        """Validate logical BHNC, then re-view dense physical logical pages.
++
++        Only the pinned vLLM 0.30 registration contract is supported. Unknown
++        layout hints, slot compression, mismatched spec dimensions, non-dense
++        strides and incomplete or padded pages fail closed without copying.
++        """
++        assert isinstance(kv_cache, torch.Tensor)
++        kv_layout = layout_hints.get("kv_layout", "none")
++        if kv_layout not in ("NHD", "HND"):
++            raise ValueError(
++                f"Unsupported kv_layout: {kv_layout}. Only NHD and HND are supported."
++            )
++        if getattr(spec, "tokens_per_state", None) != 1:
++            raise ValueError("packed vLLM 0.30 attention requires one state per token")
++        if (
++            kv_cache.shape[1] != spec.num_heads
++            or kv_cache.shape[3] * kv_cache.element_size()
++            != spec.state_content_size_bytes
++        ):
++            raise ValueError(
++                "packed vLLM 0.30 KV tensor must match logical [B, H, N, C]: "
++                f"shape={tuple(kv_cache.shape)}, heads={spec.num_heads}, "
++                f"content_bytes={spec.state_content_size_bytes}"
++            )
++        kernel_block_size = kv_cache.shape[2]
++        if kernel_block_size <= 0:
++            raise ValueError("packed attention kernel block size must be positive")
++        physical = (
++            kv_cache.permute(0, 2, 1, 3) if kv_layout == "NHD" else kv_cache
++        )
++        logical_block_size = spec.block_size
++        ratio = _logical_block_ratio(spec, physical, kernel_block_size)
++        num_blocks = physical.shape[0] // ratio
++        elems_per_page = spec.page_size_bytes // physical.element_size()
++        content_size = _synthetic_packed_content_size(
++            elems_per_page, logical_block_size
++        )
++        if kv_layout == "NHD":
++            return physical.view(
++                num_blocks, logical_block_size, _SYNTHETIC_NUM_HEADS, content_size
++            )
++        return physical.view(
++            num_blocks, _SYNTHETIC_NUM_HEADS, logical_block_size, content_size
++        )
++
++
+ # Rule registry, in match priority order.
+ _EDITS: tuple[KVCacheGroupEdit, ...] = (
+     _MambaUnifiedViewEdit(),
+     _MambaPageViewEdit(),
+     _SubpagedMLAAttentionViewEdit(),
+     _SubpagedAttentionViewEdit(),
++    _SubpagedPackedAttentionViewEdit(),
+ )
+ 
+ 

@@ -32,9 +32,19 @@ class CollectorTests(unittest.TestCase):
 vllm:kv_offload_load_bytes_total{worker="0"} 1.5e3
 vllm:kv_offload_load_bytes_total{worker="1"} 250
 vllm:kv_offload_load_bytes_created{worker="0"} 9999999
+vllm:kv_offload_allocation_failure_total 2
+vllm:kv_offload_cpu_allocation_size_count 3
+vllm:kv_offload_cpu_allocation_size_sum 7
+vllm:kv_offload_cpu_cache_usage_perc 0
 other_metric 123
 ''')
-        self.assertEqual(result, {"vllm:kv_offload_load_bytes_total": 1750})
+        self.assertEqual(result, {
+            "vllm:kv_offload_load_bytes_total": 1750,
+            "vllm:kv_offload_allocation_failure_total": 2,
+            "vllm:kv_offload_cpu_allocation_size_count": 3,
+            "vllm:kv_offload_cpu_allocation_size_sum": 7,
+            "vllm:kv_offload_cpu_cache_usage_perc": 0,
+        })
 
     def test_stream_collects_generated_ids_not_prompt_ids(self):
         class Handler(http.server.BaseHTTPRequestHandler):

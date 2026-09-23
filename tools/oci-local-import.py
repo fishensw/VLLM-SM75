@@ -1,4 +1,6 @@
-"""Create a host-specific Docker load archive from a complete OCI archive.
+"""Convert a complete OCI archive to Docker format without loading it.
+
+--full includes all layers; --parent-rootfs creates a host-dependent import.
 
 Only an exact existing parent chain may be omitted. The complete OCI remains
 the portable artifact. Does not invoke Docker or modify its internal storage.
@@ -11,7 +13,9 @@ from pathlib import Path
 import tarfile
 
 
-def convert(source, output, parent, tag):
+def convert(source, output, parent, tag, *, full=False):
+    if full and parent:
+        raise ValueError("Full conversion cannot omit parent layers")
     if output.exists():
         raise ValueError("Refusing to overwrite import archive")
     with tarfile.open(source, "r:") as archive:
@@ -41,7 +45,7 @@ def convert(source, output, parent, tag):
         layers = config["rootfs"]["diff_ids"]
         if config["architecture"] != "amd64" or config["os"] != "linux":
             raise ValueError("Expected linux/amd64")
-        if not parent or layers[:len(parent)] != parent:
+        if (not full and not parent) or layers[:len(parent)] != parent:
             raise ValueError("Existing parent chain does not match")
         if len(layers) != len(manifest["layers"]):
             raise ValueError("Layer count mismatch")
@@ -67,17 +71,19 @@ def convert(source, output, parent, tag):
         return {"imageId": manifest["config"]["digest"], "tag": tag,
                 "existingParentLayers": len(parent), "includedLayers": len(layers) - len(parent),
                 "includedBlobBytes": included, "archiveBytes": output.stat().st_size,
-                "portable": False, "requiresExactExistingParentChain": parent}
+                "portable": full, "requiresExactExistingParentChain": parent}
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--parent-rootfs", type=Path, required=True)
+    mode = parser.add_mutually_exclusive_group(required=True)
+    mode.add_argument("--parent-rootfs", type=Path)
+    mode.add_argument("--full", action="store_true", help="Include every layer for a portable Docker archive; does not load it")
     parser.add_argument("--tag", required=True)
     args = parser.parse_args()
-    parent = json.loads(args.parent_rootfs.read_text(encoding="utf-8-sig"))["Layers"]
-    result = convert(args.source, args.output, parent, args.tag)
+    parent = [] if args.full else json.loads(args.parent_rootfs.read_text(encoding="utf-8-sig"))["Layers"]
+    result = convert(args.source, args.output, parent, args.tag, full=args.full)
     args.output.with_suffix(".json").write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
     print(json.dumps(result))

@@ -1,1 +1,1 @@
-{"name":"sm75-local-console","version":"0.1.5-dev","private":true,"type":"module","scripts":{"start":"node server.mjs","test":"node --test test/*.test.mjs"}}
+{"name":"sm75-local-console","version":"0.1.6","private":true,"type":"module","scripts":{"start":"node server.mjs","test":"node --test test/*.test.mjs"}}

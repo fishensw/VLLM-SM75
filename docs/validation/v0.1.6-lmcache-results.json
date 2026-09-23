@@ -1,0 +1,592 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-09-23",
+  "release": "0.1.6",
+  "status": "experimental-candidate",
+  "testHost": "four-T10-test-host",
+  "hardware": "4 x NVIDIA T10 (SM75)",
+  "runtime": {
+    "vllm": "0.30.0+cu129",
+    "torch": "2.13.0+cu129",
+    "lmcache": "0.5.5",
+    "python": "3.12.3",
+    "cuda": "12.9",
+    "cupy-cuda12x": "14.2.0",
+    "flashinfer-python": "0.6.18",
+    "transformers": "5.15.1",
+    "numpy": "2.2.6",
+    "nvidia-nccl-cu12": "2.30.7",
+    "huggingface-hub": "1.30.0",
+    "nvidia-cutlass-dsl": "4.6.2",
+    "quack-kernels": "0.6.4",
+    "runtimeFingerprint": "0cdf007e1685e1959729cedfa236b443609b13343e2e7c635e3f6c0888547285"
+  },
+  "patch": {
+    "upstream_pr": "https://github.com/LMCache/LMCache/pull/4731",
+    "upstream_pr_head": "f180b9ffce7df45ce3037011d95a22db947fefcb",
+    "upstream_status": "open, unmerged as of 2026-09-23",
+    "lmcache_base_commit": "05a013b29da78cf2321b9b46ec5039dde2fb0bb0",
+    "base_file_sha256": "909bc3bf5ef87741f623c19aedd12499bea3f399ea79e416911449cbea197b70",
+    "patched_file_sha256": "bc60b1cdc8c9f90fb507878e931253a43f41d9251ba99ab9610b8a3320f75ee2",
+    "patch_sha256": "66d45f80479218f4f89efb477fe720a2f4e91f8730b3f6aa5c2dba3b0098dede",
+    "changes": "Copy PR4731 geometry helpers and subpaged4D match; locally adapt its apply method to validate vLLM0.30 logical BHNC registration and normalize physical strides before strict page checks. Original hybrid-only dispatcher and 5D/MLA/Mamba rules remain unchanged; ratio-one and non-hybrid views retain the stock downstream normalization path.",
+    "schema_version": 1,
+    "patch_id": "lmcache-v055-packed4d-vllm030-logical-v1",
+    "distribution_version": "0.5.5",
+    "module_path": "lmcache/integration/vllm/kv_cache_group_edits.py",
+    "base_tag": "v0.5.5-cu129",
+    "upstream_issue": "https://github.com/LMCache/LMCache/issues/4701",
+    "license": "Apache-2.0",
+    "validation_scope": "CPU tests preserve every logical-page byte and reject invalid geometry. Real GPU model restore tests are separately required; the open PR is not an upstream release guarantee.",
+    "local_adaptation": {
+      "vllm_commit": "ced6857afa0ea7b2e3f0846a62e1394e90f15607",
+      "contract_source": "vllm/v1/kv_cache_interface.py:create_kv_cache_views",
+      "contract": "Registered axes are always [B,H,N,C]; NHD/HND describes physical stride order. Validate actual spec before metadata-only permute, then retain exact page-byte and contiguity checks.",
+      "observed_raw_shape": [
+        4067,
+        1,
+        32,
+        512
+      ],
+      "observed_raw_stride": [
+        16384,
+        512,
+        512,
+        1
+      ],
+      "observed_layout_hint": "NHD",
+      "upstream_pr_verbatim": false
+    }
+  },
+  "tests": {
+    "consoleLinux": {
+      "passed": 182,
+      "failed": 0,
+      "skipped": 0,
+      "node": "22.23.2"
+    },
+    "consoleWindows": {
+      "passed": 176,
+      "failed": 0,
+      "skipped": 6,
+      "node": "24.13.1",
+      "skipReason": "Linux-specific filesystem/process/API tests"
+    },
+    "installerAndPackaging": {
+      "passed": 17,
+      "failed": 0
+    },
+    "stock054UpgradeGate": {
+      "passed": 2,
+      "scope": "Real base distribution RECORD accepted; altered isolated copy rejected. No package installation or GPU access."
+    },
+    "layoutRealVllmCpu": {
+      "passed": 16,
+      "uses": "real create_kv_cache_views; ratio-one/non-hybrid downstream detector; no model/GPU"
+    },
+    "layoutCudaByteRoundtrip": {
+      "passed": 8,
+      "matrix": "NHD/HND x int8/uint8 x 1/2 heads; shared layer offset; complete 49-page payload and untouched destination sentinels"
+    },
+    "selectedUpstreamFsGpu": {
+      "passed": 95,
+      "deselected": 16,
+      "warnings": 2,
+      "fullUpstreamSuite": false
+    },
+    "mpTierByteRoundtrip": {
+      "passedExactRoundtrips": 6,
+      "saltMisses": 2,
+      "dtypes": [
+        "float16",
+        "float8_e4m3fn"
+      ],
+      "tiers": [
+        "L1",
+        "L2 after clear L1",
+        "L2 after server restart"
+      ]
+    },
+    "lmcacheBrowser": {
+      "passed": 13,
+      "pageErrors": 0,
+      "classifiedConsoleErrors": {
+        "hardwareInCpuContainer": 4,
+        "expectedMissingDependencyRejection": 1
+      },
+      "forbiddenRequests": 0,
+      "engineStarted": false,
+      "harnessStarted": false
+    },
+    "harnessBrowser": {
+      "passed": 12,
+      "pageErrors": 0,
+      "classifiedConsoleErrors": {
+        "hardwareInCpuContainer": 1,
+        "restartHandshake": 5
+      },
+      "transportFailures": 0,
+      "modelApi": "synthetic mock"
+    },
+    "managedRealLifecycle": {
+      "passed": 2,
+      "node": "v22.23.2",
+      "actualHealthyResponse": true,
+      "concurrentRepeatedStop": true,
+      "ownedProcessesExited": true,
+      "portsReleased": true,
+      "cpuGiB": 0.25
+    }
+  },
+  "retainedFailures": [
+    {
+      "stage": "stock LMCache 0.5.5 model restore",
+      "moduleSha256": "909bc3bf5ef87741f623c19aedd12499bea3f399ea79e416911449cbea197b70",
+      "requests": [
+        {
+          "phase": "cold",
+          "inputTokens": 8192,
+          "passed": true,
+          "tokenHash": "d6b5d295d6d23ebadb2ced13822762b0a080f2a8e150d4c67975b82a132482de",
+          "finishReason": "stop",
+          "cachedTokens": 0
+        },
+        {
+          "phase": "gpu-reset-l1",
+          "inputTokens": 8192,
+          "passed": false,
+          "tokenHash": "688dab83b3e7ff181e0271df469d12ac9be25a96e70d60cc0d3b6b5d609c58e3",
+          "finishReason": "length",
+          "cachedTokens": 7840
+        }
+      ],
+      "conclusion": "cold correct; external hit 7840 after GPU reset produced gibberish and hit output length limit"
+    },
+    {
+      "stage": "verbatim PR4731 minimal backport",
+      "moduleSha256": "469a47361c40e898848ef8a2fb41199986cefdaae7fdad38e837647d74f549a1",
+      "conclusion": "rejected real model at strict page geometry check; raw BHNC axes differed from physical NHD hint"
+    }
+  ],
+  "modelValidation": {
+    "passed": 8,
+    "failed": 0,
+    "settings": {
+      "model": "Qwen3.8-27B-FP8",
+      "tensorParallel": 4,
+      "hardware": "4 x Tesla T10 SM75",
+      "kvDtype": "fp8_e4m3",
+      "logicalChunkSize": 1568,
+      "kernelBlockSize": 32,
+      "allocatorExpandableSegments": false,
+      "targetOnly": true,
+      "gpuKVBytesPerDevice": 1073741824,
+      "cpuL1BytesTotal": 2147483648,
+      "l2": "pure fs, use_odirect=false",
+      "maxModelLen": 16384,
+      "maxNumBatchedTokens": 2048,
+      "maxNumSeqs": 4,
+      "dtype": "float16"
+    },
+    "namespace": "86b65e7bd810cf8568aac3d97e5bbe0f6e7b7a005f4a1348bcc7de7699015d90",
+    "launchArgsGeneratedByCandidate": true,
+    "requests": [
+      {
+        "phase": "cold",
+        "passed": true,
+        "inputTokens": 8192,
+        "promptTokenHash": "812bbec2e850a8c0117a75eeaf534c9415c69e0608b5d68d2ea8f1ee5248495f",
+        "expected": {
+          "alpha": "0a65b73daf",
+          "beta": "378fca6ddf",
+          "gamma": "40653e8324"
+        },
+        "cachedTokens": 0,
+        "tokenHash": "d6b5d295d6d23ebadb2ced13822762b0a080f2a8e150d4c67975b82a132482de",
+        "finishReason": "stop",
+        "elapsedSeconds": 8.613992683996912,
+        "ttftSeconds": 6.766084584000055
+      },
+      {
+        "phase": "gpu-reset-l1",
+        "passed": true,
+        "inputTokens": 8192,
+        "promptTokenHash": "812bbec2e850a8c0117a75eeaf534c9415c69e0608b5d68d2ea8f1ee5248495f",
+        "expected": {
+          "alpha": "0a65b73daf",
+          "beta": "378fca6ddf",
+          "gamma": "40653e8324"
+        },
+        "cachedTokens": 7840,
+        "tokenHash": "d6b5d295d6d23ebadb2ced13822762b0a080f2a8e150d4c67975b82a132482de",
+        "finishReason": "stop",
+        "elapsedSeconds": 2.2020151180040557,
+        "ttftSeconds": 0.37369046002277173
+      },
+      {
+        "phase": "gpu-and-l1-reset-disk",
+        "passed": true,
+        "inputTokens": 8192,
+        "promptTokenHash": "812bbec2e850a8c0117a75eeaf534c9415c69e0608b5d68d2ea8f1ee5248495f",
+        "expected": {
+          "alpha": "0a65b73daf",
+          "beta": "378fca6ddf",
+          "gamma": "40653e8324"
+        },
+        "cachedTokens": 7840,
+        "tokenHash": "d6b5d295d6d23ebadb2ced13822762b0a080f2a8e150d4c67975b82a132482de",
+        "finishReason": "stop",
+        "elapsedSeconds": 2.484694529994158,
+        "ttftSeconds": 0.6548363940091804
+      },
+      {
+        "phase": "salt-b-miss",
+        "passed": true,
+        "inputTokens": 8192,
+        "promptTokenHash": "812bbec2e850a8c0117a75eeaf534c9415c69e0608b5d68d2ea8f1ee5248495f",
+        "expected": {
+          "alpha": "0a65b73daf",
+          "beta": "378fca6ddf",
+          "gamma": "40653e8324"
+        },
+        "cachedTokens": 0,
+        "tokenHash": "d6b5d295d6d23ebadb2ced13822762b0a080f2a8e150d4c67975b82a132482de",
+        "finishReason": "stop",
+        "elapsedSeconds": 8.355559910996817,
+        "ttftSeconds": 6.520588791987393
+      },
+      {
+        "phase": "fork-b-cold-reference",
+        "passed": true,
+        "inputTokens": 8191,
+        "promptTokenHash": "c465317ad877545ad064cbabf355c3954576001dd85dae89f28d04f6f4e7c3ec",
+        "expected": {
+          "alpha": "0a65b73daf",
+          "beta": "378fca6ddf",
+          "gamma": "91ec247b63"
+        },
+        "cachedTokens": 0,
+        "tokenHash": "24811f5bcb83ed5982a238d8519c2976af7eddfd5f366e4dc6c432a65b4ea0b4",
+        "finishReason": "stop",
+        "elapsedSeconds": 8.359184222994372,
+        "ttftSeconds": 6.569368149997899
+      },
+      {
+        "phase": "fork-b-shared-prefix-disk",
+        "passed": true,
+        "inputTokens": 8191,
+        "promptTokenHash": "c465317ad877545ad064cbabf355c3954576001dd85dae89f28d04f6f4e7c3ec",
+        "expected": {
+          "alpha": "0a65b73daf",
+          "beta": "378fca6ddf",
+          "gamma": "91ec247b63"
+        },
+        "cachedTokens": 7840,
+        "tokenHash": "24811f5bcb83ed5982a238d8519c2976af7eddfd5f366e4dc6c432a65b4ea0b4",
+        "finishReason": "stop",
+        "elapsedSeconds": 3.0892356999975163,
+        "ttftSeconds": 1.2940654569829348
+      },
+      {
+        "phase": "return-a-disk",
+        "passed": true,
+        "inputTokens": 8192,
+        "promptTokenHash": "812bbec2e850a8c0117a75eeaf534c9415c69e0608b5d68d2ea8f1ee5248495f",
+        "expected": {
+          "alpha": "0a65b73daf",
+          "beta": "378fca6ddf",
+          "gamma": "40653e8324"
+        },
+        "cachedTokens": 7840,
+        "tokenHash": "d6b5d295d6d23ebadb2ced13822762b0a080f2a8e150d4c67975b82a132482de",
+        "finishReason": "stop",
+        "elapsedSeconds": 2.5894230540143326,
+        "ttftSeconds": 0.7584864830132574
+      },
+      {
+        "phase": "restart-a-disk",
+        "passed": true,
+        "inputTokens": 8192,
+        "promptTokenHash": "812bbec2e850a8c0117a75eeaf534c9415c69e0608b5d68d2ea8f1ee5248495f",
+        "expected": {
+          "alpha": "0a65b73daf",
+          "beta": "378fca6ddf",
+          "gamma": "40653e8324"
+        },
+        "cachedTokens": 7840,
+        "tokenHash": "d6b5d295d6d23ebadb2ced13822762b0a080f2a8e150d4c67975b82a132482de",
+        "finishReason": "stop",
+        "elapsedSeconds": 3.272604597994359,
+        "ttftSeconds": 1.4092965509917121
+      }
+    ],
+    "allGpuPrefixHitDeltas": 0,
+    "aTokenSha256": "d6b5d295d6d23ebadb2ced13822762b0a080f2a8e150d4c67975b82a132482de",
+    "bTokenSha256": "24811f5bcb83ed5982a238d8519c2976af7eddfd5f366e4dc6c432a65b4ea0b4",
+    "eachCachedAnswerMatchesItsColdReference": true,
+    "diskEvidence": "Prefetch logs directly show 24 L1/0 L2 for CPU restore and 0 L1/24 L2 for disk/fork/return/restart, followed by all 4 ranks retrieving 7840 tokens. GPU prefix and L1 cleared; only FSL2Adapter configured; no P2P. No separate filesystem byte counter; OS page cache not cleared.",
+    "fullTokenEquivalenceBeyondTheseTasks": false,
+    "tierEvidence": [
+      {
+        "phase": "gpu-reset-l1",
+        "log": "evidence/qwen-fixed-mp-server-before-restart.log",
+        "line": 158,
+        "l1Keys": 24,
+        "l2Keys": 0
+      },
+      {
+        "phase": "gpu-and-l1-reset-disk",
+        "log": "evidence/qwen-fixed-mp-server-before-restart.log",
+        "line": 197,
+        "l1Keys": 0,
+        "l2Keys": 24
+      },
+      {
+        "phase": "fork-b-shared-prefix-disk",
+        "log": "evidence/qwen-fixed-mp-server-before-restart.log",
+        "line": 325,
+        "l1Keys": 0,
+        "l2Keys": 24
+      },
+      {
+        "phase": "return-a-disk",
+        "log": "evidence/qwen-fixed-mp-server-before-restart.log",
+        "line": 364,
+        "l1Keys": 0,
+        "l2Keys": 24
+      },
+      {
+        "phase": "restart-a-disk",
+        "log": "evidence/qwen-fixed-mp-server.log",
+        "line": 147,
+        "l1Keys": 0,
+        "l2Keys": 24
+      }
+    ]
+  },
+  "boundaries": {
+    "published": false,
+    "productionReplacement": false,
+    "fullFinalImageBuild": false,
+    "speculativeCombination": false,
+    "gpuMemorySleepWake": false,
+    "multimodalKv": false,
+    "remoteDistributedTier": false,
+    "hardDiskQuota": "external filesystem quota required",
+    "prefixReuseIsNotActiveAttentionCapacity": true,
+    "filesystemReadIsNotPhysicalDiskBenchmark": true
+  },
+  "evidenceRoot": "local-tests/v016/lmcache-upgrade",
+  "pipCheckKnownBaseDifferences": [
+    "torch 2.13.0+cu129 has requirement nvidia-nccl-cu12==2.29.7; platform_system == \"Linux\", but you have nvidia-nccl-cu12 2.30.7.",
+    "vllm 0.30.0+cu129 has requirement flashinfer-python==0.6.18.post1, but you have flashinfer-python 0.6.18.",
+    "vllm 0.30.0+cu129 has requirement huggingface_hub>=1.31.0, but you have huggingface-hub 1.30.0.",
+    "vllm 0.30.0+cu129 has requirement nvidia-cutlass-dsl==4.7.1, but you have nvidia-cutlass-dsl 4.6.2.",
+    "vllm 0.30.0+cu129 has requirement quack-kernels==0.6.5, but you have quack-kernels 0.6.4."
+  ],
+  "cleanup": {
+    "gpuTestContainer": "stopped",
+    "cpuTestContainer": "stopped",
+    "originalDevContainer": "remained stopped",
+    "gpuMemoryMiB": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "gpuPstates": [
+      "P8",
+      "P8",
+      "P8",
+      "P8"
+    ],
+    "temporaryOldPackageAuditContainer": "removed"
+  },
+  "sourceSha256": {
+    "ultra/source/console/lmcache-runtime.mjs": "c68535626a5d88ed5d3ee2c34016418a8633d58f4e5e9461b45edb430db0c730",
+    "ultra/source/console/lmcache_probe.py": "1dc6740900ac04a27585e48424afa54515bb1cb63aaa5d9dbebaf373f532ca23",
+    "ultra/source/console/public/lmcache-config.js": "3c1360f6c4ba23f97c709762e1c3b76947500c7979f05cd193d1dec94d5320a9",
+    "ultra/source/console/server.mjs": "db771c7fee04731d412d80b07a4493693043ca7bec9336e4c829ab2c1334cbe1",
+    "ultra/source/console/standalone.mjs": "74449c33670a043fbd0aa5cd65a84a2d852fe0a53c669a417a97e3dc93b727a8",
+    "ultra/source/lmcache/install-lock.json": "b2ce0f34a1bea63435a33459483de3dfa1510b57e3041cd5b3a31e5fa01535b2",
+    "ultra/source/lmcache/install.py": "0354d61760d251bbfec7f53e97d40e94532a982694bca776736365da791f2944",
+    "ultra/source/lmcache/patches/kv_cache_group_edits.py": "bc60b1cdc8c9f90fb507878e931253a43f41d9251ba99ab9610b8a3320f75ee2",
+    "ultra/source/lmcache/patches/LICENSE": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+    "ultra/source/lmcache/patches/packed4d-provenance.json": "e3e45499a8c1698aae2256a70355832cf35bb36fbb9cad567103895d7d6ca457",
+    "ultra/source/lmcache/patches/packed4d.patch": "66d45f80479218f4f89efb477fe720a2f4e91f8730b3f6aa5c2dba3b0098dede",
+    "ultra/source/lmcache/patches/README.md": "1ddec4761e1557dee8ec54cb0f3ef98ab69fd8866da0b415be752debff265b33",
+    "ultra/source/lmcache/tests/test_packed_kv_layout.py": "bb80b496b89efd0ef59cae0f81b842aa8e170452c10a470ec42d686067c65876"
+  },
+  "evidenceSha256": {
+    "lmcache-final-linux-node.log": "1e313aba225fefd0ccb678d24a822a0cd40189dcbc041a832e36921f09c3cecc",
+    "windows-node-final.log": "bcafa57663999ac6833b8805136decb3f65c2f3355eb50ec1b1f323228783365",
+    "lmcache-race-final-linux-targeted.log": "c8a154a834f5dd9aab12ed450f1fb9a984472c6f29b5cb28e7f92136dae7849d",
+    "installer-packaging-final.log": "06da686bed3f91e92a7e8f8b0e5405ed484c053d4a6cbf8c07c0d03203b0673e",
+    "old-package-upgrade-gate.log": "b4a279974bfa7969fe39acb9ad498fb64cc4969ae6314a93763c8f32ef3b04b2",
+    "browser-2026-09-23T03-22-47-500Z/results.json": "8babcf7f81a82fb8a96895ab465802e93ab084f46e33091e7299edf68232de01",
+    "harness-final/browser-2026-09-23T03-29-19-390Z/browser-report.json": "fecac5361c3a70e0b7a3d44d5ce6ae7aafc4239c4d0717c834eade78dbcfb015",
+    "evidence/final-validation-summary.json": "86b311966c1e1c802dfb82fadd16b611eaff4ba22d88c01f80b234f8de1d86a7",
+    "evidence/qwen-tier-correctness.jsonl": "37b82e66ab395aaa38bccd57b2e747049db8b7f50ae97b0ed2fc54f9ff8efaf9",
+    "evidence/qwen-tier-correctness-fixed.jsonl": "8e4fe4fb68d357d38eefcd0223c46b961cfd3bb11c42c3bc9105156c3ac77001",
+    "evidence/qwen-fork-correctness.jsonl": "f1e20a2b4a3cb7b7ba00bb4853d4169089e7030975f259aa2b342d59b2dd7f4f",
+    "evidence/qwen-fixed-mp-server-before-restart.log": "c914ab7dfa6f5195f9a0d3c964b7e5430d8800cbbb17615af68e6f817709fd68",
+    "evidence/qwen-fixed-mp-server.log": "c511581b558f68535979be8da06a1ace25160168df74939174cfff6d0e60a829",
+    "evidence/packed4d-cpu-final.log": "ac6ce3cf95743db64b2813849ade4aa15574158b777b361ec8a375978633e26f",
+    "evidence/packed4d-gpu-final.log": "43d806d4aef144b639bb1962cf78c9b7c7f00a433b1b25dd0a09afa1f5859b12",
+    "evidence/production-installer-final.log": "e18c6eb1b81015ea3a2a383f7dff173c0c43a0a58b7eeee81a11e4fbef96259f",
+    "evidence/production-installer-final-check.log": "9516c28a03dc5900db2415ab30b7a22004810e2f0606806e4a8f037528ae1db8",
+    "evidence/pip-check-final.log": "343a8f0df5f06f5223cce3c9f21e6d9f36d1fffd46861a8a723b6e428cba30b4",
+    "evidence/managed-lifecycle.json": "e976ec765a9dba6b02a06f95f53db34679b7cc389322245123604c3aa63b9ee8",
+    "evidence/mp-tier-roundtrip.json": "d22225001ba88e9b36225d634991cd5628fc04cfba187d01ca3fa09b8d76e50e",
+    "evidence/fs-gpu-primitives.log": "b5e7782436fe1c38d6e9dc841a7025dc92d758d6da40dc8bc025737645425032",
+    "final-container-state.log": "001e7b6322d2a812006f91f722f1ea14c0f67694987ddf27f87e0c3d42814acc",
+    "final-gpu-state.log": "0c92d1ef9c82c3f61cf33fb55121482ed16234c095cb29c14a6ed1f9f66b637f",
+    "evidence/cache-hit-log-evidence.json": "a9756556b64743df4372bae4e6bb2c7e06f9e988c2124dad1d33dcda0bc80b9e",
+    "evidence-final.tar.gz": "4bad2ffab7383827cb939e9da1548a8b30ad201d636dd36d02f768a9b3bf1732"
+  },
+  "fullImageAcceptance": {
+    "status": "passed",
+    "imageId": "sha256:6c550dc42f8659d357a92b7907289771870f3d01536a33a1cafc53517f9033d1",
+    "buildSourceRevision": "9e041764374fc2c60ffab37291566717de67c74d",
+    "entrypoint": "actual Ultra Node manager; profile start/stop APIs",
+    "configuration": {
+      "target": "Qwen3.8-27B-FP8",
+      "tensorParallel": 4,
+      "gpuKvBytesPerCard": 1073741824,
+      "cpuL1GiBTotal": 2,
+      "chunkTokens": 1568,
+      "maxBatchedTokens": 3135,
+      "maxModelLen": 16384,
+      "maxNumSeqs": 4,
+      "kvDtype": "fp8_e4m3",
+      "speculation": false,
+      "nativeCpuConnector": false,
+      "expandableSegments": false,
+      "marlinAtomicAdd": false,
+      "diskBackend": "FSL2Adapter; use_odirect=false"
+    },
+    "cases": [
+      {
+        "phase": "cold",
+        "inputTokens": 8192,
+        "passed": true,
+        "cachedTokens": 0,
+        "tokenHash": "d6b5d295d6d23ebadb2ced13822762b0a080f2a8e150d4c67975b82a132482de",
+        "ttftSeconds": 6.7926545170194,
+        "elapsedSeconds": 8.6741135980119,
+        "hitSource": null,
+        "error": null
+      },
+      {
+        "phase": "gpu-reset-l1",
+        "inputTokens": 8192,
+        "passed": true,
+        "cachedTokens": 7840,
+        "tokenHash": "d6b5d295d6d23ebadb2ced13822762b0a080f2a8e150d4c67975b82a132482de",
+        "ttftSeconds": 0.38031074797618203,
+        "elapsedSeconds": 2.2560607159975916,
+        "hitSource": null,
+        "error": null
+      },
+      {
+        "phase": "gpu-and-l1-reset-disk",
+        "inputTokens": 8192,
+        "passed": true,
+        "cachedTokens": 7840,
+        "tokenHash": "d6b5d295d6d23ebadb2ced13822762b0a080f2a8e150d4c67975b82a132482de",
+        "ttftSeconds": 0.6595652370015159,
+        "elapsedSeconds": 2.531477957003517,
+        "hitSource": null,
+        "error": null
+      },
+      {
+        "phase": "salt-b-miss",
+        "inputTokens": 8192,
+        "passed": true,
+        "cachedTokens": 0,
+        "tokenHash": "d6b5d295d6d23ebadb2ced13822762b0a080f2a8e150d4c67975b82a132482de",
+        "ttftSeconds": 6.525352697004564,
+        "elapsedSeconds": 8.408911606005859,
+        "hitSource": null,
+        "error": null
+      },
+      {
+        "phase": "fork-b-cold-reference",
+        "inputTokens": 8191,
+        "passed": true,
+        "cachedTokens": 0,
+        "tokenHash": "24811f5bcb83ed5982a238d8519c2976af7eddfd5f366e4dc6c432a65b4ea0b4",
+        "ttftSeconds": 6.531365885981359,
+        "elapsedSeconds": 8.362955178978154,
+        "hitSource": "cold: distinct cache salt",
+        "error": null
+      },
+      {
+        "phase": "fork-b-shared-prefix-disk",
+        "inputTokens": 8191,
+        "passed": true,
+        "cachedTokens": 7840,
+        "tokenHash": "24811f5bcb83ed5982a238d8519c2976af7eddfd5f366e4dc6c432a65b4ea0b4",
+        "ttftSeconds": 1.3239507710095495,
+        "elapsedSeconds": 3.1582406840170734,
+        "hitSource": "filesystem L2: GPU and L1 cleared before request",
+        "error": null
+      },
+      {
+        "phase": "return-a-disk",
+        "inputTokens": 8192,
+        "passed": true,
+        "cachedTokens": 7840,
+        "tokenHash": "d6b5d295d6d23ebadb2ced13822762b0a080f2a8e150d4c67975b82a132482de",
+        "ttftSeconds": 0.7596854049770627,
+        "elapsedSeconds": 2.6371840339852497,
+        "hitSource": "filesystem L2: GPU and L1 cleared before request",
+        "error": null
+      },
+      {
+        "phase": "restart-a-disk",
+        "inputTokens": 8192,
+        "passed": true,
+        "cachedTokens": 7840,
+        "tokenHash": "d6b5d295d6d23ebadb2ced13822762b0a080f2a8e150d4c67975b82a132482de",
+        "ttftSeconds": 1.3812393510015681,
+        "elapsedSeconds": 3.2722580719855614,
+        "hitSource": "filesystem L2: GPU and L1 cleared before request",
+        "error": null
+      }
+    ],
+    "storageLogEvidence": {
+      "file": "mp-complete.log",
+      "sha256": "3fe0e02274632a5a01c465a40dde459bbc4cc638ea7cb960e6b38f1bad7a2b94",
+      "lines": [
+        {
+          "line": 158,
+          "text": "[2026-09-23 08:24:51,503] LMCache INFO: Prefetch request completed (L1+L2): 24/40 retained keys (24 L1, 0 L2) in 2.5 ms (external_request_id=cmpl-afb1ee83c0ac5412-0-996366c6, prefetch_request_id=-1) (storage_manager.py:726:lmcache.v1.distributed.storage_manager)"
+        },
+        {
+          "line": 197,
+          "text": "[2026-09-23 08:24:54,130] LMCache INFO: Prefetch request completed (L1+L2): 24/40 retained keys (0 L1, 24 L2) in 280.3 ms (external_request_id=cmpl-b1cca4b2cc19cbf1-0-bedc35d1, prefetch_request_id=1) (storage_manager.py:726:lmcache.v1.distributed.storage_manager)"
+        },
+        {
+          "line": 325,
+          "text": "[2026-09-23 08:25:15,074] LMCache INFO: Prefetch request completed (L1+L2): 24/40 retained keys (0 L1, 24 L2) in 947.4 ms (external_request_id=cmpl-934e9e1fd2170fdb-0-b6449ddf, prefetch_request_id=4) (storage_manager.py:726:lmcache.v1.distributed.storage_manager)"
+        },
+        {
+          "line": 364,
+          "text": "[2026-09-23 08:25:17,806] LMCache INFO: Prefetch request completed (L1+L2): 24/40 retained keys (0 L1, 24 L2) in 389.1 ms (external_request_id=cmpl-a9af0a7210bdce4f-0-9af00ef0, prefetch_request_id=5) (storage_manager.py:726:lmcache.v1.distributed.storage_manager)"
+        },
+        {
+          "line": 538,
+          "text": "[2026-09-23 08:28:04,820] LMCache INFO: Prefetch request completed (L1+L2): 24/40 retained keys (0 L1, 24 L2) in 904.2 ms (external_request_id=cmpl-8b589d9d3f9ee044-0-ac60dc73, prefetch_request_id=0) (storage_manager.py:726:lmcache.v1.distributed.storage_manager)"
+        }
+      ]
+    },
+    "lifecycle": "{\"started\": true, \"backend\": \"in-container\"}\n{\"ok\": true}\nManaged engine and both LMCache ports stopped\n{\"started\": true, \"backend\": \"in-container\"}\n{\"ok\": true}\nManaged engine and both LMCache ports stopped\n",
+    "limits": [
+      "8K single-request synthetic text; no DFlash or MTP",
+      "FS may be served by OS page cache; not physical-disk latency or throughput benchmark",
+      "Restart persistence verified, not sudden power loss",
+      "No million-token LMCache or remote/distributed tier validation"
+    ]
+  }
+}

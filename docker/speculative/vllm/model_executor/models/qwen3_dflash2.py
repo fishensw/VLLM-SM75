@@ -40,6 +40,20 @@ def _use_sm75_bf16_emulation() -> bool:
     return current_platform.is_cuda() and current_platform.is_device_capability(75)
 
 
+def _use_sm75_tp4_context_fc(
+    fc: nn.Module, config, use_aux_hidden_state: bool
+) -> bool:
+    """Shard the unquantized FC even when the draft's MLP is quantized."""
+    return (
+        _use_sm75_bf16_emulation()
+        and get_tensor_model_parallel_world_size() == 4
+        and isinstance(fc.quant_method, UnquantizedLinearMethod)
+        and use_aux_hidden_state
+        and fc.input_size == 25600
+        and config.hidden_size == 5120
+    )
+
+
 def _grouped_conv(
     hidden_states: torch.Tensor,
     delta: torch.Tensor,
@@ -290,13 +304,8 @@ class DFlash2Qwen3Model(DFlashQwen3Model):
         draft_config = self.config.dflash_config
         # Backport the portable TP4 context-FC sharding from 1Cat v1.5.0.
         # Use the existing SM75 linear implementation, never SM70-only kernels.
-        if (
-            _use_sm75_bf16_emulation()
-            and get_tensor_model_parallel_world_size() == 4
-            and self.quant_config is None
-            and self.use_aux_hidden_state
-            and self.fc.input_size == 25600
-            and self.config.hidden_size == 5120
+        if _use_sm75_tp4_context_fc(
+            self.fc, self.config, self.use_aux_hidden_state
         ):
             self.fc = ColumnParallelLinear(
                 input_size=25600,

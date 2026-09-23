@@ -1,0 +1,361 @@
+{
+  "base": "98dff2a81d747d1dba01a47f939f48c3526d4206",
+  "target": "ced6857afa0ea7b2e3f0846a62e1394e90f15607",
+  "newline_policy": "SHA-256 over UTF-8 file bytes normalized to LF",
+  "files": [
+    {
+      "path": "vllm/config/compilation.py",
+      "status": "merged-clean",
+      "conflicts": 0,
+      "old_sha256": "3a79ea08d48d44879ac8cbfee1c7d88f9bd72927d9bd12eee31743e8da8a4d7e",
+      "new_sha256": "c9cec5c7200e8e559810ec8c30113ad61dab6780f9f7fb3c116bd0d9b5a43065",
+      "local_sha256": "c843832b0922530b6982f54cd8b4a857bdd9a8b1334888f43dd1f1ab0458b7fb",
+      "result_sha256": "105639a22df26089fb4bf257a071a823eb26ca4390f3f4587ccb607c19eea2fc"
+    },
+    {
+      "path": "vllm/config/model.py",
+      "status": "merged-clean",
+      "conflicts": 0,
+      "old_sha256": "de2309f4f710f04588ac0835e1cfd215e1310bcb136bf53142685c926256a27c",
+      "new_sha256": "f4168b67cc93ce72ff2a6d4c66974223e32fd0f1fab4c05e44bd68a275e18d69",
+      "local_sha256": "fbea4236e78b8725ab1c185b9b999088ee60d926d4a3b7e9f5608bce0311e303",
+      "result_sha256": "de9bc4d09eaa9c9c9dbcc427680f08617e9ba5bf79a88e18a523d934075dc9f6"
+    },
+    {
+      "path": "vllm/device_allocator/disk_sleep.py",
+      "status": "local-only-preserved",
+      "conflicts": 0,
+      "old_sha256": null,
+      "new_sha256": null,
+      "local_sha256": "647e2918b38107b8f715137eac190fa32c989cfcb14ef57ea2a5bd8f918b916c",
+      "result_sha256": "647e2918b38107b8f715137eac190fa32c989cfcb14ef57ea2a5bd8f918b916c"
+    },
+    {
+      "path": "vllm/device_allocator/disk_snapshot.py",
+      "status": "local-only-preserved",
+      "conflicts": 0,
+      "old_sha256": null,
+      "new_sha256": null,
+      "local_sha256": "d929905f96c9656769097c5b72c024631451508873e7c9ed0659db93738064c9",
+      "result_sha256": "d929905f96c9656769097c5b72c024631451508873e7c9ed0659db93738064c9"
+    },
+    {
+      "path": "vllm/distributed/device_communicators/cuda_communicator.py",
+      "status": "conflicts-resolved-preserving-both",
+      "conflicts": 1,
+      "resolution": "Union disjoint SM75 and upstream additions; retain FlashQLA-SM75 backend plus upstream KDA choices.",
+      "old_sha256": "03ece681b0bef349cb78dabc74585efea2cc160ae28bd711c81dfd807ca8dff5",
+      "new_sha256": "102d95c67ec798cf352b817ba92e8abc9da37f30d1bbdf3aab45d3927b627b93",
+      "local_sha256": "6cc3c47151f700632924faf4790f4737d55d681d8772b362c1ea026e8258dc49",
+      "result_sha256": "2a63bbf20527c3a4b1c2c65ed1fdf07399e90a17f02fbd85b927210af9621b32"
+    },
+    {
+      "path": "vllm/distributed/device_communicators/custom_all_reduce.py",
+      "status": "unchanged",
+      "conflicts": 0,
+      "old_sha256": "a048c1327c23580805600c0c951831bec333b1ffc4eb26a0e3d34119c4f0c445",
+      "new_sha256": "a048c1327c23580805600c0c951831bec333b1ffc4eb26a0e3d34119c4f0c445",
+      "local_sha256": "a8e4fcdef35db65db47175736276d7ebb37637c85e989ac2ac5ae6c321a64c28",
+      "result_sha256": "a8e4fcdef35db65db47175736276d7ebb37637c85e989ac2ac5ae6c321a64c28"
+    },
+    {
+      "path": "vllm/distributed/device_communicators/firefly_allreduce.cu",
+      "status": "local-only-preserved",
+      "conflicts": 0,
+      "old_sha256": null,
+      "new_sha256": null,
+      "local_sha256": "11d88f11ac4b0e9575426b23ee7087fe50d87bb7c54a2de8cd002577ce1b05c1",
+      "result_sha256": "11d88f11ac4b0e9575426b23ee7087fe50d87bb7c54a2de8cd002577ce1b05c1"
+    },
+    {
+      "path": "vllm/distributed/device_communicators/firefly_allreduce.py",
+      "status": "local-only-preserved",
+      "conflicts": 0,
+      "old_sha256": null,
+      "new_sha256": null,
+      "local_sha256": "c7d21ad3dd134583e75298b9cc21e590c5dcbb169cbe9efac0cc49897bdddd6d",
+      "result_sha256": "c7d21ad3dd134583e75298b9cc21e590c5dcbb169cbe9efac0cc49897bdddd6d"
+    },
+    {
+      "path": "vllm/distributed/kv_transfer/kv_connector/v1/base.py",
+      "status": "merged-clean",
+      "conflicts": 0,
+      "old_sha256": "26ba44e48d7aaebc0b490cd0aff40c8e2a13a1b5da38ca257e3d725afd200d3b",
+      "new_sha256": "97af64220475c6c9e8273438d7b5138b105ebe6944beb783facb36a3bb76f31b",
+      "local_sha256": "3962177e0ef6d6b39fc999f8acb03ede59cb8fd1bee985fd0632f2350c7e89f5",
+      "result_sha256": "19fa323be86403fd4bf7c7e06766efa4101e9a5d00e27873ced1f144206b7b01"
+    },
+    {
+      "path": "vllm/engine/arg_utils.py",
+      "status": "conflicts-resolved-preserving-both",
+      "conflicts": 3,
+      "resolution": "Union disjoint SM75 and upstream additions; retain FlashQLA-SM75 backend plus upstream KDA choices.",
+      "old_sha256": "950cb3b650c081d6d36d43d73e3ecd669b44eabd4fe8395b92e399c7a89b8011",
+      "new_sha256": "ead004ca266419cd25f54a7aefc0e20e1eb046f363b7f5cc977e14f52ee44bb1",
+      "local_sha256": "b26b9c4f6ef3adeaa34a8fab0e5287282bb006a24058c379f0a6b78f972d4003",
+      "result_sha256": "86bcce05e7532620676a5d5ec3536ea40a45a8c37ab61fb0b8786beeef743e21"
+    },
+    {
+      "path": "vllm/entrypoints/serve/instrumentator/dashboard.html",
+      "status": "local-only-preserved",
+      "conflicts": 0,
+      "old_sha256": null,
+      "new_sha256": null,
+      "local_sha256": "b0ea506fa0e869d4387493a1c64fb34473a1380414e87de8deb8fb67fcbcb37c",
+      "result_sha256": "b0ea506fa0e869d4387493a1c64fb34473a1380414e87de8deb8fb67fcbcb37c"
+    },
+    {
+      "path": "vllm/entrypoints/serve/instrumentator/metrics.py",
+      "status": "unchanged",
+      "conflicts": 0,
+      "old_sha256": "c20a120dccb9c443c6c194ff31725b285740fff692ea95065749c5c27b6bcc3e",
+      "new_sha256": "c20a120dccb9c443c6c194ff31725b285740fff692ea95065749c5c27b6bcc3e",
+      "local_sha256": "f6f7616ddb592b54697926729542f1e196923617d8637d7ba96bab84b2a44bac",
+      "result_sha256": "f6f7616ddb592b54697926729542f1e196923617d8637d7ba96bab84b2a44bac"
+    },
+    {
+      "path": "vllm/entrypoints/serve/instrumentator/monitor.py",
+      "status": "local-only-preserved",
+      "conflicts": 0,
+      "old_sha256": null,
+      "new_sha256": null,
+      "local_sha256": "79d3c471789df0f6f0fe1d51cb64d11c2fce60bb44bcf05c6265aba09cdf757f",
+      "result_sha256": "c4992c14a1a8dcf72cd2fb63fc4527ae1b899158d8724ab1ea837581dcdf27bf",
+      "manual_adaptation": "VLLM_MONITOR hides HTML only; retain authenticated control API for Ultra."
+    },
+    {
+      "path": "vllm/entrypoints/serve/utils/api_utils.py",
+      "status": "merged-clean",
+      "conflicts": 0,
+      "old_sha256": "2a489ca888e0ab1803f5561e29fb8c1f0c30149b56f0ae5f10917ae570596ee0",
+      "new_sha256": "555b3a999237e1cd8d6313eb9aaa3f2f4ad8d040bf80563c01557da7a451d1ed",
+      "local_sha256": "2a489ca888e0ab1803f5561e29fb8c1f0c30149b56f0ae5f10917ae570596ee0",
+      "result_sha256": "555b3a999237e1cd8d6313eb9aaa3f2f4ad8d040bf80563c01557da7a451d1ed"
+    },
+    {
+      "path": "vllm/envs.py",
+      "status": "conflicts-resolved-preserving-both",
+      "conflicts": 1,
+      "resolution": "Union disjoint SM75 and upstream additions; retain FlashQLA-SM75 backend plus upstream KDA choices.",
+      "old_sha256": "518e8952af66697d7310d53a85ff5227c2918f4d802c111a10d84168ffb9c940",
+      "new_sha256": "fbd370b2f56ff798d373e85705c9e044ccae893ef974f2800eec4ef6f2b4fb7f",
+      "local_sha256": "4c2d507f4ccdcbfddfa64c95d53fc18616f5e2a145238e0442037b0090a52b8c",
+      "result_sha256": "cb863e3df1da6fd808f12232ca000410886e981f9d3203e0f82652f946371046"
+    },
+    {
+      "path": "vllm/envs_sm75.py",
+      "status": "local-only-preserved",
+      "conflicts": 0,
+      "old_sha256": null,
+      "new_sha256": null,
+      "local_sha256": "3b18266356732a36a21e1829c4f9d35db80c17a6d35e3ddf775564351594ca48",
+      "result_sha256": "7adcadbfab1cf1226bd7f30c45f2a5b5bf53044522241ce8500d8b7264218aca",
+      "manual_adaptation": "Preserve SM75 env injection; add fixed 0.1.6-1 compile revision to separate changed kernel selection/packed weights while retaining idle/monitor cache reuse."
+    },
+    {
+      "path": "vllm/model_executor/kernels/linear/mixed_precision/marlin.py",
+      "status": "merged-clean",
+      "conflicts": 0,
+      "old_sha256": "ec18b17815f5114cdc8ba72779095b8ae3d4d1369508a0ef1d30029904cd329c",
+      "new_sha256": "fef6ff0c4a945809bdc09c2bf684c0dceb7080d40f309fbc0535a94b992dc700",
+      "local_sha256": "d3c7098d930a0285b5fac3003e90f8a7e03d43e89e5494e8c8ae76beb81ffa5a",
+      "result_sha256": "ae31e4200cee6e560e4e13d339d816f9e7526fdadb31bdee817bb95909b152e8",
+      "manual_adaptation": "Migrate Firefly hybrid custom-op and decode call to v0.30 three-weight tuple and Marlin signature; tolerate absent has_g_idx."
+    },
+    {
+      "path": "vllm/model_executor/kernels/linear/scaled_mm/marlin.py",
+      "status": "unchanged",
+      "conflicts": 0,
+      "old_sha256": "af9a504e9914e80bb25da0bc896df2f2dd88eb2811ed7456630f640a5ea98a04",
+      "new_sha256": "af9a504e9914e80bb25da0bc896df2f2dd88eb2811ed7456630f640a5ea98a04",
+      "local_sha256": "809caa77a0d12c75584101dfda7f9be3147a81a355b8e85fd3b8762b6d4bba5c",
+      "result_sha256": "809caa77a0d12c75584101dfda7f9be3147a81a355b8e85fd3b8762b6d4bba5c"
+    },
+    {
+      "path": "vllm/model_executor/layers/mamba/gdn/qwen_gdn_linear_attn.py",
+      "status": "merged-clean",
+      "conflicts": 0,
+      "old_sha256": "cb819264c1e791177d866f484ca0579a7d57141926705a1f75dd4a79de4d0125",
+      "new_sha256": "b80f8e6f3fff442fb880aebb3209c52f814f66490009f4ac4003de603576d10a",
+      "local_sha256": "24b8be68689f0a49875e88a1601a09a87de4f92eac2a8ee64973fcd93417cf9b",
+      "result_sha256": "981f22b537f783d442361d72ff390aba1193dd5c531f7a58df107b1871f422c1"
+    },
+    {
+      "path": "vllm/model_executor/layers/quantization/kv_cache.py",
+      "status": "merged-clean",
+      "conflicts": 0,
+      "old_sha256": "cd09817e065d5b0074382fc04a2374ca0ba1c879b3cd125b62f4738e1631ea8a",
+      "new_sha256": "343665e0742ef111da53a3fc1fb4c4fd07b006895642e0ddbaaa57da68323a74",
+      "local_sha256": "0c5859a5cd56239dc24509dc963c6b43bd02dfd9505f222f89ae1559706bcbb4",
+      "result_sha256": "b2e6a1297c455fcc4448e48a70257efbcfa8fc5cbbf1351ba0ccde6818818ccd"
+    },
+    {
+      "path": "vllm/model_executor/layers/quantization/utils/firefly.cu",
+      "status": "local-only-preserved",
+      "conflicts": 0,
+      "old_sha256": null,
+      "new_sha256": null,
+      "local_sha256": "3ae2c8d804a1e73469609fe13b78cdb9f25291c577f48ed7708420215676a2af",
+      "result_sha256": "3ae2c8d804a1e73469609fe13b78cdb9f25291c577f48ed7708420215676a2af"
+    },
+    {
+      "path": "vllm/model_executor/layers/quantization/utils/firefly.py",
+      "status": "local-only-preserved",
+      "conflicts": 0,
+      "old_sha256": null,
+      "new_sha256": null,
+      "local_sha256": "d2e87b82fcadeea8c6c5762429fc74550c71c9320cd347d431026d7a68597def",
+      "result_sha256": "d2e87b82fcadeea8c6c5762429fc74550c71c9320cd347d431026d7a68597def"
+    },
+    {
+      "path": "vllm/model_executor/layers/quantization/utils/marlin_utils_fp8.py",
+      "status": "merged-clean",
+      "conflicts": 0,
+      "old_sha256": "72c324a9de072e60c1f126ad3d5e7f077f6a8752590435e088634f798683d12a",
+      "new_sha256": "8807899cd206a8237951fc256f8426660d876b0b5cef9b41dfa0c06087088ba1",
+      "local_sha256": "4f7e039c8b2a73aba82083a69e47fb8d552aea20dbcc178d0ef618bd37d7617d",
+      "result_sha256": "155b1d3dcaf3a0f09b41dd558d104400002b0e674ee0297db8fb0fc75cfd568f"
+    },
+    {
+      "path": "vllm/third_party/flash_qla_sm75/LICENSE",
+      "status": "local-only-preserved",
+      "conflicts": 0,
+      "old_sha256": null,
+      "new_sha256": null,
+      "local_sha256": "d0b7a111f48dc0207c7e057c810ae0e2fdbc807ba654eb669ade998b2cdc3438",
+      "result_sha256": "d0b7a111f48dc0207c7e057c810ae0e2fdbc807ba654eb669ade998b2cdc3438"
+    },
+    {
+      "path": "vllm/third_party/flash_qla_sm75/SOURCE.md",
+      "status": "local-only-preserved",
+      "conflicts": 0,
+      "old_sha256": null,
+      "new_sha256": null,
+      "local_sha256": "500bb7df4ef2119831f83d16a03c5c6cd42159767b0a3e02cac7767b31e8950b",
+      "result_sha256": "500bb7df4ef2119831f83d16a03c5c6cd42159767b0a3e02cac7767b31e8950b"
+    },
+    {
+      "path": "vllm/third_party/flash_qla_sm75/__init__.py",
+      "status": "local-only-preserved",
+      "conflicts": 0,
+      "old_sha256": null,
+      "new_sha256": null,
+      "local_sha256": "5034bbb8a88a741abdcdfb858e49125171fcade1dfe4f93751f68b52138c8ff5",
+      "result_sha256": "5034bbb8a88a741abdcdfb858e49125171fcade1dfe4f93751f68b52138c8ff5"
+    },
+    {
+      "path": "vllm/third_party/flash_qla_sm75/build_extension.py",
+      "status": "local-only-preserved",
+      "conflicts": 0,
+      "old_sha256": null,
+      "new_sha256": null,
+      "local_sha256": "69739b845f1b1fe4351eb1bf5c78b7dc708b659d3dddf53d901409159a993152",
+      "result_sha256": "69739b845f1b1fe4351eb1bf5c78b7dc708b659d3dddf53d901409159a993152"
+    },
+    {
+      "path": "vllm/third_party/flash_qla_sm75/csrc/gdn_forward.cu",
+      "status": "local-only-preserved",
+      "conflicts": 0,
+      "old_sha256": null,
+      "new_sha256": null,
+      "local_sha256": "4192f5af83614b70ea65546787970b4be9f80e33998961ac736a63215614a256",
+      "result_sha256": "4192f5af83614b70ea65546787970b4be9f80e33998961ac736a63215614a256"
+    },
+    {
+      "path": "vllm/third_party/flash_qla_sm75/fused_fwd.py",
+      "status": "local-only-preserved",
+      "conflicts": 0,
+      "old_sha256": null,
+      "new_sha256": null,
+      "local_sha256": "63be8bacd8e87082f6d40740395c3f423c01f285f72ff7994f642d3d41eeebaf",
+      "result_sha256": "63be8bacd8e87082f6d40740395c3f423c01f285f72ff7994f642d3d41eeebaf"
+    },
+    {
+      "path": "vllm/third_party/flash_qla_sm75/selftest.py",
+      "status": "local-only-preserved",
+      "conflicts": 0,
+      "old_sha256": null,
+      "new_sha256": null,
+      "local_sha256": "a8c1264a2a6b93a9b004a50bd5d3cede995bd78cd49286f5507da7c6760640b2",
+      "result_sha256": "a8c1264a2a6b93a9b004a50bd5d3cede995bd78cd49286f5507da7c6760640b2"
+    },
+    {
+      "path": "vllm/v1/attention/backends/flashinfer.py",
+      "status": "merged-clean",
+      "conflicts": 0,
+      "old_sha256": "95f9e66762860f94a428c0f7f9ff6564f375ed95c46fc8b9019b3d91c99a57b0",
+      "new_sha256": "8ee541fde43ed92a417b3f01ea1e6fc64af8ab2eb54cbfc28308a49aaca4ed7f",
+      "local_sha256": "b1cee4549a8b05076a8dd62e276792bf68609a7b36c1eb2a658f7383b067b738",
+      "result_sha256": "b12a51455413f192be0e7b3c5a2102402bc276ac87a2659a409cbe3cedafd9cf"
+    },
+    {
+      "path": "vllm/v1/attention/backends/gdn_attn.py",
+      "status": "merged-clean",
+      "conflicts": 0,
+      "old_sha256": "c65552d9aad86472544033d44ad8a872221a83e6b60ba9918cc049ab0c580c7c",
+      "new_sha256": "3831019404a92200a38b43571c040cffeb6638bbdc71e4cb5e680dbc6c93d054",
+      "local_sha256": "0b61f540c5df00ca16457232ba82127ea7187c6a6d4d88a09962b2d631f46851",
+      "result_sha256": "35a45dcc93158c9438e197a1be47dc2785f06a0dd04e293490e2cce4ce22352b"
+    },
+    {
+      "path": "vllm/v1/core/sched/scheduler_sm75.py",
+      "status": "local-only-preserved",
+      "conflicts": 0,
+      "old_sha256": null,
+      "new_sha256": null,
+      "local_sha256": "d0af3707b7ff0cee4683d5450b26e104c7458f07b6fb3a2f7b7cc4f4834274a7",
+      "result_sha256": "d0af3707b7ff0cee4683d5450b26e104c7458f07b6fb3a2f7b7cc4f4834274a7"
+    },
+    {
+      "path": "vllm/v1/engine/async_llm.py",
+      "status": "merged-clean",
+      "conflicts": 0,
+      "old_sha256": "46b1df9cb7466552e9ebd52f896eecc7e9e81bbf966077171f320366b7fcbbad",
+      "new_sha256": "52cbf404f1dbc99c6bebf4a50a7eb18ff842a1f53106a45f365523192d816be1",
+      "local_sha256": "b554d4f01cc97e592b51189ec45b69a5cf142a6ba9de42514f3e42a3305649fc",
+      "result_sha256": "ab926385356d25a4d658bf27d54b82d6b89bff60ef34e194cfae0ff1cb4bbdd6"
+    },
+    {
+      "path": "vllm/v1/engine/auto_sleep.py",
+      "status": "local-only-preserved",
+      "conflicts": 0,
+      "old_sha256": null,
+      "new_sha256": null,
+      "local_sha256": "934f463819521888335f06f16ed925668949531531b93ab01bef231787ee565b",
+      "result_sha256": "934f463819521888335f06f16ed925668949531531b93ab01bef231787ee565b"
+    },
+    {
+      "path": "vllm/v1/engine/core.py",
+      "status": "merged-clean",
+      "conflicts": 0,
+      "old_sha256": "f990e260cebf0826d08cfd30955c0c7a85b9af00504841b91759ca5bc7b036f6",
+      "new_sha256": "268bf40534a853812867ae8e80040f190983cb364b41182b55969aace20c93f5",
+      "local_sha256": "7b3cc196064a8861f3e6aae0b93958c8207ab6ed4f43826fa1cb6cd9e74ae5df",
+      "result_sha256": "3dcc60ec5a55eca3e227918db83b47220530124f58c7cde9971d7a1d90fa130d"
+    },
+    {
+      "path": "vllm/v1/engine/core_client.py",
+      "status": "conflicts-resolved-preserving-both",
+      "conflicts": 1,
+      "resolution": "Union disjoint SM75 and upstream additions; retain FlashQLA-SM75 backend plus upstream KDA choices.",
+      "old_sha256": "969832582303057621f5c3ced4561a6bcc2ecc73d4d79b4dd97da0e84cb43e6c",
+      "new_sha256": "fd6ca0cb7499b3086eef2fc57674b7ace56ef1c648f09e92e144b255b79018f8",
+      "local_sha256": "5ade439fcc897b6834a57b0462c7dbdae62905c6739c40c254811fe6a6dabac9",
+      "result_sha256": "49b280e9151e0d1da8ce9ac9c71546ce9e6b0f89a12cd6c28cd06fcb6f1b5775"
+    },
+    {
+      "path": "vllm/model_executor/kernels/linear/scaled_mm/cutlass.py",
+      "status": "new-overlay-backport-pr-53376",
+      "new_sha256": "d01b6fe09e3c3fa3991045f6ac7b469a58a550c56426ffd8900badbbe7e5355b",
+      "result_sha256": "f09dd2bb26fdc5df44bbd88b0e5307c560bf1ec95711415aaa772972a33950df",
+      "manual_adaptation": "Preserve v0.30 source, gate FP8 selection through native CUDA build/capability probe from upstream PR #53376."
+    },
+    {
+      "path": "vllm/model_executor/kernels/linear/scaled_mm/humming.py",
+      "status": "new-overlay-sm75-fp8-overflow-gate",
+      "new_sha256": "0c39527e06ae1f003428b336400533a3afc76da3bb329bcbbfb5ad938bb2cd57",
+      "result_sha256": "e0371f169b27cd1e4a032d7fd218c8559ddaa0975ebd47a22e38f303c1f00ed6",
+      "manual_adaptation": "Reject SM75 FP16 input/output tensor/channel FP8 Humming to avoid pre-scale FP16 overflow; auto falls back to Marlin. Other architectures, INT8 and block/group scales retain existing eligibility."
+    }
+  ]
+}

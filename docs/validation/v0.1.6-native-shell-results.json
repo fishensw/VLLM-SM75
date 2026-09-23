@@ -1,0 +1,45 @@
+{
+  "scope": "same-document shared native workbench; no inference changes",
+  "image": "sha256:26d98242e43440bd5a6b9e7ca131bcec961022d5d6d45911c2409480ce1f8681",
+  "node": {
+    "total": 189,
+    "passed": 182,
+    "skipped": 7,
+    "failed": 0
+  },
+  "clientBundles": {
+    "checked": 69,
+    "failed": 0
+  },
+  "browser": {
+    "actualImage": true,
+    "workbenchIframes": 0,
+    "sharedSidebar": true,
+    "singleSettings": true,
+    "settingsSaved": true,
+    "theme": true,
+    "syntheticConversationAndNativeDirectoryTool": true,
+    "watcher": true,
+    "plugins": true,
+    "profileEditorNavigation": true,
+    "widths": [
+      1600,
+      900,
+      420
+    ],
+    "logoutClearsNativeRuntime": true,
+    "settingsBeforeFirstProfile": true,
+    "temporaryStartFailureRetry": true,
+    "pageErrors": 0,
+    "unexpectedHttpFailures": 0
+  },
+  "production": {
+    "templatesUnchanged": 4,
+    "unraidIconsAndEditabilityPreserved": true,
+    "containerRestarted": false,
+    "gpuProcessesAndMemoryUnchanged": true,
+    "harnessConnectionReloaded": true,
+    "authenticatedUiAcceptance": "isolated image only; production account configuration unchanged; production static assets and installed native clients verified"
+  },
+  "gpuBenchmarksRepeated": false
+}

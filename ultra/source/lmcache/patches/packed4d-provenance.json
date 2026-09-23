@@ -1,0 +1,37 @@
+{
+  "upstream_pr": "https://github.com/LMCache/LMCache/pull/4731",
+  "upstream_pr_head": "f180b9ffce7df45ce3037011d95a22db947fefcb",
+  "upstream_status": "open, unmerged as of 2026-09-23",
+  "lmcache_base_commit": "05a013b29da78cf2321b9b46ec5039dde2fb0bb0",
+  "base_file_sha256": "909bc3bf5ef87741f623c19aedd12499bea3f399ea79e416911449cbea197b70",
+  "patched_file_sha256": "bc60b1cdc8c9f90fb507878e931253a43f41d9251ba99ab9610b8a3320f75ee2",
+  "patch_sha256": "66d45f80479218f4f89efb477fe720a2f4e91f8730b3f6aa5c2dba3b0098dede",
+  "changes": "Copy PR4731 geometry helpers and subpaged4D match; locally adapt its apply method to validate vLLM0.30 logical BHNC registration and normalize physical strides before strict page checks. Original hybrid-only dispatcher and 5D/MLA/Mamba rules remain unchanged; ratio-one and non-hybrid views retain the stock downstream normalization path.",
+  "schema_version": 1,
+  "patch_id": "lmcache-v055-packed4d-vllm030-logical-v1",
+  "distribution_version": "0.5.5",
+  "module_path": "lmcache/integration/vllm/kv_cache_group_edits.py",
+  "base_tag": "v0.5.5-cu129",
+  "upstream_issue": "https://github.com/LMCache/LMCache/issues/4701",
+  "license": "Apache-2.0",
+  "validation_scope": "CPU tests preserve every logical-page byte and reject invalid geometry. Real GPU model restore tests are separately required; the open PR is not an upstream release guarantee.",
+  "local_adaptation": {
+    "vllm_commit": "ced6857afa0ea7b2e3f0846a62e1394e90f15607",
+    "contract_source": "vllm/v1/kv_cache_interface.py:create_kv_cache_views",
+    "contract": "Registered axes are always [B,H,N,C]; NHD/HND describes physical stride order. Validate actual spec before metadata-only permute, then retain exact page-byte and contiguity checks.",
+    "observed_raw_shape": [
+      4067,
+      1,
+      32,
+      512
+    ],
+    "observed_raw_stride": [
+      16384,
+      512,
+      512,
+      1
+    ],
+    "observed_layout_hint": "NHD",
+    "upstream_pr_verbatim": false
+  }
+}

@@ -3,6 +3,8 @@
 Uses exact token-ID inputs, three-position retrieval, natural stop, output token
 hashes, streamed timing, and real offload counters. Not a performance benchmark.
 The key stays in memory; every completed/failed case is appended and fsynced.
+On vLLM 0.30, cache reset requires the server to start with
+VLLM_SERVER_DEV_MODE=1; ordinary repeat validation does not require it.
 """
 from __future__ import annotations
 
@@ -24,6 +26,10 @@ METRICS = {
     "vllm:prefix_cache_hits_total", "vllm:prefix_cache_queries_total",
     "vllm:num_preemptions_total", "vllm:kv_cache_usage_perc",
     "vllm:num_requests_running", "vllm:num_requests_waiting",
+    "vllm:kv_offload_allocation_failure_total",
+    "vllm:kv_offload_cpu_allocation_size_count",
+    "vllm:kv_offload_cpu_allocation_size_sum",
+    "vllm:kv_offload_cpu_cache_usage_perc",
 }
 
 
@@ -113,7 +119,8 @@ class Client:
 
     def generate(self, tokens, maximum, timeout, minimum_memory):
         started = time.monotonic()
-        first = None
+        first = last_emission = None
+        first_emission_tokens = 0
         output, generated, usage, finish = [], [], None, None
         stop = threading.Event()
         violation = []
@@ -162,6 +169,9 @@ class Client:
                         text = choice.get("text") or ""
                         if first is None and (delta or text):
                             first = time.monotonic()
+                            first_emission_tokens = len(delta)
+                        if delta:
+                            last_emission = time.monotonic()
                         generated.extend(delta)
                         output.append(text)
                         finish = choice.get("finish_reason") or finish
@@ -179,6 +189,8 @@ class Client:
                 "finishReason": finish, "usage": usage, "elapsedSeconds": elapsed,
                 "ttftSeconds": first - started if first is not None else None,
                 "decodeSeconds": time.monotonic() - first if first is not None else None,
+                "firstEmissionTokens": first_emission_tokens,
+                "decodeWindowSeconds": last_emission - first if last_emission is not None and first is not None else None,
                 "hostMinimumAvailableBytes": minimum_seen}
 
 
@@ -195,6 +207,7 @@ def main():
     parser.add_argument("--key-file", type=Path, default=Path("/data/api-access.json"))
     parser.add_argument("--model", required=True)
     parser.add_argument("--lengths", default="8192,32768,65536,131072,262016")
+    parser.add_argument("--context-limit", type=int, default=262144, help="Explicit configured input+output contract; does not change server capacity")
     parser.add_argument("--repeats", type=int, default=2)
     parser.add_argument("--max-output", type=int, default=128)
     parser.add_argument("--timeout", type=int, default=1800)
@@ -203,7 +216,7 @@ def main():
     parser.add_argument("--sustained-decode", action="store_true",
                         help="Require the entire output budget; intentional length stop after correct JSON prefix")
     parser.add_argument("--reset-gpu-cache-before-repeat", action="store_true",
-                        help="Idle engine only: retain external cache and require measured CPU-to-GPU bytes")
+                        help="Requires VLLM_SERVER_DEV_MODE=1 at server startup; idle engine only: retain external cache and require measured CPU-to-GPU bytes")
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--baseline", type=Path, action="append", default=[],
                         help="Passed JSONL baseline; may be supplied for multiple disjoint length sets")
@@ -228,8 +241,8 @@ def main():
     with client.request("/health", timeout=10) as response:
         assert response.status == 200
     for length in lengths:
-        if length <= 0 or length + args.max_output > 262144:
-            raise SystemExit("Input plus output must fit the explicit 262144-token contract")
+        if length <= 0 or length + args.max_output > args.context_limit:
+            raise SystemExit(f"Input plus output must fit the explicit {args.context_limit}-token contract")
         tokens, expected = client.prompt(length, args.salt, args.sustained_decode)
         prompt_hash = token_hash(tokens)
         previous_hash = None
@@ -263,7 +276,7 @@ def main():
                         after = client.metrics()
                 record.update(result)
                 record["metricsBefore"], record["metricsAfter"] = before, after
-                record["counterDeltas"] = {name: after[name] - before.get(name, 0) for name in after if name.endswith("_total")}
+                record["counterDeltas"] = {name: after[name] - before.get(name, 0) for name in after if name.endswith(("_total", "_count", "_sum"))}
                 assert result["usage"]["prompt_tokens"] == length, "Actual prompt length mismatch"
                 if args.sustained_decode:
                     assert result["finishReason"] == "length", "Did not exercise the entire decode budget"

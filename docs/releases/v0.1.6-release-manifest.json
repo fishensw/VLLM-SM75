@@ -1,0 +1,155 @@
+{
+  "schemaVersion": 1,
+  "release": "0.1.6",
+  "status": "released",
+  "publicBaselineCommit": "2c5bfef81aadcd6c5a69812988fe14746543de89",
+  "upstream": {
+    "version": "0.30.0",
+    "commit": "ced6857afa0ea7b2e3f0846a62e1394e90f15607",
+    "image": "vllm/vllm-openai:v0.30.0-cu129@sha256:58fdb6bb123a81aa53f46fa4652ad8cc87e817bd1077c9832c6258ef12c1c688",
+    "platform": "linux/amd64"
+  },
+  "published": true,
+  "productionReplacement": true,
+  "productionContainerState": "Ultra running with matching public UI files applied live; other three formal containers created from latest image",
+  "localFormalImage": "vllm-sm75:v0.1.6-ultra",
+  "localFormalImageId": "sha256:2f72e25bcaa491dafe4175afaff4a091841598f3901ff8988924bc7b42cca24e",
+  "validation": {
+    "record": "../validation/v0.1.6.md",
+    "gpu": "passed-bounded-four-T10-full-image-functional-tests; see strict regression failures separately",
+    "officialBaseBuild": "standard-and-ultra-complete; GPU-acceptance-completed-with-recorded-regression-and-equivalence-failures",
+    "issue13SameCheckpointAcceptance": "unconfirmed-original-checkpoint; public-same-weight-control-tested",
+    "longSpeculativeTokenEquivalence": "failed-0-of-3-long-prompts; short-smoke-passed",
+    "cpuKvReadback": "target-only-passed; dflash-combination-no-common-prefix-safe-recompute",
+    "results": "../validation/v0.1.6-results.json",
+    "fullImageRecord": "../validation/v0.1.6-full-images.md",
+    "fullImageResults": "../validation/v0.1.6-full-images-results.json",
+    "dependencyMetadata": "known-overrides-and-base-optional-package-mismatch; see full-image results",
+    "workbenchIntegration": "../validation/v0.1.6-workbench-integration.md",
+    "unifiedUiResults": "../validation/v0.1.6-unified-ui-results.json"
+  },
+  "harness": {
+    "version": "0.1.7-alpha.2",
+    "prerelease": true,
+    "commit": "00102833dfaee1da9f48a3a8eae9d34005a75218",
+    "release": "https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v0.1.7-alpha.2",
+    "nodeVersion": "22.23.2",
+    "nodeImage": "node:22.23.2-bookworm-slim@sha256:43aeff40f4afc22e83f7589a2f37e111cff5ca84529571f1c8415bcc5fcc21b2",
+    "pnpmVersion": "11.7.0",
+    "lockfile": "../../ultra/harness/package-lock.json",
+    "validation": "../validation/v0.1.6-harness.md",
+    "lockSha256": "3c45c9df14985b7b46aea0a423d95365619a48114dc510151e00e0d85ae46763",
+    "nativePackageCount": 267,
+    "lockedPackageCount": 586,
+    "results": "../validation/v0.1.6-harness-results.json"
+  },
+  "contextConfiguration": {
+    "targetTokens": 1048576,
+    "ropeType": "yarn",
+    "gpuKvBudget": "bytes-per-GPU",
+    "cpuKvBudget": "bytes-total-across-TP-ranks",
+    "cpuKvPurpose": "prefix-cache-offloading; not active GPU KV capacity",
+    "validation": "../validation/v0.1.6-context.md",
+    "fullImageResults": "../validation/v0.1.6-full-images-results.json"
+  },
+  "lmcache": {
+    "version": "0.5.5",
+    "tag": "v0.5.5-cu129",
+    "commit": "05a013b29da78cf2321b9b46ec5039dde2fb0bb0",
+    "defaultEnabled": false,
+    "defaultInstalled": false,
+    "status": "experimental",
+    "connector": "lmcache.integration.vllm.lmcache_mp_connector.LMCacheMPConnector",
+    "tiers": [
+      "GPU active KV",
+      "shared CPU L1",
+      "Python fs L2"
+    ],
+    "patch": {
+      "id": "lmcache-v055-packed4d-vllm030-logical-v1",
+      "upstreamPr": "https://github.com/LMCache/LMCache/pull/4731",
+      "upstreamHead": "f180b9ffce7df45ce3037011d95a22db947fefcb",
+      "upstreamStatus": "open-unmerged",
+      "mandatory": true,
+      "moduleSha256": "bc60b1cdc8c9f90fb507878e931253a43f41d9251ba99ab9610b8a3320f75ee2",
+      "localAdaptation": {
+        "vllm_commit": "ced6857afa0ea7b2e3f0846a62e1394e90f15607",
+        "contract_source": "vllm/v1/kv_cache_interface.py:create_kv_cache_views",
+        "contract": "Registered axes are always [B,H,N,C]; NHD/HND describes physical stride order. Validate actual spec before metadata-only permute, then retain exact page-byte and contiguity checks.",
+        "observed_raw_shape": [
+          4067,
+          1,
+          32,
+          512
+        ],
+        "observed_raw_stride": [
+          16384,
+          512,
+          512,
+          1
+        ],
+        "observed_layout_hint": "NHD",
+        "upstream_pr_verbatim": false
+      }
+    },
+    "installationLock": "../../ultra/source/lmcache/install-lock.json",
+    "documentation": "../lmcache.md",
+    "validation": "../validation/v0.1.6-lmcache.md",
+    "results": "../validation/v0.1.6-lmcache-results.json",
+    "purpose": "prefix reuse; not active-attention capacity extension",
+    "unsupportedCombinations": [
+      "speculative decoding",
+      "GPU memory sleep",
+      "expandable_segments",
+      "native CPU KV connector",
+      "CacheBlend/CacheGen on hybrid opaque pages"
+    ],
+    "notValidated": [
+      "million-token inference",
+      "image/video KV",
+      "remote/distributed tiers"
+    ],
+    "acceptance": "passed-full-ultra-image-and-earlier-overlay-four-T10-target-only-text-8k-L1-L2-restart-salt-fork-tests",
+    "fullImageRecord": "../validation/v0.1.6-full-images.md",
+    "defaultInstalledScope": "project-pinned-cu129-extension; upstream base may contain an incompatible unvalidated LMCache package"
+  },
+  "documentation": {
+    "main": "../../README.md",
+    "configurationTemplates": "../configuration-v0.1.6.md",
+    "build": "../../docker/BUILD.md",
+    "status": "released"
+  },
+  "productionUiUpdate": {
+    "method": "single sidebar, shared single-line header and horizontal settings; console and native clients replaced live; Harness reconnected; active model and container not restarted",
+    "runningUltraBaseImageId": "sha256:9f17280b2eb7b9709f1f452dda37be1e257710ff17d1a7a08dd9b6c8a9869f91",
+    "newImageForRecreate": "sha256:2f72e25bcaa491dafe4175afaff4a091841598f3901ff8988924bc7b42cca24e",
+    "unraidTemplatesAndIcons": "unchanged",
+    "latestUpdate": "front-end script only; Harness and model processes remain running"
+  },
+  "sourcePreparation": {
+    "scope": "release documentation, package version metadata and build-context exclusions",
+    "inferenceBehaviorChanged": false,
+    "formalRuntimeRebuilt": false,
+    "githubPushed": false,
+    "checks": {
+      "buildAndPackaging": {
+        "passed": 21,
+        "failed": 0
+      },
+      "console": {
+        "total": 203,
+        "passed": 196,
+        "skipped": 7,
+        "failed": 0
+      },
+      "gpuRerun": false
+    }
+  },
+  "publication": {
+    "repository": "https://github.com/fishensw/VLLM-SM75",
+    "tag": "v0.1.6",
+    "releaseUrl": "https://github.com/fishensw/VLLM-SM75/releases/tag/v0.1.6",
+    "scope": "source-code-and-validation-artifacts",
+    "containerImagesPublished": false
+  }
+}

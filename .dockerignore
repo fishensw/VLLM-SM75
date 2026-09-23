@@ -41,3 +41,11 @@ share/python-wheels/
 *.egg
 MANIFEST
 rust/target/
+
+# Local dependencies, caches and environment files are never build inputs.
+**/node_modules
+**/.env
+**/.env.*
+/.pytest_cache
+/.ruff_cache
+/tmp

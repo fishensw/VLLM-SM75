@@ -1,0 +1,6 @@
+# Optional extension of an already verified v0.1.6 standard or ultra image.
+ARG BASE_IMAGE
+FROM ${BASE_IMAGE}
+COPY ultra/source/lmcache /opt/vllm-sm75/lmcache
+RUN python3 /opt/vllm-sm75/lmcache/install.py --install --build-no-gpu
+LABEL io.sm75.lmcache.version="0.5.5" io.sm75.lmcache.channel="experimental"

@@ -45,7 +45,33 @@ class ReleaseScripts(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn('BASE_IMAGE=audited-runtime', args)
         self.assertIn('--memory', args)
-        self.assertIn('none', args)
+        self.assertEqual(args[args.index('--network') + 1], 'default')
+
+    def test_lmcache_build_opt_in_reaches_both_ultra_recipes(self):
+        for mode in ('full', 'ui'):
+            result, args = self.invoke('docker/build.sh', EDITION='ultra', BUILD_MODE=mode,
+                                      RUNTIME_IMAGE='audited-runtime', INSTALL_LMCACHE='1')
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn('INSTALL_LMCACHE=1', args)
+
+    def test_context_template_is_forwarded_and_zero_cpu_disables_connector(self):
+        override = json.dumps({'dtype': 'float16', 'text_config': {'rope_parameters':
+            {'rope_type': 'yarn', 'factor': 4, 'original_max_position_embeddings': 262144},
+            'max_position_embeddings': 1048576}})
+        result, args = self.invoke('docker/run.sh', POWER_MODE='sleep',
+            AUTO_SLEEP_IDLE_TIMEOUT='0', CPU_KV_GIB='0', GPU_KV_BYTES='4294967296',
+            MAX_MODEL_LEN='1048576', MAX_NUM_SEQS='1', MAX_NUM_BATCHED_TOKENS='4096',
+            HF_OVERRIDES=override)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertNotIn('--kv-transfer-config', args)
+        for flag, value in [('--max-model-len','1048576'), ('--max-num-seqs','1'),
+                            ('--max-num-batched-tokens','4096'),
+                            ('--kv-cache-memory-bytes','4294967296'), ('--hf-overrides',override)]:
+            self.assertEqual(args[args.index(flag)+1], value)
+        result, args = self.invoke('docker/run.sh', POWER_MODE='sleep', CPU_KV_GIB='2')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        kv = json.loads(args[args.index('--kv-transfer-config')+1])
+        self.assertEqual(kv['kv_connector_extra_config']['cpu_bytes_to_use'], 2 * 1024**3)
 
     def test_invalid_mode_cannot_call_docker(self):
         result, args = self.invoke('docker/build.sh', EDITION='unknown')
@@ -62,6 +88,13 @@ class ReleaseScripts(unittest.TestCase):
         self.assertEqual(args[args.index('--auto-sleep-idle-timeout') + 1], '30')
         kv = json.loads(args[args.index('--kv-transfer-config') + 1])
         self.assertEqual(kv['kv_connector_extra_config']['cpu_bytes_to_use'], 8589934592)
+
+    def test_marlin_reduction_setting_reaches_container(self):
+        for value in ('0', '1'):
+            result, args = self.invoke('docker/run.sh', POWER_MODE='sleep',
+                AUTO_SLEEP_IDLE_TIMEOUT='0', VLLM_MARLIN_USE_ATOMIC_ADD=value)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn('VLLM_MARLIN_USE_ATOMIC_ADD=' + value, args)
 
     def test_ultra_dispatch_does_not_require_web_token_or_stop_services(self):
         result, args = self.invoke('docker/run.sh', EDITION='ultra', ULTRA_DATA_ROOT='/tmp/sm75-test-ultra',

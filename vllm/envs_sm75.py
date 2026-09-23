@@ -11,13 +11,17 @@ append 到上游 envs.py 尾部触发注入。注入做两件事:
    __getattr__ / __dir__ / is_set / validate_environ / enable_envs_cache
    全围绕该 dict, 灌入后 envs.VLLM_FIREFLY 等属性访问自动生效(无需改调用方)。
 2) 包一层 vllm.envs.compile_factors, 把 INSTALL_IGNORED(idle auto-sleep 计时器)
-   从 hash factors pop 掉 —— 它们只影响调度/checkpoint, 不改变编译图。
+   从 hash factors pop 掉，并加入固定的 overlay 编译版本，隔离后端/权重布局变更。
 
 好处: 上游 envs.py 后续升级随便改(内容级), 本文件只跟「dict + __getattr__
 + compile_factors 返回 dict」这个稳定机制耦合, 冲突面从整文件缩到一处注入。
 """
 
 import os
+
+# Internal release fingerprint, not an environment setting. Bump when overlay
+# changes can select a different kernel or packed-weight layout before tracing.
+_COMPILE_REVISION = "0.1.6-1"
 
 # 需从 compile_factors hash 中排除的 key: idle auto-sleep 计时器/路径只影响
 # 调度与 checkpoint bookkeeping, 不改变编译图。切 test/prod sleep 计时不应
@@ -127,7 +131,7 @@ EXTENSIONS: dict[str, object] = {
     "VLLM_FIREFLY_AR_BACKEND": _firefly_ar_backend,
     # 单文件 HTML 监控页开关, 默认开(_monitor 归一化)。
     # 开 = serve 在 /monitor 挂自包含 HTML 看板(纯前端 canvas 图表, 无 CDN,
-    # 轮询同源 /metrics); 0/off/false/no = 关(不挂路由)。见
+    # 轮询同源 /metrics); 0/off/false/no = 只关闭 HTML 页面(控制 API 保留)。见
     # entrypoints/serve/instrumentator/monitor.py。
     "VLLM_MONITOR": _monitor,
     # A3(sm75 参考): custom allreduce 在 cuda graph capture 时的图输入策略。
@@ -187,11 +191,15 @@ def apply() -> None:
             for key in INSTALL_IGNORED:
                 factors.pop(key, None)
             # The dashboard only attaches HTTP routes; it cannot change a
-            # compiled graph. Keep the legacy monitor-off cache signature so
-            # enabling the UI reuses existing production compilation artifacts.
+            # compiled graph. Keep its monitor-off signature so enabling the
+            # UI reuses artifacts within the same overlay compile revision.
             # Do not change the getter: the actual monitor remains enabled.
             if "VLLM_MONITOR" in factors:
                 factors["VLLM_MONITOR"] = False
+            # AOT lookup happens before tracing the newly selected kernel.
+            # Separate releases even when the vLLM version and "auto" backend
+            # configuration are unchanged; both AOT and regular caches use it.
+            factors["_vllm_sm75_compile_revision"] = _COMPILE_REVISION
             return factors
 
         _compile_factors_sm75._sm75_wrapped = True  # type: ignore[attr-defined]

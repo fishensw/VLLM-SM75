@@ -18,3 +18,7 @@ __pycache__/
 /evidence/
 /ultra/source/console/data/
 /ultra/node_modules/
+
+# Generated dependencies and local test caches
+node_modules/
+.pytest_cache/

@@ -1,0 +1,580 @@
+{
+  "schemaVersion": 1,
+  "release": "0.1.6",
+  "date": "2026-09-23",
+  "status": "development-candidate",
+  "runtime": {
+    "upstreamVersion": "0.30.0+cu129",
+    "gpu": "4 x Tesla T10 16 GiB (SM75)",
+    "tensorParallelSize": 4,
+    "officialBaseImageRebuilt": false,
+    "basis": "Verified official wheel installed into existing CUDA 12.9 runtime plus candidate overlays",
+    "overlayFilesMatched": 46,
+    "compileRevision": "0.1.6-1",
+    "temporaryDiagnosticRestored": true,
+    "testContainerStopped": true
+  },
+  "tests": {
+    "windowsCpu": {
+      "passed": 142,
+      "skipped": 18,
+      "subtestsPassed": 9
+    },
+    "linuxUltra": {
+      "passed": 74,
+      "skipped": 0
+    },
+    "gpuNumericalAndSelectors": {
+      "passed": 65
+    },
+    "linuxEngineSleepCache": {
+      "passed": 81
+    },
+    "linuxInitialConfigAndSelectors": {
+      "passed": 28
+    },
+    "compileCacheRevision": {
+      "passed": 5,
+      "subtestsPassed": 5
+    },
+    "longContextClientAfterMetricsExpansion": {
+      "passed": 4
+    }
+  },
+  "longServing": [
+    {
+      "label": "fp8-auto-before-fix",
+      "summary": {
+        "requests": 6,
+        "passed_requests": 6,
+        "completion_tokens": 1536,
+        "request_seconds_sum": 65.795863,
+        "completion_tokens_per_request_second": 23.344932796154676,
+        "outputs_below_128_tokens": 0,
+        "outputs_at_token_limit": 6,
+        "metrics_valid": true,
+        "drafts": 1530.0,
+        "draft_tokens": 10710.0,
+        "accepted_tokens": 0.0,
+        "token_acceptance_rate": 0.0,
+        "accepted_tokens_per_draft": 0.0,
+        "mean_acceptance_length_including_verification_token": 1.0
+      },
+      "allRequestsPassed": true
+    },
+    {
+      "label": "fp8-marlin",
+      "summary": {
+        "requests": 6,
+        "passed_requests": 6,
+        "completion_tokens": 1536,
+        "request_seconds_sum": 27.561531,
+        "completion_tokens_per_request_second": 55.72985042086378,
+        "outputs_below_128_tokens": 0,
+        "outputs_at_token_limit": 6,
+        "metrics_valid": true,
+        "drafts": 630.0,
+        "draft_tokens": 4410.0,
+        "accepted_tokens": 902.0,
+        "token_acceptance_rate": 0.20453514739229026,
+        "accepted_tokens_per_draft": 1.4317460317460318,
+        "mean_acceptance_length_including_verification_token": 2.431746031746032
+      },
+      "allRequestsPassed": true
+    },
+    {
+      "label": "bf16-control",
+      "summary": {
+        "requests": 6,
+        "passed_requests": 6,
+        "completion_tokens": 1536,
+        "request_seconds_sum": 27.816194,
+        "completion_tokens_per_request_second": 55.21963213227518,
+        "outputs_below_128_tokens": 0,
+        "outputs_at_token_limit": 6,
+        "metrics_valid": true,
+        "drafts": 624.0,
+        "draft_tokens": 4368.0,
+        "accepted_tokens": 912.0,
+        "token_acceptance_rate": 0.2087912087912088,
+        "accepted_tokens_per_draft": 1.4615384615384615,
+        "mean_acceptance_length_including_verification_token": 2.4615384615384617
+      },
+      "allRequestsPassed": true
+    },
+    {
+      "label": "fp8-auto-fixed",
+      "summary": {
+        "requests": 6,
+        "passed_requests": 6,
+        "completion_tokens": 1536,
+        "request_seconds_sum": 27.043886999999998,
+        "completion_tokens_per_request_second": 56.79656922098514,
+        "outputs_below_128_tokens": 0,
+        "outputs_at_token_limit": 6,
+        "metrics_valid": true,
+        "drafts": 618.0,
+        "draft_tokens": 4326.0,
+        "accepted_tokens": 918.0,
+        "token_acceptance_rate": 0.21220527045769763,
+        "accepted_tokens_per_draft": 1.4854368932038835,
+        "mean_acceptance_length_including_verification_token": 2.4854368932038833
+      },
+      "allRequestsPassed": true
+    }
+  ],
+  "smoke": [
+    {
+      "label": "bf16-original",
+      "passedChecks": 12,
+      "totalChecks": 12,
+      "shortGreedyTokenSequencesMatched": 3
+    },
+    {
+      "label": "fp8-auto-before-fix",
+      "passedChecks": 12,
+      "totalChecks": 12,
+      "shortGreedyTokenSequencesMatched": 3
+    },
+    {
+      "label": "fp8-marlin",
+      "passedChecks": 12,
+      "totalChecks": 12,
+      "shortGreedyTokenSequencesMatched": 3
+    },
+    {
+      "label": "bf16-control",
+      "passedChecks": 12,
+      "totalChecks": 12,
+      "shortGreedyTokenSequencesMatched": 3
+    },
+    {
+      "label": "fp8-auto-fixed",
+      "passedChecks": 12,
+      "totalChecks": 12,
+      "shortGreedyTokenSequencesMatched": 3
+    }
+  ],
+  "longSpeculativeEquivalence": {
+    "passed": false,
+    "diagnosticComplete": true,
+    "summary": {
+      "requests": 6,
+      "valid_logprobs_requests": 6,
+      "equal_token_sequences": 0,
+      "compared_prompts": 3,
+      "first_difference_indices": [
+        11,
+        29,
+        196
+      ]
+    },
+    "firstDifferences": [
+      {
+        "prompt": 1,
+        "first_different_token_index": 11,
+        "common_prefix_verified": true,
+        "request_payload_equal": true,
+        "system_fingerprint_equal": true,
+        "top2LogprobGapOff": 0.015625,
+        "top2LogprobGapOn": 0.015625,
+        "bothSelectedOwnTop1": true
+      },
+      {
+        "prompt": 2,
+        "first_different_token_index": 29,
+        "common_prefix_verified": true,
+        "request_payload_equal": true,
+        "system_fingerprint_equal": true,
+        "top2LogprobGapOff": 0.03125,
+        "top2LogprobGapOn": 0.0,
+        "bothSelectedOwnTop1": true
+      },
+      {
+        "prompt": 3,
+        "first_different_token_index": 196,
+        "common_prefix_verified": true,
+        "request_payload_equal": true,
+        "system_fingerprint_equal": true,
+        "top2LogprobGapOff": 0.03125,
+        "top2LogprobGapOn": 0.0,
+        "bothSelectedOwnTop1": true
+      }
+    ]
+  },
+  "longContext": [
+    {
+      "inputTokens": 8192,
+      "repeat": 1,
+      "passed": true,
+      "elapsedSeconds": 6.872338931978447,
+      "ttftSeconds": 6.446804751991294,
+      "tokenHash": "6da7f7f72e1424ecf203c1ce7ddd362ef6b6d0168ae65d8c4c50a91d9ba190f2",
+      "counterDeltas": {
+        "vllm:kv_offload_store_bytes_total": 447086592.0,
+        "vllm:prefix_cache_queries_total": 8192.0,
+        "vllm:prefix_cache_hits_total": 0.0,
+        "vllm:num_preemptions_total": 0.0
+      }
+    },
+    {
+      "inputTokens": 8192,
+      "repeat": 2,
+      "passed": true,
+      "elapsedSeconds": 3.0285452750104014,
+      "ttftSeconds": 2.599844987009419,
+      "tokenHash": "6da7f7f72e1424ecf203c1ce7ddd362ef6b6d0168ae65d8c4c50a91d9ba190f2",
+      "counterDeltas": {
+        "vllm:kv_offload_store_bytes_total": 160825344.0,
+        "vllm:prefix_cache_queries_total": 8192.0,
+        "vllm:prefix_cache_hits_total": 4992.0,
+        "vllm:num_preemptions_total": 0.0
+      }
+    },
+    {
+      "inputTokens": 16000,
+      "repeat": 1,
+      "passed": true,
+      "elapsedSeconds": 13.149945398996351,
+      "ttftSeconds": 12.725690445979126,
+      "tokenHash": "f96d1ead767924bc6a5a236fa25c2b9197f97ce73a55d33e33e59325bd27d1ba",
+      "counterDeltas": {
+        "vllm:kv_offload_store_bytes_total": 719716352.0,
+        "vllm:prefix_cache_queries_total": 16000.0,
+        "vllm:prefix_cache_hits_total": 0.0,
+        "vllm:num_preemptions_total": 0.0
+      }
+    },
+    {
+      "inputTokens": 16000,
+      "repeat": 2,
+      "passed": true,
+      "elapsedSeconds": 2.698981758992886,
+      "ttftSeconds": 2.3170815219928045,
+      "tokenHash": "f96d1ead767924bc6a5a236fa25c2b9197f97ce73a55d33e33e59325bd27d1ba",
+      "counterDeltas": {
+        "vllm:kv_offload_store_bytes_total": 160825344.0,
+        "vllm:prefix_cache_queries_total": 16000.0,
+        "vllm:prefix_cache_hits_total": 13312.0,
+        "vllm:num_preemptions_total": 0.0
+      }
+    }
+  ],
+  "cpuKvReadback": {
+    "status": "target-only-passed; dflash-combination-no-common-prefix",
+    "dflashRuns": [
+      {
+        "cpuBytes": 536870912,
+        "maxNumBatchedTokens": 2048,
+        "cases": [
+          {
+            "inputTokens": 8192,
+            "repeat": 1,
+            "passed": true,
+            "tokenHash": "d6b5d295d6d23ebadb2ced13822762b0a080f2a8e150d4c67975b82a132482de",
+            "counterDeltas": {
+              "vllm:kv_offload_store_bytes_total": 447086592.0,
+              "vllm:prefix_cache_queries_total": 8192.0,
+              "vllm:prefix_cache_hits_total": 0.0,
+              "vllm:num_preemptions_total": 0.0
+            }
+          },
+          {
+            "inputTokens": 8192,
+            "repeat": 2,
+            "passed": false,
+            "tokenHash": "d6b5d295d6d23ebadb2ced13822762b0a080f2a8e150d4c67975b82a132482de",
+            "counterDeltas": {
+              "vllm:kv_offload_store_bytes_total": 0.0,
+              "vllm:prefix_cache_queries_total": 8192.0,
+              "vllm:prefix_cache_hits_total": 0.0,
+              "vllm:num_preemptions_total": 0.0
+            },
+            "gpuCacheResetExternalPreserved": true,
+            "error": "AssertionError: No measured CPU KV readback"
+          }
+        ]
+      },
+      {
+        "cpuBytes": 2147483648,
+        "maxNumBatchedTokens": 2048,
+        "cases": [
+          {
+            "inputTokens": 8192,
+            "repeat": 1,
+            "passed": true,
+            "tokenHash": "d6b5d295d6d23ebadb2ced13822762b0a080f2a8e150d4c67975b82a132482de",
+            "counterDeltas": {
+              "vllm:kv_offload_store_bytes_total": 447086592.0,
+              "vllm:prefix_cache_queries_total": 8192.0,
+              "vllm:prefix_cache_hits_total": 0.0,
+              "vllm:num_preemptions_total": 0.0
+            }
+          },
+          {
+            "inputTokens": 8192,
+            "repeat": 2,
+            "passed": false,
+            "tokenHash": "d6b5d295d6d23ebadb2ced13822762b0a080f2a8e150d4c67975b82a132482de",
+            "counterDeltas": {
+              "vllm:kv_offload_store_bytes_total": 0.0,
+              "vllm:prefix_cache_queries_total": 8192.0,
+              "vllm:prefix_cache_hits_total": 0.0,
+              "vllm:num_preemptions_total": 0.0
+            },
+            "gpuCacheResetExternalPreserved": true,
+            "error": "AssertionError: No measured CPU KV readback"
+          }
+        ]
+      },
+      {
+        "cpuBytes": 2147483648,
+        "maxNumBatchedTokens": 1664,
+        "cases": [
+          {
+            "inputTokens": 8192,
+            "repeat": 1,
+            "passed": true,
+            "tokenHash": "d6b5d295d6d23ebadb2ced13822762b0a080f2a8e150d4c67975b82a132482de",
+            "counterDeltas": {
+              "vllm:kv_offload_cpu_allocation_size_count": 16.0,
+              "vllm:kv_offload_cpu_allocation_size_sum": 30.0,
+              "vllm:kv_offload_store_bytes_total": 447086592.0,
+              "vllm:prefix_cache_queries_total": 8192.0,
+              "vllm:prefix_cache_hits_total": 0.0,
+              "vllm:num_preemptions_total": 0.0
+            }
+          },
+          {
+            "inputTokens": 8192,
+            "repeat": 2,
+            "passed": false,
+            "tokenHash": "d6b5d295d6d23ebadb2ced13822762b0a080f2a8e150d4c67975b82a132482de",
+            "counterDeltas": {
+              "vllm:kv_offload_cpu_allocation_size_count": 0.0,
+              "vllm:kv_offload_cpu_allocation_size_sum": 0.0,
+              "vllm:kv_offload_store_bytes_total": 0.0,
+              "vllm:prefix_cache_queries_total": 8192.0,
+              "vllm:prefix_cache_hits_total": 0.0,
+              "vllm:num_preemptions_total": 0.0
+            },
+            "gpuCacheResetExternalPreserved": true,
+            "error": "AssertionError: No measured CPU KV readback"
+          }
+        ]
+      }
+    ],
+    "diagnostic": {
+      "cpuCapacityChunks": 126,
+      "allocatedChunks": 30,
+      "evictableChunks": 30,
+      "pendingChunks": 0,
+      "gdnBoundaryTokens": 4992,
+      "draftResidentChunkIndices": [
+        5,
+        6,
+        7,
+        8
+      ],
+      "draftRequiredChunkIndicesAtGdnBoundary": [
+        3,
+        4,
+        5,
+        6
+      ],
+      "draftChunkTokens": 832,
+      "commonRestorablePrefixTokens": 0,
+      "fallback": "safe recomputation",
+      "instrumentedSourceRestoredSha256": "2c5282f4a3165cd787fb355e215e3869f1bdd3f2c795b2155fc537c9d135191a"
+    },
+    "targetOnlyControl": {
+      "cpuBytes": 2147483648,
+      "maxNumBatchedTokens": 2048,
+      "speculativeConfig": null,
+      "cases": [
+        {
+          "inputTokens": 8192,
+          "repeat": 1,
+          "passed": true,
+          "tokenHash": "d6b5d295d6d23ebadb2ced13822762b0a080f2a8e150d4c67975b82a132482de",
+          "elapsedSeconds": 8.335769536002772,
+          "ttftSeconds": 6.490141777001554,
+          "counterDeltas": {
+            "vllm:kv_offload_cpu_allocation_size_count": 8.0,
+            "vllm:kv_offload_cpu_allocation_size_sum": 8.0,
+            "vllm:kv_offload_store_bytes_total": 410845184.0,
+            "vllm:prefix_cache_queries_total": 8192.0,
+            "vllm:prefix_cache_hits_total": 0.0,
+            "vllm:num_preemptions_total": 0.0
+          }
+        },
+        {
+          "inputTokens": 8192,
+          "repeat": 2,
+          "passed": true,
+          "tokenHash": "d6b5d295d6d23ebadb2ced13822762b0a080f2a8e150d4c67975b82a132482de",
+          "elapsedSeconds": 2.185097998008132,
+          "ttftSeconds": 0.35304399402230047,
+          "counterDeltas": {
+            "vllm:kv_offload_cpu_allocation_size_count": 0.0,
+            "vllm:kv_offload_cpu_allocation_size_sum": 0.0,
+            "vllm:kv_offload_load_bytes_total": 410845184.0,
+            "vllm:kv_offload_store_bytes_total": 0.0,
+            "vllm:prefix_cache_queries_total": 8192.0,
+            "vllm:prefix_cache_hits_total": 0.0,
+            "vllm:num_preemptions_total": 0.0
+          },
+          "gpuCacheResetExternalPreserved": true
+        }
+      ]
+    }
+  },
+  "limitations": [
+    "Official v0.30 base image and ultra image not rebuilt end-to-end",
+    "Issue #13 author has not confirmed the exact original checkpoint",
+    "Long output token-for-token speculative equivalence did not pass; close top-1 probability rankings flipped",
+    "262K, full-model AWQ/MoE/multimodal, and physical GPU sleep-resume not validated in this run",
+    "FlashInfer 0.6.18 and NCCL 2.30.7 retained; differ from official wheel strict pins",
+    "DFlash/GDN tested combination has no jointly restorable CPU prefix after GPU reset; 512MiB/2GiB and prefill2048/1664 trials did not read back; safe recomputation preserved outputs"
+  ],
+  "evidence": [
+    {
+      "file": "bf16-control-long.json",
+      "sha256": "ff0a468c7f3efed4dd1c56fc631250c119cafd02d715644c5bfece834b6917fc",
+      "bytes": 163688
+    },
+    {
+      "file": "fp8-auto-before-fix-long.json",
+      "sha256": "06fc53561ff57b6a966f4ceb638bbe5547a62c35b1a3927a46607d5aa56c044e",
+      "bytes": 163130
+    },
+    {
+      "file": "fp8-auto-fixed-long.json",
+      "sha256": "68e19695531a5245b843c670901278e927eb0068cc936831e12e923c290ae10e",
+      "bytes": 163688
+    },
+    {
+      "file": "fp8-marlin-long.json",
+      "sha256": "f0b53f20e304feec9933c465ae8c483d60234679625db6825348075708bbe4d0",
+      "bytes": 163805
+    },
+    {
+      "file": "bf16-control-smoke.json",
+      "sha256": "af4c6358ff06f003196d0de938b0e9e216330568c51fd8f470d2e4bfb507bce8",
+      "bytes": 48426
+    },
+    {
+      "file": "bf16-original-smoke.json",
+      "sha256": "dfc1299c1e6023ad2c0a933a62b8cd4a87f1d212eb08c3e8cb60c453c0f48d7f",
+      "bytes": 48426
+    },
+    {
+      "file": "fp8-auto-before-fix-smoke.json",
+      "sha256": "8ec8ffb17a0342f4f31256ab6f9ce272ab5a54138fe349938061491b12152236",
+      "bytes": 48418
+    },
+    {
+      "file": "fp8-auto-fixed-smoke.json",
+      "sha256": "0e274031c09a2e8810fc2a64a4bbf8cc0b5187563a0b696d4ab8c64333e5aad0",
+      "bytes": 48423
+    },
+    {
+      "file": "fp8-marlin-smoke.json",
+      "sha256": "6967645bb976be0afc3c061bf96eda13b1edae7a7c2c8f544e48b052a31c36f0",
+      "bytes": 48424
+    },
+    {
+      "file": "final-long-spec-logprobs.json",
+      "sha256": "4182e8bb1741606618c77f24daedcc8793e2b5fbfa1820af99808a99fbae21de",
+      "bytes": 5162226
+    },
+    {
+      "file": "final-long-context-repeats.jsonl",
+      "sha256": "eba094a68df3b69153316c1338543a6273295487c630653660096bed6237423e",
+      "bytes": 7696
+    },
+    {
+      "file": "gpu-final-gate-firefly.log",
+      "sha256": "ccd27a32d2fa0a3b7baf79f726730dbcaf80adf3aec473361c39e91361a36021",
+      "bytes": 26607
+    },
+    {
+      "file": "ultra-node-tests.log",
+      "sha256": "358ad2ab9c54089dbffae1840ad6b3a0bb879cb80de45cc46b40df27c041ab75",
+      "bytes": 16173
+    },
+    {
+      "file": "linux-engine-tests.log",
+      "sha256": "c56dca3eba0f1eb6dde11b40e5900c5d38f3098db3f0ad6006b400f27319f59b",
+      "bytes": 179
+    },
+    {
+      "file": "cpu-tests-final.xml",
+      "sha256": "9bc0e316da7b46e99fdc201157d758121ed75bceda84b0fa39b820e6b8a5daa4",
+      "bytes": 27885
+    },
+    {
+      "file": "compile-revision-pytest.log",
+      "sha256": "2e53d979de8cf4f68c09b246e5cece8284484c75a4f001a0775aa253e5479379",
+      "bytes": 112
+    },
+    {
+      "file": "dflash2-bf16-control-verified.json",
+      "sha256": "7136da979f0cc242acde9d21f6ebf5fb31af349736257e1a30a790a129e5cfd3",
+      "bytes": 353
+    },
+    {
+      "file": "dflash2-fp8-weight-stats.json",
+      "sha256": "fd268253895b164408217cb6b3b6bf8b106898702d69a08d0797f6c0a52be4f0",
+      "bytes": 8238
+    },
+    {
+      "file": "final-cpu-kv-readback.jsonl",
+      "sha256": "cfaf64b2d150e8a57a1b843107c4461584575cb9d9472bb797c59edb5a72be21",
+      "bytes": 3820
+    },
+    {
+      "file": "final-cpu-kv-readback-2g.jsonl",
+      "sha256": "7130aeb78f9cfa8b85e87e66f95ab6a8ffd579faebdcf8aef689a21c8b9be8f8",
+      "bytes": 3820
+    },
+    {
+      "file": "final-cpu-kv-readback-aligned.jsonl",
+      "sha256": "0df359b14ddb1022db00c87c03f967d96909538adb1d4763b5586d3115b0ee49",
+      "bytes": 4453
+    },
+    {
+      "file": "final-cpu-kv-readback-diag.jsonl",
+      "sha256": "7e23776cdaabf0892fe80512b067be26428710a6a14fc5a50412091cef380fc4",
+      "bytes": 4452
+    },
+    {
+      "file": "engine-fp8-kv-readback-aligned.log",
+      "sha256": "8b8f335dc04a4a01b575135e247b50faeb23e0bf145ec331f6ae4ffd1c56ce7f",
+      "bytes": 73851
+    },
+    {
+      "file": "engine-fp8-kv-readback-diag.log",
+      "sha256": "ddde17e6ffb4dfa91df1f2794bbc4d4c803c79cafb7ae4ba01f514bc6aa183b6",
+      "bytes": 75025
+    },
+    {
+      "file": "final-cpu-kv-readback-target-only.jsonl",
+      "sha256": "476ddd5515f079633a836c2a3a039ee1d4523b733967fa978f71f558198fb5e7",
+      "bytes": 4504
+    },
+    {
+      "file": "final-cpu-kv-readback-target-only.log",
+      "sha256": "7b68d81b70a535ced789513fd20bdcd3abfabc3b425a1ae2defd35c1e59d2ffd",
+      "bytes": 1013
+    },
+    {
+      "file": "runtime-actual-final.json",
+      "sha256": "cb2920c2c8bd343b0ede1742cd1f0d445dab41859ead8aa01ddbf00b00628dc0",
+      "bytes": 1177513
+    }
+  ],
+  "validationPhase": "early-wheel-overlay",
+  "scopeNote": "Historical phase evidence; runtime.officialBaseImageRebuilt applies to this phase only. See full-image results for subsequent complete-image acceptance.",
+  "subsequentFullImageResults": "v0.1.6-full-images-results.json"
+}

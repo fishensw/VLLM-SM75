@@ -6,6 +6,7 @@ pop 掉 INSTALL_IGNORED 的 auto-sleep 计时器)。本测试验证注入后的�
 
 - 改 auto-sleep 计时/路径 → compile cache key 不变(被 wrapper pop)。
 - 改真实 graph env(VLLM_USE_LAYERNAME, 上游字段) → cache key 仍失效。
+- 固定 overlay 编译版本隔离旧缓存；同版本重复注入与 UI/休眠调整保持复用。
 
 上游侧的 compile_factors 模拟成"ignored 不含 auto-sleep"(上游本不知道它们),
 靠 apply() 的 wrapper pop 达成"不计入 hash", 比原来硬编码进 ignored 更贴近
@@ -72,6 +73,7 @@ class SleepCompileCacheTests(unittest.TestCase):
             n: fake_envs.environment_variables[n] for n in names
         }
         self.envs = fake_envs
+        self.envs_sm75 = envs_sm75
 
     def cache_key(self, **settings):
         settings = {
@@ -109,7 +111,7 @@ class SleepCompileCacheTests(unittest.TestCase):
             self.cache_key(VLLM_USE_LAYERNAME="1"),
         )
 
-    def test_monitor_toggle_preserves_legacy_cache_without_disabling_ui(self):
+    def test_monitor_toggle_preserves_release_cache_without_disabling_ui(self):
         reference = self.cache_key(VLLM_MONITOR="0")
         self.assertEqual(reference, self.cache_key(VLLM_MONITOR="1"))
         with patch.dict(os.environ, {"VLLM_MONITOR": "1"}):
@@ -117,8 +119,49 @@ class SleepCompileCacheTests(unittest.TestCase):
             legacy["VLLM_MONITOR"] = False
             for name in _load_envs_sm75().INSTALL_IGNORED:
                 legacy.pop(name, None)
+            legacy["_vllm_sm75_compile_revision"] = "0.1.6-1"
             self.assertEqual(legacy, self.envs.compile_factors())
             self.assertTrue(self.envs.environment_variables["VLLM_MONITOR"]())
+
+
+    def test_release_revision_invalidates_the_legacy_fingerprint(self):
+        current = self.envs.compile_factors()
+        legacy = self.envs.compile_factors.__wrapped__()
+        for name in self.envs_sm75.INSTALL_IGNORED:
+            legacy.pop(name, None)
+        legacy["VLLM_MONITOR"] = False
+        self.assertEqual(current["_vllm_sm75_compile_revision"], "0.1.6-1")
+        without_revision = {
+            key: value for key, value in current.items()
+            if key != "_vllm_sm75_compile_revision"
+        }
+        self.assertEqual(without_revision, legacy)
+
+        def fingerprint(factors):
+            return hashlib.sha256(
+                json.dumps(factors, sort_keys=True).encode()
+            ).hexdigest()
+
+        self.assertNotEqual(fingerprint(legacy), fingerprint(current))
+        self.assertNotIn(
+            "_vllm_sm75_compile_revision", self.envs.environment_variables
+        )
+
+    def test_revision_is_fixed_and_repeated_apply_is_idempotent(self):
+        # Restore the complete extension registry narrowed by setUp before
+        # checking real repeated-install behavior.
+        self.envs_sm75.apply()
+        wrapper = self.envs.compile_factors
+        reference = self.cache_key()
+        with patch.dict(os.environ, {"_vllm_sm75_compile_revision": "override"}):
+            self.envs_sm75.apply()
+            self.envs_sm75.apply()
+            self.assertIs(self.envs.compile_factors, wrapper)
+            self.assertEqual(reference, self.cache_key())
+            self.assertEqual(
+                self.envs.compile_factors()["_vllm_sm75_compile_revision"],
+                "0.1.6-1",
+            )
 
 
 if __name__ == "__main__":

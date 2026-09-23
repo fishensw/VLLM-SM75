@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { createHash } from "node:crypto";
 //#region src/insights/engine.mjs
-/** Read-only DSH 0.1.5-rc.2 log fold. No prompt, reasoning or tool body is retained. */
+/** Read-only DSH V3/V4 log fold. No prompt, reasoning or tool body is retained. */
 const record = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
 const count = (v) => Number.isSafeInteger(v) && v >= 0;
 const elapsed = (start, end) => start === null ? 0 : Math.max(0, end - start);
@@ -136,6 +136,7 @@ function settle(s, time, usage, source) {
 		...a.route?.effort ? { effort: a.route.effort } : {}
 	} : a.route;
 	s.route = route;
+	if (s.turn?.number === a.turn) s.turn.route = { ...route };
 	const u = usage === void 0 || usage === null ? a.usage : normalizeUsage(usage);
 	for (const b of books(s, route)) {
 		b.calls++;
@@ -257,6 +258,7 @@ function reduceEvent(state, event) {
 				...effort ? { effort } : {}
 			};
 			if (s.open) s.open.route = { ...s.route };
+			if (s.turn) s.turn.route = { ...s.route };
 		}
 	} else if (event.type === "user/message") s.previousFailure = null;
 	else if (event.type === "turn/start") {
@@ -302,7 +304,10 @@ function reduceEvent(state, event) {
 			for (const b of books(s)) b.tools++;
 		}
 	} else if (event.type === "tool/result") {
-		const block = d.message?.content?.find?.((b) => b?.type === "tool-result");
+		// V4 lifts the V3 tool-result wrapper onto a first-class tool message.
+		const block = d.message?.role === "tool"
+			? d.message
+			: d.message?.content?.find?.((b) => b?.type === "tool-result");
 		const id = block?.toolCallId ?? d.message?.source?.callId;
 		const index = s.tools.findIndex((t) => t.id === id);
 		if (index >= 0) {
@@ -514,7 +519,8 @@ const stateSchema = z.object({
 function installProjection(ctx) {
 	ctx.sessionProjections.register({
 		key: "watcherInsights",
-		stateVersion: 1,
+		// Re-fold tool results and routes learned after turn/start.
+		stateVersion: 3,
 		stateSchema,
 		init: (header, inherited) => stateSchema.parse(initialState(header, inherited)),
 		apply: (state, event) => reduceEvent(state, event),

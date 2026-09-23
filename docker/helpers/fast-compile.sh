@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # 容器内"软编译": 从挂载的项目目录(WORK, 默认 /work) 把 overlay 应用到镜像。
-# 流程: overlay .py(秒级) -> speculative(8 .py) -> flashqla.so(hash 门控,
+# 流程: overlay .py(秒级) -> speculative(9 .py) -> flashqla.so(hash 门控,
 #       base 已预编通常跳过)。
 # 幂等: 只改 .py 时秒级完成; 只有 .cu 变了才触发对应 nvcc 重编。
 # 用法(容器内):  bash /opt/vllm-sm75/fast_compile.sh   然后 docker restart <容器>
@@ -23,7 +23,7 @@ log "应用 overlay .py (-> $VLLM_PKGS)"
 python3 /opt/vllm-sm75/install_sm75_overlay.py "$WORK/vllm" \
     --source-copy /opt/vllm-sm75/source/vllm
 
-# --- 2) speculative: 拷 8 个 .py 并装到 vllm 包(model_runner hook 校验) ---
+# --- 2) speculative: 拷 9 个 .py 并装到 vllm 包(model_runner hook 校验) ---
 if [ -d "$WORK/docker/speculative" ]; then
   log "应用 speculative overlay"
   rm -rf /opt/vllm-sm75/speculative

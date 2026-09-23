@@ -1,8 +1,12 @@
+import {ManagedLMCache, preflightLMCache, lmcachePlan, lmcacheEnvironment, terminateLMCacheProcess} from './lmcache-runtime.mjs';
+import {modelContext, retargetContextModel} from './public/context-config.js';
+import { harnessVersion } from "./apply-branding.mjs";
+import { harnessPath } from "./harness-config.mjs";
+import { Attachments } from "./attachments.mjs";
 import { Auth, equalSecret } from "./auth.mjs";
 import { switchModel } from "./switch-model.mjs";
 import { validateSampling } from "./sampling.mjs";
 import { modelSamplingDefaults } from "./sampling-defaults.mjs";
-import { createRequire } from "node:module";
 import { deleteModelFiles } from "./model-delete.mjs";
 import { OriginalTests } from "./original-tests.mjs";
 import { chatConfig } from "./chat-config.mjs";
@@ -22,7 +26,7 @@ import {
 import { liveSummary } from "./live-summary.mjs";
 import { Telemetry } from "./telemetry.mjs";
 import { Store, presets, applyPreset } from "./store.mjs";
-import { Standalone } from "./standalone.mjs";
+import { Standalone, writeHarnessFile } from "./standalone.mjs";
 import { searchModels } from "./model-search.mjs";
 import { JobLedger } from "./job-ledger.mjs";
 const exec = promisify(execFile),
@@ -71,6 +75,7 @@ syncEngineKeyFile();
 const originalTests = new OriginalTests(root, store, engineKey);
 const standalone =
   process.env.SM75_SINGLE_CONTAINER === "1" ? new Standalone(root, key) : null;
+const attachments = new Attachments(root);
 const profilesPath = path.join(root, "profiles.json");
 let profiles = fs.existsSync(profilesPath)
   ? JSON.parse(fs.readFileSync(profilesPath))
@@ -79,6 +84,9 @@ const ledger = new JobLedger(store),
   jobs = ledger.jobs;
 let locks = new Set(),
   native = new Map();
+const nativeCaches = new Map();
+const pendingStarts = new Set();
+let shuttingDown = false;
 const history = new Map();
 const telemetry = new Telemetry(path.join(root, "metrics"));
 const host = process.env.SM75_CONSOLE_HOST || "127.0.0.1",
@@ -331,7 +339,13 @@ async function waitHarnessReady() {
   const deadline = Date.now() + 60000;
   while (Date.now() < deadline) {
     try {
-      await nativeHarnessCookie();
+      const cookie = await nativeHarnessCookie();
+      if (standalone) {
+        const response = await fetch(`http://127.0.0.1:${harnessPort}/sm75/ready`, {
+          headers: {cookie}, signal: AbortSignal.timeout(5000),
+        });
+        if (!response.ok || !(await response.json()).ready) throw Error("Harness model setup pending");
+      }
       return;
     } catch {
       await sleep(500);
@@ -415,6 +429,7 @@ function modelCatalog() {
         path: dir,
         format: kind,
         modelType: cfg.model_type,
+        context: modelContext(cfg),
         weightGiB: weightGiB(actual),
         role: old?.role === "main" ? "main" : role,
       });
@@ -436,14 +451,22 @@ function modelCatalog() {
   return [...found.values()];
 }
 async function start(p) {
+  if (shuttingDown) throw Error("管理服务正在关闭");
   p = unifiedProfile(p);
   if (locks.has("model-switch") || locks.has(p.id) || locks.has("model-delete"))
     throw Error("操作进行中");
   locks.add(p.id);
   locks.add("model-switch");
+  let completeStart;
+  const finished = new Promise(resolve => {completeStart = resolve;});
+  pendingStarts.add(finished);
   try {
     const st = await status(p);
     if (st.running) return st;
+    // Check optional dependencies and disk before switchModel can stop the current engine.
+    const cacheCheck = await preflightLMCache(p, {standalone: !!standalone,
+      ownedPorts: standalone?.lmcache.child ? standalone.lmcache.ports : []});
+    if (shuttingDown) throw Error("管理服务正在关闭");
     if (standalone)
       return await switchModel(p, {
         current: standalone.engine,
@@ -461,18 +484,44 @@ async function start(p) {
       vllmBin: process.env.SM75_VLLM_BIN,
     });
     if (p.backend === "native") {
-      const log = fs.openSync(path.join(root, p.id + ".log"), "a");
+      const cache = new ManagedLMCache({logRoot: root});
+      nativeCaches.set(p.id, cache);
+      let cacheFailed = false, engineChild, log, cacheRuntime;
       try {
+        if (shuttingDown) throw Error("管理服务正在关闭");
+        cacheRuntime = await cache.start(p, {runtimeFingerprint: cacheCheck?.runtimeFingerprint});
+        if (!cacheRuntime) nativeCaches.delete(p.id);
+        if (cacheRuntime) cacheRuntime.child.once("exit", () => {
+          cacheFailed = true;
+          if (engineChild && cache.child === cacheRuntime.child && native.get(p.id) === engineChild)
+            terminateLMCacheProcess(engineChild).catch(() => {});
+        });
+        if (shuttingDown) throw Error("管理服务正在关闭");
+        if (cacheRuntime && (cacheRuntime.child.exitCode !== null || cacheRuntime.child.signalCode != null))
+          throw Error("LMCache 服务在模型启动前退出");
+        log = fs.openSync(path.join(root, p.id + ".log"), "a");
         await new Promise((resolve, reject) => {
           const c = spawn(cmd.bin, cmd.args, {
-            env: { ...process.env, ...cmd.env },
+            env: { ...process.env, ...cmd.env, ...(cacheRuntime ? lmcacheEnvironment : {}) },
+            detached: !!cacheRuntime,
             stdio: ["ignore", log, log],
           });
+          engineChild = c;
           c.once("spawn", () => {
+            if (shuttingDown || (cacheRuntime && (cacheFailed || cacheRuntime.child.exitCode !== null || cacheRuntime.child.signalCode != null))) {
+              const stopped = cacheRuntime ? terminateLMCacheProcess(c) : new Promise(resolve => {c.once("exit", resolve); c.kill("SIGTERM");});
+              stopped.then(() => reject(Error("管理服务关闭或 LMCache 在模型启动期间退出")), reject);
+              return;
+            }
             native.set(p.id, c);
             resolve();
           });
-          c.once("exit", () => native.delete(p.id));
+          c.once("exit", () => {
+            native.delete(p.id);
+            cache.stop().catch(() => {}).finally(() => {
+              if (nativeCaches.get(p.id) === cache) nativeCaches.delete(p.id);
+            });
+          });
           c.once("error", (error) => {
             native.delete(p.id);
             fs.appendFileSync(
@@ -482,8 +531,12 @@ async function start(p) {
             reject(error);
           });
         });
+      } catch (error) {
+        await cache.stop();
+        nativeCaches.delete(p.id);
+        throw error;
       } finally {
-        fs.closeSync(log);
+        if (log !== undefined) fs.closeSync(log);
       }
     } else {
       const { c } = await managed(p.id);
@@ -495,6 +548,8 @@ async function start(p) {
     }
     return { started: true };
   } finally {
+    pendingStarts.delete(finished);
+    completeStart();
     locks.delete(p.id);
     locks.delete("model-switch");
   }
@@ -502,8 +557,23 @@ async function start(p) {
 async function stop(p) {
   if (standalone) return standalone.stop(p);
   if (p.backend === "native") {
-    native.get(p.id)?.kill("SIGTERM");
-    return;
+    if (locks.has("model-switch") || locks.has(p.id) || locks.has("model-delete"))
+      throw Error("操作进行中");
+    locks.add(p.id);
+    locks.add("model-switch");
+    try {
+      const child = native.get(p.id), cache = nativeCaches.get(p.id);
+      if (cache && child) await terminateLMCacheProcess(child);
+      else child?.kill("SIGTERM");
+      if (cache) {
+        await cache.stop();
+        if (nativeCaches.get(p.id) === cache) nativeCaches.delete(p.id);
+      }
+      return;
+    } finally {
+      locks.delete(p.id);
+      locks.delete("model-switch");
+    }
   }
   const { name, c } = await managed(p.id);
   if (c?.State.Running) await docker(["stop", "--time", "10", name]);
@@ -535,6 +605,7 @@ async function proxy(req, res, p, suffix, payload) {
 }
 const server = http.createServer(async (req, res) => {
   try {
+    if (!auth.networkAllowed(req)) return json(res, { error: "当前地址不在允许网段内" }, 403);
     const u = new URL(req.url, "http://local");
     if (u.pathname.startsWith("/brand/")) {
       const name = u.pathname.slice(7);
@@ -574,16 +645,18 @@ const server = http.createServer(async (req, res) => {
         ip: uHost(req),
       });
     }
+    if (u.pathname === "/dsh" || u.pathname === "/dsh/") {
+      res.writeHead(308, {Location: "/" + u.search, "Cache-Control": "no-store"});
+      return res.end();
+    }
     if (
-      u.pathname === "/token-usage.json" ||
-      u.pathname === "/token-usage" ||
-      u.pathname === "/dsh/" ||
+      u.pathname.startsWith("/dsh/") ||
+      u.pathname.startsWith("/harness-ui/") ||
       u.pathname.startsWith("/plugins/") ||
       u.pathname.startsWith("/assets/") ||
       ["/favicon.svg", "/manifest.webmanifest"].includes(u.pathname) ||
       u.pathname.startsWith("/api/")
     ) {
-      if (u.pathname === "/dsh/") req.url = "/" + u.search;
       return bridge.emit("request", req, res);
     }
     if (u.pathname.startsWith("/console-api/"))
@@ -592,7 +665,9 @@ const server = http.createServer(async (req, res) => {
       if (!auth.originAllowed(req))
         return json(res, { error: "来源不匹配" }, 403);
       const payload = await body(req),
-        result = auth.login(payload.token, req);
+        result = payload.username !== undefined
+          ? await auth.loginAccount(payload.username, payload.password, req)
+          : auth.login(payload.token, req);
       if (result.cookie) res.setHeader("Set-Cookie", result.cookie);
       if (result.status === 429) res.setHeader("Retry-After", "60");
       return json(
@@ -605,7 +680,7 @@ const server = http.createServer(async (req, res) => {
     }
     if (u.pathname === "/api/session" && req.method === "GET") {
       const principal = auth.principal(req);
-      return json(res, { authenticated: !!principal, principal });
+      return json(res, { authenticated: !!principal, principal, accountConfigured: !!auth.policy.account });
     }
     if (u.pathname === "/api/logout" && req.method === "POST") {
       if (!auth.originAllowed(req))
@@ -640,6 +715,8 @@ const server = http.createServer(async (req, res) => {
       u.pathname === "/" ||
       u.pathname === "/app.js" ||
       u.pathname === "/live-summary.js" ||
+      u.pathname === "/context-config.js" ||
+      u.pathname === "/lmcache-config.js" ||
       u.pathname === "/style.css"
     ) {
       const f = {
@@ -647,6 +724,8 @@ const server = http.createServer(async (req, res) => {
         "/": "index.html",
         "/app.js": "app.js",
         "/live-summary.js": "live-summary.js",
+        "/context-config.js": "context-config.js",
+        "/lmcache-config.js": "lmcache-config.js",
         "/style.css": "style.css",
       }[u.pathname];
       res.writeHead(200, {
@@ -663,7 +742,29 @@ const server = http.createServer(async (req, res) => {
     auth.track(req, res);
     if (req.method !== "GET" && !auth.originAllowed(req))
       return json(res, { error: "来源不匹配" }, 403);
+    if (u.pathname === "/api/attachments" && req.method === "POST") {
+      const p = profile(u.searchParams.get("profile"));
+      if (!chatConfig(p).input.includes("image")) return json(res, {error:"当前模型未启用图片输入"},422);
+      try { return json(res, await attachments.upload(req,p.id)); }
+      catch(error) { return json(res,{error:error.message},400); }
+    }
+    const attachmentPath = u.pathname.match(/^\/api\/attachments\/([a-f0-9]{32})$/);
+    if (attachmentPath && req.method === "GET") {
+      try {
+        const {meta,data}=attachments.read(attachmentPath[1]);
+        res.writeHead(200,{"Content-Type":meta.mime,"Cache-Control":"private, no-store","X-Content-Type-Options":"nosniff"});
+        return res.end(data);
+      } catch { return json(res,{error:"附件不存在"},404); }
+    }
     const b = req.method === "POST" ? await body(req) : {};
+    if (u.pathname === "/api/security") {
+      if (req.method === "GET") return json(res, auth.securityInfo(req));
+      if (req.method === "POST") {
+        try { return json(res, await auth.updateSecurity(b, req)); }
+        catch (error) { return json(res, { error: error.message }, 400); }
+      }
+      return json(res, { error: "方法不支持" }, 405);
+    }
     if (u.pathname === "/api/workspace-file" && req.method === "GET") {
       const raw = (u.search.match(/[?&]path=([^&]*)/) || [])[1];
       const rel = raw ? decodeURIComponent(raw) : "";
@@ -925,31 +1026,20 @@ const server = http.createServer(async (req, res) => {
         store.put("sampling", "main", data);
         if (standalone) {
           fs.mkdirSync("/dsh/home", { recursive: true });
-          fs.writeFileSync(
-            "/dsh/home/sm75-sampling.json",
-            JSON.stringify(data),
-            { mode: 0o644 },
-          );
+          writeHarnessFile("/dsh/home/sm75-sampling.json", JSON.stringify(data));
         }
       }
       let configured = [];
       if (standalone)
         try {
-          const require = createRequire("/opt/harness/node_modules/anchor.cjs");
-          const cfg = require("yaml").parse(
-            fs.readFileSync("/dsh/home/settings.yaml", "utf8"),
-          );
-          for (const [provider, p] of Object.entries(
-            cfg["llm-pi-ai"]?.providers || {},
-          ))
-            for (const m of p.models || [])
-              configured.push({
-                id: provider + "/" + m.id,
-                name: m.id,
-                provider,
-                api: m.api || p.api,
-                defaults: modelSamplingDefaults(provider, p, m, profiles, standalone.engine?.id),
-              });
+          const response = await fetch(`http://127.0.0.1:${harnessPort}/sm75/configured-models`, {
+            headers: {cookie: await nativeHarnessCookie()}, signal: AbortSignal.timeout(5000),
+          });
+          if (!response.ok) throw Error("Harness model settings unavailable");
+          const snapshot = await response.json();
+          configured = snapshot.models.map(({model, config, ...row}) => ({
+            ...row, defaults: modelSamplingDefaults(row.provider, config, model, profiles, standalone.engine?.id),
+          }));
         } catch {}
       return json(res, { ...data, configured });
     }
@@ -1004,7 +1094,7 @@ const server = http.createServer(async (req, res) => {
           id: "personal-" + crypto.randomUUID().slice(0, 8),
           name: model.name + " · " + (original.name || "我的配置"),
         });
-        p.args[0] = model.path;
+        p.args = retargetContextModel(p.args, model.path, model.context);
         validateProfile(p);
         profiles.push(p);
         save();
@@ -1082,7 +1172,7 @@ const server = http.createServer(async (req, res) => {
       return json(res, {
         gpus: await gpu(),
         root,
-        version: "0.1.5-dev",
+        version: JSON.parse(fs.readFileSync(path.join(here, "package.json"), "utf8")).version,
         scope: standalone
           ? "单容器内模型与工作区进程"
           : "仅管理 sm75-v015-test-* 候选容器",
@@ -1143,16 +1233,7 @@ const server = http.createServer(async (req, res) => {
       fs.mkdirSync(dir, { recursive: true });
       const file = path.join(dir, p.id + ".json");
       if (req.method === "POST") {
-        if (
-          !Array.isArray(b.messages) ||
-          b.messages.length > 200 ||
-          b.messages.some(
-            (m) =>
-              !["user", "assistant", "system"].includes(m.role) ||
-              typeof m.content !== "string",
-          )
-        )
-          throw Error("无效会话");
+        attachments.validate(b.messages, p.id);
         fs.writeFileSync(
           file + ".tmp",
           JSON.stringify({ messages: b.messages, updated: Date.now() }),
@@ -1179,7 +1260,8 @@ const server = http.createServer(async (req, res) => {
       if (action === "preview" && standalone)
         return json(res, {
           bin: "vllm",
-          args: ["serve", ...p.args, "--port", String(p.port)],
+          args: ["serve", ...(lmcachePlan(p)?.engineArgs || p.args), "--port", String(p.port)],
+          lmcache: lmcachePlan(p)?.summary || null,
           cache: cacheLayout(p.cacheRoot, p.format),
           backend: "in-container",
         });
@@ -1190,6 +1272,7 @@ const server = http.createServer(async (req, res) => {
         return json(res, {
           bin: c.bin,
           args: c.args,
+          lmcache: lmcachePlan(p)?.summary || null,
           cache: cacheLayout(p.cacheRoot, p.format),
         });
       }
@@ -1245,6 +1328,7 @@ const server = http.createServer(async (req, res) => {
       if (action === "chat" && req.method === "POST")
         return await proxy(req, res, p, "/v1/chat/completions", {
           ...b,
+          messages: attachments.expand(b.messages,p.id,chatConfig(p).input.includes("image")),
           stream: true,
           stream_options: { include_usage: true },
         });
@@ -1299,7 +1383,7 @@ const server = http.createServer(async (req, res) => {
     if (standalone && u.pathname === "/api/harness")
       return json(res, {
         running: !!standalone.harness,
-        version: "0.1.5-rc.1",
+        version: harnessVersion(),
         backend: "in-container",
       });
     if (standalone && u.pathname === "/api/harness/install")
@@ -1325,11 +1409,13 @@ const server = http.createServer(async (req, res) => {
       harnessCookie = "";
       await standalone.startHarness(profile(b.profile));
       await waitHarnessReady();
-      return json(res, { url: "/dsh/" });
+      return json(res, { url: "/harness-ui/" });
     }
     if (u.pathname === "/api/harness" && req.method === "GET")
       return json(res, {
-        version: "0.1.5-rc.1",
+        version: null,
+        supported: false,
+        message: "独立旧版 Harness 构建已移除；请使用 ultra 容器内工作台",
         running: !!(await inspect(harnessName))?.State.Running,
         home: path.join(root, "harness/home"),
       });
@@ -1339,137 +1425,8 @@ const server = http.createServer(async (req, res) => {
         await docker(["stop", "--time", "10", harnessName]);
       return json(res, { ok: true });
     }
-    if (u.pathname === "/api/harness/start" && req.method === "POST") {
-      const p = profile(b.profile),
-        c = await inspect(harnessName);
-      if (c && c.Config.Labels?.["sm75.managed"] !== "v015-candidate")
-        throw Error("Harness 容器名称冲突");
-      if (c?.State.Running && c.Config.Labels?.["sm75.profile"] !== p.id)
-        throw Error("先停止当前 Harness 再切换模型");
-      const h = path.join(root, "harness/home"),
-        w = path.join(root, "harness/workspace");
-      fs.mkdirSync(h, { recursive: true });
-      fs.mkdirSync(w, { recursive: true });
-      const i = p.args.indexOf("--served-model-name"),
-        model = i >= 0 ? p.args[i + 1] : p.args[0];
-      const length = p.args.indexOf("--max-model-len"),
-        n = length >= 0 ? Number(p.args[length + 1]) : 0;
-      const config = {
-        "llm-pi-ai": {
-          providers: {
-            "sm75-local": {
-              apiKeyEnv: "SM75_ENGINE_KEY",
-              api: "openai-completions",
-              baseURL: `http://127.0.0.1:${p.port}/v1`,
-              compat: {
-                supportsDeveloperRole: false,
-                maxTokensField: "max_tokens",
-              },
-              models: [{ id: model, ...(n > 0 ? { contextWindow: n } : {}) }],
-            },
-          },
-        },
-      };
-      // JSON is a YAML subset. Merge only the managed provider, preserving other settings.
-      const file = path.join(h, "settings.yaml");
-      if (fs.existsSync(file)) {
-        let old;
-        try {
-          old = JSON.parse(fs.readFileSync(file));
-        } catch {
-          const parsed = await docker([
-            "run",
-            "--rm",
-            "--network",
-            "none",
-            "--label",
-            "sm75.managed=v015-candidate",
-            "--volume",
-            `${h}:/data:ro`,
-            "--entrypoint",
-            "node",
-            "local/vllm-sm75:v015-harness-20260912",
-            "-e",
-            "console.log(JSON.stringify(require('/opt/harness/node_modules/yaml').parse(require('fs').readFileSync('/data/settings.yaml','utf8'))))",
-          ]);
-          old = JSON.parse(parsed.stdout);
-          if (!old || Array.isArray(old) || typeof old !== "object")
-            throw Error("Harness 配置格式无效");
-        }
-        config["llm-pi-ai"].providers = {
-          ...old["llm-pi-ai"]?.providers,
-          ...config["llm-pi-ai"].providers,
-        };
-        Object.assign(config, {
-          ...old,
-          "llm-pi-ai": { ...old["llm-pi-ai"], ...config["llm-pi-ai"] },
-        });
-      }
-      config["agent-default-model"] = { provider: "sm75-local", model };
-      fs.writeFileSync(file, JSON.stringify(config, null, 2), { mode: 0o600 });
-      if (c?.State.Running) {
-        await waitHarnessReady();
-        return json(res, { url: "/dsh/" });
-      }
-      if (c) await docker(["rm", harnessName]);
-      harnessCookie = "";
-      await exec(
-        "docker",
-        [
-          "run",
-          "--pull",
-          "never",
-          "-d",
-          "--name",
-          harnessName,
-          "--label",
-          "sm75.managed=v015-candidate",
-          "--label",
-          `sm75.profile=${p.id}`,
-          "--cap-drop",
-          "ALL",
-          "--security-opt",
-          "no-new-privileges",
-          "--network",
-          process.env.SM75_ENGINE_NETWORK || "bridge",
-          "-v",
-          `${h}:/data`,
-          "-v",
-          `${w}:/workspace`,
-          "--env",
-          "SM75_ENGINE_KEY",
-          "--entrypoint",
-          "/usr/local/bin/node",
-          "local/vllm-sm75:v015-harness-20260912",
-          "/opt/harness/node_modules/@deepseek-ai/dsh/lib/bin.js",
-          "--profile",
-          "web",
-          "--no-open",
-          "--host",
-          "127.0.0.1",
-          "--port",
-          String(harnessPort),
-          "--trusted-host",
-          `${uHost(req)}:${proxyPort}`,
-          `${process.env.SM75_CONSOLE_PUBLIC_HOST || uHost(req)}:${proxyPort}`,
-        ],
-        { env: { ...process.env, SM75_ENGINE_KEY: key }, timeout: 30000 },
-      );
-      await waitHarnessReady();
-      return json(res, { url: "/dsh/" });
-    }
-    if (u.pathname === "/api/harness/install" && req.method === "POST") {
-      return json(res, {
-        id: launchJob("harness-build", "docker", [
-          "build",
-          "-f",
-          path.join(here, "../docker/Dockerfile.harness"),
-          "-t",
-          "local/vllm-sm75:v015-harness-20260912",
-          path.join(here, ".."),
-        ]),
-      });
-    }
+    if (["/api/harness/start", "/api/harness/install"].includes(u.pathname) && req.method === "POST")
+      return json(res, {error: "独立旧版 Harness 构建已移除；请使用 ultra 容器内工作台"}, 409);
     return json(res, { error: "接口不存在" }, 404);
   } catch (e) {
     if (!res.headersSent) json(res, { error: e.message }, 400);
@@ -1506,13 +1463,14 @@ function uHost(req) {
 }
 // Separate browser origin for the native Harness UI. Only authenticated console sessions pass.
 const bridge = http.createServer(async (req, res) => {
+  if (!auth.networkAllowed(req)) return json(res, { error: "当前地址不在允许网段内" }, 403);
   if (!logged(req)) {
     if (
       req.method === "GET" &&
       (req.headers.accept || "").includes("text/html")
     ) {
       res.writeHead(302, {
-        Location: "/?returnTo=" + encodeURIComponent("/dsh/"),
+        Location: "/",
         "Cache-Control": "no-store",
       });
       return res.end();
@@ -1535,7 +1493,7 @@ const bridge = http.createServer(async (req, res) => {
     {
       host: "127.0.0.1",
       port: harnessPort,
-      path: req.url,
+      path: harnessPath(req.url),
       method: req.method,
       headers: {
         ...req.headers,
@@ -1593,7 +1551,7 @@ bridge.on("upgrade", async (req, socket, head) => {
   const up = http.request({
     host: "127.0.0.1",
     port: harnessPort,
-    path: req.url,
+    path: harnessPath(req.url),
     headers: {
       ...req.headers,
       authorization: "",
@@ -1665,7 +1623,6 @@ const collectTimer = setInterval(async () => {
     collecting = false;
   }
 }, 5000);
-let shuttingDown = false;
 process.on("SIGTERM", async () => {
   if (shuttingDown) return;
   shuttingDown = true;
@@ -1674,9 +1631,17 @@ process.on("SIGTERM", async () => {
   bridge.close();
   server.close();
   originalTests.close();
+  if (standalone) standalone.closing = true;
+  for (const [id, cache] of nativeCaches) if (!native.has(id)) await cache.stop();
+  await Promise.all([...pendingStarts]);
   if (standalone) await standalone.close();
   for (const p of profiles) telemetry.flush(p.id);
-  for (const c of native.values()) c.kill();
+  for (const [id, c] of native) {
+    const cache = nativeCaches.get(id);
+    if (cache) { await terminateLMCacheProcess(c); await cache.stop(); }
+    else c.kill();
+  }
+  for (const cache of nativeCaches.values()) await cache.stop();
   bridge.closeAllConnections();
   server.closeAllConnections();
   process.exit(0);

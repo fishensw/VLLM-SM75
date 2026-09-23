@@ -43,6 +43,26 @@ class LocalImportTest(unittest.TestCase):
             with self.assertRaises(ValueError):
                 module.convert(source, output, [parent], "local/test:canary")
 
+    def test_full_archive_includes_every_layer_and_keeps_image_identity(self):
+        with tempfile.TemporaryDirectory() as directory:
+            source, output = Path(directory) / 'source.tar', Path(directory) / 'full.tar'
+            parent, image = self.fixture(source)
+            with self.assertRaises(ValueError):
+                module.convert(source, output, [], 'local/test:full')
+            self.assertFalse(output.exists())
+            with self.assertRaises(ValueError):
+                module.convert(source, output, [parent], 'local/test:full', full=True)
+            result = module.convert(source, output, [], 'local/test:full', full=True)
+            self.assertTrue(result['portable'])
+            self.assertEqual(result['imageId'], image)
+            self.assertEqual(result['existingParentLayers'], 0)
+            with tarfile.open(output) as archive:
+                manifest = json.load(archive.extractfile('manifest.json'))[0]
+                self.assertEqual(archive.extractfile(manifest['Layers'][0]).read(), b'parent')
+                self.assertEqual(archive.extractfile(manifest['Layers'][1]).read(), b'new layer')
+                config = archive.extractfile(manifest['Config']).read()
+                self.assertEqual('sha256:' + hashlib.sha256(config).hexdigest(), image)
+
     def test_rejects_nonmatching_parent_before_writing(self):
         with tempfile.TemporaryDirectory() as directory:
             source, output = Path(directory) / "source.tar", Path(directory) / "local.tar"

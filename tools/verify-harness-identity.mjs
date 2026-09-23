@@ -50,8 +50,8 @@ try {
   assert.equal(fs.lstatSync("/dsh/home/sm75-plugins.patch.json").isSymbolicLink(), false);
   assert.equal(fs.readFileSync(secret, "utf8"), "disposable");
 } finally { await runtime.close(); }
-fs.unlinkSync("/dsh/home/settings.yaml");
+fs.rmSync("/dsh/home/settings.yaml", {force: true});
 fs.symlinkSync(secret, "/dsh/home/settings.yaml");
-await assert.rejects(runtime.startHarness({ id: "audit", args: ["audit-model"], port: 8000 }), { code: "ELOOP" });
+await assert.rejects(runtime.startHarness({ id: "audit", args: ["audit-model"], port: 8000 }), /regular file owned by the Harness user|ELOOP/);
 assert.equal(fs.readFileSync(secret, "utf8"), "disposable");
 console.log("PASS DSH UID/GID 1000, zero capabilities, credential isolation, HTTP startup/shutdown, config symlink rejection");

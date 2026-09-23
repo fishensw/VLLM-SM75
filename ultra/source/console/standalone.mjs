@@ -1,11 +1,13 @@
-import { harnessThinking, thinkingBudgets } from "./chat-config.mjs";
+import {isLMCacheEnabled} from './public/lmcache-config.js';
+import {ManagedLMCache, preflightLMCache, lmcacheEnvironment} from './lmcache-runtime.mjs';
+import { managedHarnessConfig, harnessPatch, legacyHarnessConfig } from "./harness-config.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { cacheLayout, containerCache, flashinferWorkspace } from "./config.mjs";
 
-function writeHarnessFile(file, text) {
+export function writeHarnessFile(file, text) {
   // The tool user owns this directory. Do not follow a replaced destination
   // symlink when the manager writes configuration on a later restart.
   const temporary = path.join(path.dirname(file), `.sm75-${randomUUID()}`);
@@ -25,12 +27,17 @@ function writeHarnessFile(file, text) {
 }
 
 export class Standalone {
-  constructor(root, key) {
+  constructor(root, key, options = {}) {
+    this.preflightLMCache = options.preflight || preflightLMCache;
     this.root = root;
     this.key = key;
     this.engine = null;
     this.harness = null;
     this.supervisor = null;
+    this.lmcache = new ManagedLMCache({launch: (...args) => this.launch(...args), terminate: child => this.terminate(child), logRoot: root});
+    this.cacheCleanup = null;
+    this.closing = false;
+    this.startFinished = null;
   }
   status(p) {
     return {
@@ -120,15 +127,32 @@ export class Standalone {
     };
   }
   async start(p) {
+    if (this.closing) throw Error("管理服务正在关闭");
     if (this.starting) throw Error("模型启动进行中");
     if (this.engine) {
       if (this.engine.id === p.id) return this.status(p);
       throw Error("请先停止当前模型");
     }
     this.starting = true;
+    let finishStart;
+    this.startFinished = new Promise(resolve => {finishStart = resolve;});
+    let cacheRuntime, engineChild, cacheFailed = false;
     try {
+      if (this.cacheCleanup) { await this.cacheCleanup; this.cacheCleanup = null; }
+      if (isLMCacheEnabled(p)) {
+        const checked = await this.preflightLMCache(p, {standalone: true});
+        if (this.closing) throw Error("管理服务正在关闭");
+        cacheRuntime = await this.lmcache.start(p, {runtimeFingerprint: checked?.runtimeFingerprint});
+        cacheRuntime.child.once("exit", () => {
+          cacheFailed = true;
+          if (this.lmcache.child === cacheRuntime.child && this.engine?.child === engineChild)
+            this.terminate(engineChild).catch(() => {});
+        });
+        if (cacheRuntime.child.exitCode !== null || cacheRuntime.child.signalCode != null)
+          throw Error("LMCache 服务在模型启动前退出");
+      }
       const preparedCache = this.prepareCache(p);
-      const args = [...p.args];
+      const args = [...(cacheRuntime?.plan.engineArgs || p.args)];
       const i = args.indexOf("--port");
       if (i >= 0) args[i + 1] = String(p.port);
       else args.push("--port", String(p.port));
@@ -168,12 +192,15 @@ export class Standalone {
           path.join(this.root, p.id + ".pstate.log"),
         );
       }
+      if (this.closing) throw Error("管理服务正在关闭");
+      if (cacheFailed) throw Error("LMCache 服务在模型启动前退出");
       const child = await this.launch(
         "vllm",
         ["serve", ...args],
         {
           MALLOC_ARENA_MAX: "2",
           ...p.env,
+          ...(cacheRuntime ? lmcacheEnvironment : {}),
           ...containerCache,
           FLASHINFER_WORKSPACE_BASE:
             preparedCache?.FLASHINFER_WORKSPACE_BASE || "/root",
@@ -182,8 +209,17 @@ export class Standalone {
         },
         path.join(this.root, p.id + ".log"),
       );
+      engineChild = child;
+      if (this.closing || (cacheRuntime && (cacheFailed || cacheRuntime.child.exitCode !== null || cacheRuntime.child.signalCode != null))) {
+        await this.terminate(child);
+        throw Error("LMCache 服务在模型启动期间退出，已停止本次模型进程");
+      }
       this.engine = { id: p.id, child };
       child.once("exit", async () => {
+        if (cacheRuntime) {
+          this.cacheCleanup = this.lmcache.stop(cacheRuntime.child);
+          this.cacheCleanup.catch(() => {});
+        }
         if (this.engine?.child === child) this.engine = null;
         if (this.supervisor) {
           const s = this.supervisor;
@@ -201,12 +237,14 @@ export class Standalone {
       });
       return { started: true, backend: "in-container" };
     } catch (error) {
+      if (cacheRuntime) await this.lmcache.stop(cacheRuntime.child);
       const supervisor = this.supervisor;
       this.supervisor = null;
       if (supervisor) await this.terminate(supervisor);
       throw error;
     } finally {
       this.starting = false;
+      finishStart();
     }
   }
   async stop(p) {
@@ -224,6 +262,8 @@ export class Standalone {
       fs.unlinkSync("/tmp/pstate-state.json");
     } catch {}
     if (this.engine?.id === p.id) await this.terminate(this.engine.child);
+    await this.lmcache.stop();
+    await this.cacheCleanup;
   }
   logs(p, offset = 0) {
     const file = path.join(this.root, p.id + ".log");
@@ -261,73 +301,14 @@ export class Standalone {
       fs.chownSync(dir, 1000, 1000);
       fs.chmodSync(dir, 0o700);
     }
+    const config = managedHarnessConfig(p);
     const file = path.join(home, "settings.yaml");
-    let old = {};
-    if (fs.existsSync(file)) {
-      const { createRequire } = await import("node:module");
-      const require = createRequire("/opt/harness/node_modules/anchor.cjs");
-      const fd = fs.openSync(
-        file,
-        fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW,
-      );
-      try {
-        old = require("yaml").parse(fs.readFileSync(fd, "utf8")) || {};
-      } finally {
-        fs.closeSync(fd);
-      }
-    }
-    const modelIndex = p.args.indexOf("--served-model-name"),
-      model = modelIndex >= 0 ? p.args[modelIndex + 1] : p.args[0];
-    const ci = p.args.indexOf("--max-model-len"),
-      contextWindow = ci >= 0 ? Number(p.args[ci + 1]) : 0;
-    const cfg = {
-      ...old,
-      "llm-pi-ai": {
-        ...old["llm-pi-ai"],
-        providers: {
-          ...old["llm-pi-ai"]?.providers,
-          "sm75-local": {
-            apiKeyEnv: "SM75_ENGINE_KEY",
-            api: "openai-completions",
-            thinkingBudgets,
-            baseURL: `http://127.0.0.1:${p.port}/v1`,
-            compat: {
-              supportsDeveloperRole: false,
-              maxTokensField: "max_tokens",
-            },
-            models: [
-              {
-                id: model,
-                ...harnessThinking(p),
-                ...(contextWindow > 0 ? { contextWindow } : {}),
-              },
-            ],
-          },
-        },
-      },
-      "agent-default-model": { provider: "sm75-local", model },
-    };
-    writeHarnessFile(file, JSON.stringify(cfg, null, 2));
+    const { createRequire } = await import("node:module");
+    const require = createRequire("/opt/harness/node_modules/anchor.cjs");
+    const legacy = legacyHarnessConfig(file, config, require("yaml").parse);
+    if (legacy) writeHarnessFile(file, JSON.stringify(legacy, null, 2));
     const overlay = path.join(home, "sm75-plugins.patch.json");
-    writeHarnessFile(
-      overlay,
-      JSON.stringify([
-        {
-          insert: [
-            { id: "sm75-workbench", name: "sm75-workbench" },
-            { id: "dsh-watcher", name: "dsh-watcher" },
-            {
-              id: "token-usage-route",
-              name: "/opt/sm75-workbench/console/plugins/token-usage-route.mjs",
-            },
-            {
-              id: "client-token-usage",
-              name: "@deepseek-ai/dsh-client-ui-token-usage",
-            },
-          ],
-        },
-      ]),
-    );
+    writeHarnessFile(overlay, JSON.stringify(harnessPatch(config), null, 2));
     const dshArgs = [
       "/opt/harness/node_modules/@deepseek-ai/dsh/lib/bin.js",
       "--profile",
@@ -381,6 +362,11 @@ export class Standalone {
     await this.terminate(this.harness?.child);
   }
   async close() {
+    this.closing = true;
+    if (this.starting) {
+      await this.lmcache.stop();
+      await this.startFinished;
+    }
     if (this.supervisor) {
       const s = this.supervisor;
       this.supervisor = null;
@@ -390,5 +376,7 @@ export class Standalone {
       } catch {}
     }
     await Promise.all([this.terminate(this.engine?.child), this.stopHarness()]);
+    await this.lmcache.stop();
+    if (this.cacheCleanup) await this.cacheCleanup;
   }
 }

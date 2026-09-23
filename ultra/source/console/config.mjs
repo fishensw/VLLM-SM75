@@ -1,3 +1,5 @@
+import {validateLMCacheProfile, lmcacheConnectorArgs} from './public/lmcache-config.js';
+import {argValue, setArg, validateContextArgs, GiB} from './public/context-config.js';
 import path from 'node:path';
 import fs from 'node:fs';
 
@@ -45,12 +47,22 @@ export function validateProfile(p) {
     p.power={mode:m,idleSeconds:num(q.idleSeconds??(q.idleMinutes!=null?q.idleMinutes*60:1),1,1,86400,'空闲时长（秒）'),util:num(q.util,5,0,100,'负载阈值'),confirm:num(q.confirm,60,0,600,'确认时长'),low:num(q.low,8,0,16,'P8 值'),high:num(q.high,16,0,16,'高态值'),poll:num(q.poll,5,1,60,'轮询间隔'),gpus:typeof q.gpus==='string'&&/^[0-9,]+$/.test(q.gpus)?q.gpus:'0,1,2,3'};
     if(p.power.low===0&&p.power.high===0)throw Error('P8/高态不能同时为 0（会钉在 645MHz）');
   }
-  const ki=p.args.indexOf('--kv-transfer-config');
-  if(ki>=0){
-    let kv;try{kv=JSON.parse(p.args[ki+1]);}catch{throw Error('CPU KV 配置不是合法 JSON');}
-    const KVDEF={kv_connector:'OffloadingConnector',kv_role:'kv_both',kv_connector_extra_config:{spec_name:'CPUOffloadingSpec',cpu_bytes_to_use:8589934592}};
-    kv={...KVDEF,...kv,kv_connector_extra_config:{...KVDEF.kv_connector_extra_config,...(kv.kv_connector_extra_config||{})}};
-    p.args[ki+1]=JSON.stringify(kv);
+  validateContextArgs(p.args);
+  validateLMCacheProfile(p);
+  const transfer = argValue(p.args, '--kv-transfer-config');
+  if (transfer !== null) {
+    const kv = JSON.parse(transfer);
+    const extra = kv.kv_connector_extra_config || {};
+    // Preserve custom/tiering connectors; CPU defaults belong only to this spec.
+    if ((!kv.kv_connector || kv.kv_connector === 'OffloadingConnector') &&
+        (!kv.kv_role || kv.kv_role === 'kv_both') &&
+        (!extra.spec_name || extra.spec_name === 'CPUOffloadingSpec')) {
+      const normalized = JSON.stringify({
+        kv_connector: 'OffloadingConnector', kv_role: 'kv_both', ...kv,
+        kv_connector_extra_config: {spec_name: 'CPUOffloadingSpec', cpu_bytes_to_use: 8 * GiB, ...extra},
+      });
+      if (normalized !== transfer) p.args = setArg(p.args, '--kv-transfer-config', normalized);
+    }
   }
   cacheLayout(p.cacheRoot,p.format);
   return p;
@@ -62,7 +74,7 @@ export function makeCommand(profile, apiKey, options={}) {
   const env={...p.env,VLLM_API_KEY:apiKey,VLLM_MONITOR:'1'};
   if (p.backend==='native') {
     const base=flashinferWorkspace(p.cacheRoot, options.mkdir);
-    const args=[...p.args];const i=args.indexOf('--port');if(i>=0)args[i+1]=String(p.port);else args.push('--port',String(p.port));
+    const args=lmcacheConnectorArgs(p);const i=args.indexOf('--port');if(i>=0)args[i+1]=String(p.port);else args.push('--port',String(p.port));
     return {name,bin:options.vllmBin||'vllm',args:['serve',...args],env:{...env,...layout,FLASHINFER_WORKSPACE_BASE:base}};
   }
   const args=['run','--detach','--name',name,'--label','sm75.managed=v015-candidate',

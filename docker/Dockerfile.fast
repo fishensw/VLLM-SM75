@@ -3,7 +3,7 @@
 # 由容器内 /opt/vllm-sm75/fast_compile.sh 从挂载项目目录软编译(BUILD_MODE=fast bash docker/build.sh)。
 # 目的: 避开反复 docker build 撞 containerd snapshotter 抖动, 迭代时只重启容器。
 
-ARG BASE_IMAGE=vllm/vllm-openai:v0.29.0-cu129@sha256:7ef5a35d1ef8ce2cf9d671dd91eec6e367c5849262e0362b4d3d4a26be0d87d2
+ARG BASE_IMAGE=vllm/vllm-openai:v0.30.0-cu129@sha256:58fdb6bb123a81aa53f46fa4652ad8cc87e817bd1077c9832c6258ef12c1c688
 
 # 1) flashinfer 0.6.18 + 去 jit-cache(无 SM75 AOT cubin, 会挂 CUDA graph warmup)
 FROM ${BASE_IMAGE} AS sm75-base
@@ -11,7 +11,30 @@ RUN uv pip uninstall --system flashinfer-jit-cache && \
     uv pip install --system --no-cache --no-deps flashinfer-python==0.6.18 flashinfer-cubin==0.6.18 \
         --extra-index-url https://flashinfer.ai/whl/
 
+# The pinned official cu129 image contains Torch 2.14/cu130 after its optional
+# connector install, while its vLLM/torchvision wheels require Torch 2.13.
+# Restore the CUDA 12.9 ABI before compiling any extension; keep the official
+# /etc/uv-overrides.txt NCCL pin. Resolve exact CUDA wheel and Triton versions.
+RUN uv pip install --system --no-cache \
+        --index https://download.pytorch.org/whl/cu129 \
+        torch==2.13.0+cu129 triton==3.7.1 && \
+    python3 -c 'import torch, importlib.metadata as m; assert torch.__version__ == "2.13.0+cu129"; assert torch.version.cuda == "12.9"; assert m.version("triton") == "3.7.1"'
+
 # 2) 预编译 flash_qla GDN prefill .so(稳定内核, nvcc 慢, 编一次进 base 免每次启动等)
+# CUDA 12/13 wheels share .so paths. A version-only downgrade leaves overwritten
+# files behind, so remove conflicting distributions and reinstall all four.
+RUN uv pip uninstall --system nvidia-cudnn-cu13 nvidia-cusparselt-cu13 \
+        nvidia-nccl-cu13 nvidia-nvshmem-cu13 && \
+    uv pip install --system --no-cache --no-deps \
+        --reinstall-package nvidia-cudnn-cu12 --reinstall-package nvidia-cusparselt-cu12 \
+        --reinstall-package nvidia-nccl-cu12 --reinstall-package nvidia-nvshmem-cu12 \
+        nvidia-cudnn-cu12==9.20.0.48 nvidia-cusparselt-cu12==0.8.1 \
+        nvidia-nccl-cu12==2.30.7 nvidia-nvshmem-cu12==3.4.5
+# Keep CUDA Python API consistent with Torch and the optional LMCache wheel.
+RUN uv pip install --system --no-cache --no-deps cuda-python==12.9.7 cuda-bindings==12.9.7
+COPY docker/helpers/verify_cuda_libraries.py /tmp/verify_cuda_libraries.py
+RUN python3 /tmp/verify_cuda_libraries.py && rm /tmp/verify_cuda_libraries.py
+
 FROM sm75-base AS flashqla-builder
 ENV TORCH_CUDA_ARCH_LIST=7.5
 ARG MAX_JOBS=1
@@ -31,11 +54,11 @@ RUN python3 /opt/flashqla-build/source/build_extension.py \
 FROM sm75-base AS runtime
 RUN uv pip install --system transformers==5.15.1
 ARG VLLM_SM75_RELEASE=vllm-sm75-fast
-ARG UPSTREAM_VLLM_COMMIT=98dff2a81d747d1dba01a47f939f48c3526d4206
+ARG UPSTREAM_VLLM_COMMIT=ced6857afa0ea7b2e3f0846a62e1394e90f15607
 LABEL org.opencontainers.image.title="VLLM-SM75 fast" \
       org.opencontainers.image.version="${VLLM_SM75_RELEASE}" \
       ai.vllm.upstream.commit="${UPSTREAM_VLLM_COMMIT}" \
-      ai.vllm.upstream.version="v0.29.0"
+      ai.vllm.upstream.version="v0.30.0"
 RUN mkdir -p /opt/vllm-sm75/extensions /opt/vllm-sm75/work /opt/vllm-sm75/evidence
 # patch 必须和 transformers 5.15.1 同层之后; 工具放 /opt 供 fast_compile 调用
 COPY docker/helpers/patch_transformers_startup.py /tmp/patch_transformers_startup.py

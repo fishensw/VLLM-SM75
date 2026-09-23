@@ -1,0 +1,3471 @@
+{
+  "schemaVersion": 1,
+  "release": "v0.1.6",
+  "component": "Ultra unified UI",
+  "generatedAt": "2026-09-23T23:14:45.598111+00:00",
+  "scope": {
+    "environment": "isolated CPU-only UI acceptance container",
+    "metrics": "synthetic idle, busy and missing metric states",
+    "conversation": "local mock model exercised a native conversation and tool flow",
+    "themeFixtures": "existing speed-test and SQL-test HTML/CSS with request-capable scripts removed; repository monitor HTML/CSS",
+    "chartVerification": "mock Chart.js instance checks axis, grid and legend theme-update calls",
+    "gpuBenchmarksRun": false,
+    "newInferencePerformanceClaims": false,
+    "previousGpuAcceptanceAndLimitations": "unchanged"
+  },
+  "verification": {
+    "nodeTests": {
+      "total": 203,
+      "passed": 196,
+      "skipped": 7,
+      "failed": 0
+    },
+    "clientBundles": {
+      "checked": 69,
+      "passed": 69
+    },
+    "sourceCanary": {
+      "status": "passed",
+      "checks": {
+        "flatNavigationAndBackgroundBoot": true,
+        "nativeNodesDraftViewAndWatcherRetained": true,
+        "conversationAndTool": true,
+        "singleLineMetricsAllVisible": true,
+        "fullWidthEditorAndHorizontalSettings": true,
+        "logoutAndOriginGate": true
+      },
+      "javascriptErrors": 0,
+      "nativeVersion": "0.1.7-alpha.2"
+    },
+    "actualImageAcceptance": {
+      "status": "passed",
+      "imageId": "sha256:2f72e25bcaa491dafe4175afaff4a091841598f3901ff8988924bc7b42cca24e",
+      "sourceArchiveSha256": "2e85139ed62195e535d8072a7760098250129fd587120f7b3bd442c81e63af84",
+      "sourceBindMount": false,
+      "checks": {
+        "routeChangesKeepProfileSelectorPosition": true,
+        "routeChangesKeepSidebarNavigationPosition": true,
+        "routeChangesKeepAuxiliaryActionsPosition": true,
+        "singleProfileSelectorAndSelectedValuePreserved": true,
+        "singleLineMetricsAllVisible": true
+      },
+      "sizes": [
+        14,
+        17
+      ],
+      "viewportWidths": [
+        1440,
+        1600,
+        1920
+      ],
+      "routeChecks": 42,
+      "javascriptErrors": 0,
+      "scope": "Header and sidebar stability across routes. Prior initialization, conversation and typography evidence retained separately."
+    },
+    "historicalGlobalFontImageAcceptance": {
+      "status": "passed",
+      "imageId": "sha256:3adc2b5348323365f0ac141692b9fbfcfecdf70690621121e27d5f4b563b3937",
+      "sourceArchiveSha256": "725e42a625e4789559409f6363f07d159752f375d330ebe42dd0d04deaf0da2c",
+      "sourceBindMount": false,
+      "checks": {
+        "flatNavigationAndBackgroundBoot": true,
+        "nativeNodesDraftViewAndWatcherRetained": true,
+        "conversationAndTool": true,
+        "singleLineMetricsAllVisible": true,
+        "globalFontSizes": [
+          12,
+          14,
+          16,
+          17
+        ],
+        "originalSidebarBase": 16,
+        "fullWidthEditorAndHorizontalSettings": true,
+        "logoutAndOriginGate": true
+      },
+      "javascriptErrors": 0
+    },
+    "historicalNativeNavigationImageAcceptance": {
+      "status": "passed",
+      "imageId": "sha256:8a70d03252e6f3c16a04686c2eb0cb8ac996fb75dff76c555c8c72760a62d822",
+      "sourceArchiveSha256": "104b67ba43541e44365bc11ea5a0b4b7e54ee31d148d154d21ac7a678f879ba6",
+      "sourceBindMount": false,
+      "checks": {
+        "stableIdsAndActualPanelContent": true,
+        "threeNativeSettingsHaveContent": true,
+        "failedSelectionKeepsContentTitleAndUrl": true,
+        "disconnectedOwnersReportFailureForPanelsAndSettings": true,
+        "scriptFailureIsVisible": true,
+        "flatNavigationAndBackgroundBoot": true,
+        "nativeNodesDraftViewAndWatcherRetained": true,
+        "conversationAndTool": true,
+        "firstWorkspaceRestoredWithoutManualSelection": true
+      },
+      "javascriptErrors": 0,
+      "scope": "Native navigation, settings, boot readiness and failure feedback. Prior typography/layout evidence retained separately."
+    },
+    "historicalNativeReadinessImageAcceptance": {
+      "status": "passed",
+      "imageId": "sha256:5907e98cd71d6a37ad34478c6087e002330553f19fee5e40db33d6f37f282999",
+      "sourceArchiveSha256": "563a6113cb493aaad66c753c745e3cf9636b9d9817fa0dc5ba1ff797c811580f",
+      "sourceBindMount": false,
+      "checks": {
+        "stableIdsAndActualPanelContent": true,
+        "threeNativeSettingsHaveContent": true,
+        "failedSelectionKeepsContentTitleAndUrl": true,
+        "disconnectedOwnersReportFailureForPanelsAndSettings": true,
+        "scriptFailureIsVisible": true,
+        "orphanLockSymptomReproduced": true,
+        "recoveryAfterLockReleaseWithoutHarnessRestart": true
+      },
+      "javascriptErrors": 0,
+      "scope": "Native sidebar and settings content; write-lock failure reproduction and recovery. Prior conversation, typography and layout evidence retained separately."
+    }
+  },
+  "headerLayout": {
+    "viewportWidthsPx": [
+      1440,
+      1600,
+      1920
+    ],
+    "metricStates": [
+      "busy",
+      "idle",
+      "missing"
+    ],
+    "cases": 36,
+    "heightPx": 64,
+    "metricCount": 8,
+    "labelFontPx": 14,
+    "valueFontPx": 16,
+    "singleLine": true,
+    "noHorizontalOverflow": true,
+    "allMetricsVisible": true,
+    "metricFontNotReduced": true,
+    "fontSettingValues": [
+      12,
+      14,
+      16,
+      17
+    ],
+    "auxiliaryControlsMoveToPrimarySidebarWhenRequired": true,
+    "measurements": [
+      {
+        "fontSetting": 12,
+        "width": 1920,
+        "state": "idle",
+        "height": 64,
+        "availableWidth": 1684,
+        "usedWidth": 1684
+      },
+      {
+        "fontSetting": 12,
+        "width": 1600,
+        "state": "idle",
+        "height": 64,
+        "availableWidth": 1364,
+        "usedWidth": 1364
+      },
+      {
+        "fontSetting": 12,
+        "width": 1440,
+        "state": "idle",
+        "height": 64,
+        "availableWidth": 1268,
+        "usedWidth": 1268
+      },
+      {
+        "fontSetting": 12,
+        "width": 1920,
+        "state": "busy",
+        "height": 64,
+        "availableWidth": 1684,
+        "usedWidth": 1684
+      },
+      {
+        "fontSetting": 12,
+        "width": 1600,
+        "state": "busy",
+        "height": 64,
+        "availableWidth": 1364,
+        "usedWidth": 1364
+      },
+      {
+        "fontSetting": 12,
+        "width": 1440,
+        "state": "busy",
+        "height": 64,
+        "availableWidth": 1268,
+        "usedWidth": 1268
+      },
+      {
+        "fontSetting": 12,
+        "width": 1920,
+        "state": "missing",
+        "height": 64,
+        "availableWidth": 1684,
+        "usedWidth": 1684
+      },
+      {
+        "fontSetting": 12,
+        "width": 1600,
+        "state": "missing",
+        "height": 64,
+        "availableWidth": 1364,
+        "usedWidth": 1364
+      },
+      {
+        "fontSetting": 12,
+        "width": 1440,
+        "state": "missing",
+        "height": 64,
+        "availableWidth": 1268,
+        "usedWidth": 1268
+      },
+      {
+        "fontSetting": 14,
+        "width": 1920,
+        "state": "idle",
+        "height": 64,
+        "availableWidth": 1684,
+        "usedWidth": 1684
+      },
+      {
+        "fontSetting": 14,
+        "width": 1600,
+        "state": "idle",
+        "height": 64,
+        "availableWidth": 1364,
+        "usedWidth": 1364
+      },
+      {
+        "fontSetting": 14,
+        "width": 1440,
+        "state": "idle",
+        "height": 64,
+        "availableWidth": 1268,
+        "usedWidth": 1268
+      },
+      {
+        "fontSetting": 14,
+        "width": 1920,
+        "state": "busy",
+        "height": 64,
+        "availableWidth": 1684,
+        "usedWidth": 1684
+      },
+      {
+        "fontSetting": 14,
+        "width": 1600,
+        "state": "busy",
+        "height": 64,
+        "availableWidth": 1364,
+        "usedWidth": 1364
+      },
+      {
+        "fontSetting": 14,
+        "width": 1440,
+        "state": "busy",
+        "height": 64,
+        "availableWidth": 1268,
+        "usedWidth": 1268
+      },
+      {
+        "fontSetting": 14,
+        "width": 1920,
+        "state": "missing",
+        "height": 64,
+        "availableWidth": 1684,
+        "usedWidth": 1684
+      },
+      {
+        "fontSetting": 14,
+        "width": 1600,
+        "state": "missing",
+        "height": 64,
+        "availableWidth": 1364,
+        "usedWidth": 1364
+      },
+      {
+        "fontSetting": 14,
+        "width": 1440,
+        "state": "missing",
+        "height": 64,
+        "availableWidth": 1268,
+        "usedWidth": 1268
+      },
+      {
+        "fontSetting": 16,
+        "width": 1920,
+        "state": "idle",
+        "height": 64,
+        "availableWidth": 1684,
+        "usedWidth": 1684
+      },
+      {
+        "fontSetting": 16,
+        "width": 1600,
+        "state": "idle",
+        "height": 64,
+        "availableWidth": 1364,
+        "usedWidth": 1364
+      },
+      {
+        "fontSetting": 16,
+        "width": 1440,
+        "state": "idle",
+        "height": 64,
+        "availableWidth": 1258,
+        "usedWidth": 1258
+      },
+      {
+        "fontSetting": 16,
+        "width": 1920,
+        "state": "busy",
+        "height": 64,
+        "availableWidth": 1684,
+        "usedWidth": 1684
+      },
+      {
+        "fontSetting": 16,
+        "width": 1600,
+        "state": "busy",
+        "height": 64,
+        "availableWidth": 1364,
+        "usedWidth": 1364
+      },
+      {
+        "fontSetting": 16,
+        "width": 1440,
+        "state": "busy",
+        "height": 64,
+        "availableWidth": 1258,
+        "usedWidth": 1258
+      },
+      {
+        "fontSetting": 16,
+        "width": 1920,
+        "state": "missing",
+        "height": 64,
+        "availableWidth": 1684,
+        "usedWidth": 1684
+      },
+      {
+        "fontSetting": 16,
+        "width": 1600,
+        "state": "missing",
+        "height": 64,
+        "availableWidth": 1364,
+        "usedWidth": 1364
+      },
+      {
+        "fontSetting": 16,
+        "width": 1440,
+        "state": "missing",
+        "height": 64,
+        "availableWidth": 1258,
+        "usedWidth": 1258
+      },
+      {
+        "fontSetting": 17,
+        "width": 1920,
+        "state": "idle",
+        "height": 64,
+        "availableWidth": 1676,
+        "usedWidth": 1676
+      },
+      {
+        "fontSetting": 17,
+        "width": 1600,
+        "state": "idle",
+        "height": 64,
+        "availableWidth": 1356,
+        "usedWidth": 1356
+      },
+      {
+        "fontSetting": 17,
+        "width": 1440,
+        "state": "idle",
+        "height": 64,
+        "availableWidth": 1248,
+        "usedWidth": 1248
+      },
+      {
+        "fontSetting": 17,
+        "width": 1920,
+        "state": "busy",
+        "height": 64,
+        "availableWidth": 1676,
+        "usedWidth": 1676
+      },
+      {
+        "fontSetting": 17,
+        "width": 1600,
+        "state": "busy",
+        "height": 64,
+        "availableWidth": 1356,
+        "usedWidth": 1356
+      },
+      {
+        "fontSetting": 17,
+        "width": 1440,
+        "state": "busy",
+        "height": 64,
+        "availableWidth": 1248,
+        "usedWidth": 1248
+      },
+      {
+        "fontSetting": 17,
+        "width": 1920,
+        "state": "missing",
+        "height": 64,
+        "availableWidth": 1676,
+        "usedWidth": 1676
+      },
+      {
+        "fontSetting": 17,
+        "width": 1600,
+        "state": "missing",
+        "height": 64,
+        "availableWidth": 1356,
+        "usedWidth": 1356
+      },
+      {
+        "fontSetting": 17,
+        "width": 1440,
+        "state": "missing",
+        "height": 64,
+        "availableWidth": 1248,
+        "usedWidth": 1248
+      }
+    ]
+  },
+  "theme": {
+    "modes": {
+      "dark": {
+        "matchingProfileListEditorAndSettingsWidth": true,
+        "contentWidthPx": 1684,
+        "horizontalSettingsTabs": true,
+        "settingsTabCount": 6,
+        "navigationSelectedColors": {
+          "foreground": "rgb(103, 158, 254)",
+          "background": "rgb(32, 53, 77)"
+        },
+        "switchTrackColors": {
+          "on": "rgb(22, 125, 94)",
+          "off": "rgb(105, 116, 131)"
+        },
+        "primaryButtonColors": {
+          "foreground": "rgb(16, 24, 32)",
+          "background": "rgb(103, 158, 254)"
+        },
+        "testToolThemeAfterNativeBoot": {
+          "background": "rgb(24, 36, 52)",
+          "color": "rgb(249, 250, 251)",
+          "font": "16px"
+        },
+        "monitorThemeAfterNativeBoot": {
+          "background": "rgb(32, 32, 32)",
+          "color": "rgb(249, 250, 251)",
+          "font": "14px"
+        },
+        "sampledTextContrastMinimum": 6.73,
+        "sampledTextContrastThreshold": 4.5
+      },
+      "light": {
+        "matchingProfileListEditorAndSettingsWidth": true,
+        "contentWidthPx": 1684,
+        "horizontalSettingsTabs": true,
+        "settingsTabCount": 6,
+        "navigationSelectedColors": {
+          "foreground": "rgb(43, 74, 146)",
+          "background": "rgb(231, 239, 255)"
+        },
+        "switchTrackColors": {
+          "on": "rgb(22, 125, 94)",
+          "off": "rgb(123, 135, 150)"
+        },
+        "primaryButtonColors": {
+          "foreground": "rgb(255, 255, 255)",
+          "background": "rgb(43, 74, 146)"
+        },
+        "testToolThemeAfterNativeBoot": {
+          "background": "rgb(242, 245, 248)",
+          "color": "rgb(11, 13, 15)",
+          "font": "16px"
+        },
+        "monitorThemeAfterNativeBoot": {
+          "background": "rgb(255, 255, 255)",
+          "color": "rgb(11, 13, 15)",
+          "font": "14px"
+        },
+        "sampledTextContrastMinimum": 8.41,
+        "sampledTextContrastThreshold": 4.5
+      }
+    },
+    "checks": {
+      "themeSwitches": 4,
+      "contrastPass": true,
+      "frameReload": true,
+      "dynamicFrame": true,
+      "storedThemeOnReload": true,
+      "formValuesPreserved": true,
+      "chartAxesUpdated": true,
+      "nativeStylesPreserved": true
+    },
+    "javascriptErrors": 0,
+    "screenshotsVisuallyInspected": true,
+    "limitations": "Theme fixture checks preserve original tool markup and styles but do not execute real benchmark workloads or prove model performance."
+  },
+  "nativeLifecycle": {
+    "coldStartCount": 5,
+    "coldStartRoutes": [
+      "harness",
+      "profiles",
+      "settings"
+    ],
+    "singleNativeFrame": true,
+    "rootSlotErrors": 0,
+    "checks": {
+      "backgroundBoot": {
+        "ownsHost": true,
+        "onboardingDialogCount": 0
+      },
+      "providerDraft": {
+        "preservedAcrossTabs": true,
+        "preservedAcrossPages": true,
+        "sameInputNode": true,
+        "saved": false
+      },
+      "settingsSections": {
+        "appearance": [
+          "language",
+          "appearance",
+          "font-size",
+          "transcript-view",
+          "performance-usage",
+          "current-version"
+        ],
+        "assistant": [
+          "permission",
+          "link-opening",
+          "developer-tools",
+          "composer-enter"
+        ],
+        "settingsDialogs": 0
+      },
+      "settingsPersistence": {
+        "fontPxAfterReload": 15,
+        "lightThemeAfterReload": true
+      },
+      "settingsRestored": {
+        "fontPx": 14,
+        "theme": "dark"
+      },
+      "conversationLifecycle": {
+        "sameInputAndFrameNodes": true,
+        "draftRetained": true,
+        "watcherAndPluginsNavigable": true,
+        "toolbarHiddenOnWatcher": true,
+        "modelRequestsSent": 0,
+        "nativeToolbarCount": 1,
+        "conversationHeaderElements": 0
+      }
+    },
+    "javascriptErrors": 0,
+    "passed": true
+  },
+  "loaderAndAuthentication": {
+    "cases": [
+      {
+        "name": "unknown-existing-transport",
+        "rejectedBeforeResourceFetch": true,
+        "privilegeGranted": false,
+        "originalTransportPreserved": true,
+        "customTransportInvocations": 0,
+        "nativeResourcesRequested": 0,
+        "foreignResourcesRequested": 0,
+        "nativeAssetsMounted": 0,
+        "ordinarySettingsAvailable": true,
+        "javascriptErrors": 0
+      },
+      {
+        "name": "cross-origin-entry",
+        "rejectedBeforeResourceFetch": true,
+        "privilegeGranted": false,
+        "originalTransportPreserved": null,
+        "customTransportInvocations": 0,
+        "nativeResourcesRequested": 0,
+        "foreignResourcesRequested": 0,
+        "nativeAssetsMounted": 0,
+        "ordinarySettingsAvailable": true,
+        "javascriptErrors": 0
+      },
+      {
+        "name": "entry-with-query",
+        "rejectedBeforeResourceFetch": true,
+        "privilegeGranted": false,
+        "originalTransportPreserved": null,
+        "customTransportInvocations": 0,
+        "nativeResourcesRequested": 0,
+        "foreignResourcesRequested": 0,
+        "nativeAssetsMounted": 0,
+        "ordinarySettingsAvailable": true,
+        "javascriptErrors": 0
+      }
+    ],
+    "unauthenticatedHarness": {
+      "status": 401,
+      "denied": true
+    },
+    "passed": true
+  },
+  "screenshots": [
+    {
+      "path": "docs/assets/v0.1.6-unified-workbench.png",
+      "description": "Actual candidate UI in isolation; all header metrics shown are synthetic UI-layout values, not GPU performance measurements."
+    }
+  ],
+  "publication": {
+    "rawOperationalLogsIncluded": false,
+    "privateHostsPathsAndCredentialsIncluded": false,
+    "note": "Only selected structured UI results are included; no request bodies, private configuration or operational logs are published."
+  },
+  "productionUpdate": {
+    "status": "applied",
+    "formalImageId": "sha256:2f72e25bcaa491dafe4175afaff4a091841598f3901ff8988924bc7b42cca24e",
+    "formalDefinitions": 4,
+    "runningContainerRestarted": false,
+    "runningContainerIdAndStartedAt": "unchanged",
+    "gpuProcessIdentifiersAndMemory": "unchanged",
+    "unraidTemplateXmlBytes": "unchanged",
+    "unraidManagedIconWebuiLabels": "unchanged",
+    "environmentAndMounts": "unchanged",
+    "otherDefinitions": "created-from-new-image",
+    "runningImageLayer": "prior-image-retained-until-next-container-recreate",
+    "staticAssets": "byte-matched-to-accepted-source",
+    "nativeClientBundles": {
+      "checked": 69,
+      "failed": 0
+    },
+    "temporaryContainers": "removed",
+    "temporaryCandidateTag": "removed",
+    "rollbackFilesAndImage": "retained",
+    "appearanceConfigWrittenByDeployment": false,
+    "testContainersAndCandidateTagRemoved": true,
+    "authenticatedFormalBrowserAcceptance": "not-performed",
+    "existingBrowserRefreshRequired": true
+  },
+  "firstUseFinalImage": {
+    "browserStarts": 1,
+    "isolatedDataContainerPreviouslyInitialized": true,
+    "automaticWorkspaceRestore": true,
+    "manualWorkspaceSelectionRequired": false,
+    "mockConversationAndTools": true,
+    "samePanelReselectionDoesNotAbortRestore": true,
+    "javascriptErrors": 0
+  },
+  "historicalFirstUse": {
+    "checkedAt": "2026-09-23T17:28:01.379Z",
+    "scope": "Two fresh tmpfs actual-image sessions; no New Session workaround or arbitrary post-onboarding sleep",
+    "cause": "The asynchronous welcome acknowledgment keeps root inert until the dialog closes; fill/keyboard calls before real focus deliver no input events.",
+    "runs": [
+      {
+        "index": 1,
+        "freshTmpfs": true,
+        "onboardingWait": "dialog hidden and editor without inert ancestor",
+        "actualEditorFocused": true,
+        "inputMethod": "pressSequentially",
+        "inputPreserved": true,
+        "sendEnabled": true,
+        "mockConversationCompleted": true,
+        "javascriptErrors": 0,
+        "newSessionButtonUsed": false
+      },
+      {
+        "index": 2,
+        "freshTmpfs": true,
+        "onboardingWait": "dialog hidden and editor without inert ancestor",
+        "actualEditorFocused": true,
+        "inputMethod": "pressSequentially",
+        "inputPreserved": true,
+        "sendEnabled": true,
+        "mockConversationCompleted": true,
+        "javascriptErrors": 0,
+        "newSessionButtonUsed": false
+      }
+    ],
+    "passed": true,
+    "supersededBy": "firstUseFinalImage"
+  },
+  "globalTypography": {
+    "schemaVersion": 1,
+    "title": "Ultra 全局字号验证汇总",
+    "scope": "隔离浏览器环境中的字号比例、控件几何、原生界面及图表渲染验证；使用静态图表和模拟推理响应，未使用 GPU 模型。",
+    "result": "passed",
+    "fontSettingsPx": [
+      12,
+      14,
+      17
+    ],
+    "defaultSettingPx": 14,
+    "measurementArrayOrder": "所有实测数组依次对应全局设置 12、14、17 px；保留各区域原有字号层级。",
+    "console": {
+      "passed": true,
+      "viewportPx": {
+        "width": 1920,
+        "height": 1080
+      },
+      "pageStateChecks": 33,
+      "monitoringFrameChecks": 3,
+      "typographyComparisons": 166,
+      "renderedTextControlComparisons": 610,
+      "settingsTabs": 6,
+      "settingsTabsRemainSingleRow": true,
+      "controlGeometryRisks": 0,
+      "horizontalPageOverflowCases": 0,
+      "pageErrors": 0,
+      "representativeFontPx": {
+        "body": [
+          13.7143,
+          16,
+          19.4286
+        ],
+        "sidebarBrand": [
+          13.7143,
+          16,
+          19.4286
+        ],
+        "sidebarNavigation": [
+          13.7143,
+          16,
+          19.4286
+        ],
+        "sidebarFooter": [
+          11.1429,
+          13,
+          15.7857
+        ],
+        "profileInput": [
+          12,
+          14,
+          17
+        ],
+        "profileLabel": [
+          12,
+          14,
+          17
+        ],
+        "profileHelp": [
+          12,
+          14,
+          17
+        ],
+        "settingsTab": [
+          13.7143,
+          16,
+          19.4286
+        ]
+      },
+      "visualReview": "关键截图已核对侧栏、运行配置编辑器、外观、参数模板、部署硬件、监控及快速会话，未发现文字裁切或重叠。"
+    },
+    "switchesAndCheckboxes": {
+      "passed": true,
+      "pageStateChecks": 21,
+      "totalSwitchMeasurements": 21,
+      "consoleInputSwitchMeasurements": 15,
+      "nativeSwitchMeasurements": 6,
+      "textInputHeightChecks": 108,
+      "switchSizePx": {
+        "width": 36,
+        "height": 20
+      },
+      "consoleThumbSizePx": {
+        "width": 14,
+        "height": 14
+      },
+      "consoleThumbBorderRadius": "50%",
+      "geometryUnchangedAcrossFontSettings": true,
+      "pageErrors": 0,
+      "visualReview": "复选框形式的开关和原生设置开关保持横向胶囊形状；通用输入最小高度不再撑高开关。"
+    },
+    "nativeWorkbench": {
+      "passed": true,
+      "testedFontSequencePx": [
+        12,
+        14,
+        17,
+        12,
+        17,
+        14
+      ],
+      "sampleChecks": 60,
+      "pageErrors": 0,
+      "representativeFontPx": {
+        "appearanceTitle": [
+          12,
+          14,
+          17
+        ],
+        "appearanceDescription": [
+          10.2857,
+          12,
+          14.5714
+        ],
+        "conversationEditor": [
+          12,
+          14,
+          17
+        ],
+        "conversationBody": [
+          12,
+          14,
+          17
+        ],
+        "watcherHeading": [
+          14.5714,
+          17,
+          20.6429
+        ]
+      },
+      "rapidSave": {
+        "passed": true,
+        "fix": "连续修改期间，较早的 Host 保存回执不再覆盖更新的本地字号；最终保存完成后再采纳持久化状态。",
+        "unitRegressionPassed": true,
+        "unitScenarios": [
+          "连续增大至 17 时较早回执不回退界面",
+          "连续减小至 12 时中间回执不覆盖最终值",
+          "保存返回失败时恢复已接受值并结束等待",
+          "传输异常时恢复已接受值并结束等待"
+        ],
+        "finalBrowserProof": "真实原生按钮连续切换 12、14、17、12、17、14，并等待实际 Host 保存完成；字号及上下限状态全部通过。"
+      }
+    },
+    "embeddedTools": {
+      "passed": true,
+      "tools": [
+        "性能测试",
+        "SQL 测试",
+        "性能监控"
+      ],
+      "originalTypographyHierarchyPreserved": true,
+      "dynamicallyAddedPopupScales": true,
+      "pageErrors": 0,
+      "representativeFontPx": {
+        "performanceTestBody": [
+          13.7143,
+          16,
+          19.4286
+        ],
+        "performanceTestTitle": [
+          27.4286,
+          32,
+          38.8571
+        ],
+        "dynamicPopup": [
+          11.1429,
+          13,
+          15.7857
+        ],
+        "sqlButton": [
+          11.1429,
+          13,
+          15.7857
+        ],
+        "monitorTitle": [
+          19.7143,
+          23,
+          27.9286
+        ],
+        "monitorButton": [
+          12,
+          14,
+          17
+        ],
+        "monitorCanvas": [
+          9.42857,
+          11,
+          13.3571
+        ]
+      }
+    },
+    "chartRendering": {
+      "passed": true,
+      "library": "Chart.js",
+      "version": "4.4.1",
+      "realBrowserRendering": true,
+      "staticChartData": true,
+      "resolvedFontOptionsVerified": true,
+      "noCompounding": true,
+      "representativeFontPx": {
+        "default": [
+          10.2857,
+          12,
+          14.5714
+        ],
+        "resolvedAxisTick": [
+          8.5714,
+          10,
+          12.1429
+        ],
+        "axisTitle": [
+          13.7143,
+          16,
+          19.4286
+        ],
+        "legend": [
+          12,
+          14,
+          17
+        ],
+        "chartTitle": [
+          15.4286,
+          18,
+          21.8571
+        ]
+      },
+      "idleObservation": {
+        "durationMs": 2000,
+        "chartUpdates": 0,
+        "domMutations": 0,
+        "taskDurationSeconds": 0
+      },
+      "noIdleUpdateLoop": true,
+      "pageErrors": 0
+    },
+    "evidenceResolution": {
+      "olderSettingsTabObservation": "早期 iframe 验证记录中的设置页签固定 16px 仅为当时观察。随后修复了样式作用域冲突；最终控制台验证实测为 13.7143、16、19.4286px，已通过。",
+      "rapidSaveEvidence": "早期 iframe 记录使用固定等待时间，不能单独证明快速保存正确性；此结论采用后续原生保存修复、单元回归和最终真实按钮浏览器验证。",
+      "inheritedBodyTypography": "后续补齐正文继承字号，并以全部实际文字控件比例比较重新验证。",
+      "switchGeometry": "通用最小高度误伤开关的问题采用最后一次专项几何与截图复验结果。"
+    },
+    "restoredFontSettingPx": 14,
+    "productionDeploymentConclusionIncluded": false,
+    "firstLaunchConclusionIncluded": false
+  },
+  "historicalGlobalFontFirstUse": {
+    "freshStarts": 2,
+    "automaticWorkspaceRestore": true,
+    "manualWorkspaceSelectionRequired": false,
+    "mockConversationAndTools": true,
+    "samePanelReselectionDoesNotAbortRestore": true,
+    "javascriptErrors": 0
+  },
+  "nativeNavigationRepair": {
+    "stablePanelIds": {
+      "usage": "sm75-usage",
+      "plugins": "plugins"
+    },
+    "readyRequiresMountedOwners": [
+      "frame",
+      "settings"
+    ],
+    "oldLayoutReaderCompatibility": true,
+    "failedNavigationDoesNotCommitTitleOrUrl": true,
+    "scriptLoadTimeoutMs": 15000,
+    "disconnectedBridgeFeedback": true,
+    "settingsLoadFeedback": true,
+    "reportedExistingBrowserRootCause": "confirmed stale profile package writer lock: recorded owner process absent; managed local-provider setup failed; console waited for readiness; reproduced in actual isolated image"
+  },
+  "nativeInitializationRepair": {
+    "rootCause": "orphaned profile package writer lock after prior process exit",
+    "formalRecovery": {
+      "ownerAbsenceVerified": true,
+      "orphanLockPrivatelyBackedUp": true,
+      "profileBytesUnchangedDuringRecovery": true,
+      "automaticLockDeletion": false
+    },
+    "diagnostics": {
+      "stages": [
+        "waiting-for-plugins",
+        "local-provider",
+        "default-model",
+        "ready"
+      ],
+      "lockTimeoutCode": "CONFIG_LOCK_TIMEOUT",
+      "credentialValuesExposed": false
+    },
+    "lockReleaseRetry": {
+      "trigger": "readiness poll after lock-timeout failure",
+      "cooldownMs": 3000,
+      "concurrentInitialization": "deduplicated",
+      "lockOwnershipPolicy": "never automatically remove another writer lock"
+    },
+    "isolatedActualImage": {
+      "imageId": "sha256:5907e98cd71d6a37ad34478c6087e002330553f19fee5e40db33d6f37f282999",
+      "reproducedStatus": 503,
+      "reproducedCode": "CONFIG_LOCK_TIMEOUT",
+      "reproducedUi": "opening usage; native UI not loaded",
+      "afterLockReleaseStatus": 200,
+      "afterLockReleaseReady": true,
+      "usageContentVisible": true,
+      "harnessRestartRequiredForRecovery": false
+    },
+    "configWatcher": {
+      "scope": "requested configuration file and required parent directories",
+      "unrelatedUnreadableBackupExcluded": true,
+      "watchedFileErrorsStillVisible": true
+    },
+    "browser": {
+      "scope": "Isolated candidate image UI; synthetic model only",
+      "checks": {
+        "stableIdsAndActualPanelContent": true,
+        "threeNativeSettingsHaveContent": true,
+        "failedSelectionKeepsContentTitleAndUrl": true,
+        "disconnectedOwnersReportFailureForPanelsAndSettings": true,
+        "scriptFailureIsVisible": true
+      },
+      "errors": []
+    },
+    "formalBackendAfterRefresh": {
+      "status": 200,
+      "ready": true,
+      "failed": false,
+      "stage": "ready"
+    },
+    "sourceArchiveSha256": "563a6113cb493aaad66c753c745e3cf9636b9d9817fa0dc5ba1ff797c811580f"
+  },
+  "headerRouteStability": {
+    "cause": "route-specific leading space budget moved the existing selector between header and sidebar",
+    "layoutRule": "same viewport width and global font use the same reserved toolbar and power-button budget across routes",
+    "profileSelectorCount": 1,
+    "imageId": "sha256:2f72e25bcaa491dafe4175afaff4a091841598f3901ff8988924bc7b42cca24e",
+    "sourceArchiveSha256": "2e85139ed62195e535d8072a7760098250129fd587120f7b3bd442c81e63af84",
+    "browser": {
+      "scope": "Actual candidate image, no source override",
+      "cases": [
+        {
+          "size": 14,
+          "width": 1440,
+          "positions": [
+            {
+              "route": "profiles",
+              "profileParent": "appHeader",
+              "profileCount": 1,
+              "selected": "global-font",
+              "navY": 55.59375,
+              "actions": [
+                "appHeader",
+                "appHeader"
+              ],
+              "headerHeight": 64,
+              "headerWidth": 1268,
+              "headerScroll": 1268,
+              "metrics": [
+                {
+                  "x": 690.53125,
+                  "y": 19.5,
+                  "right": 753.96875
+                },
+                {
+                  "x": 761.96875,
+                  "y": 19.5,
+                  "right": 834.65625
+                },
+                {
+                  "x": 842.65625,
+                  "y": 19.5,
+                  "right": 913.734375
+                },
+                {
+                  "x": 921.734375,
+                  "y": 19.5,
+                  "right": 997.15625
+                },
+                {
+                  "x": 1005.15625,
+                  "y": 19.5,
+                  "right": 1103
+                },
+                {
+                  "x": 1111,
+                  "y": 19.5,
+                  "right": 1197.296875
+                },
+                {
+                  "x": 1205.296875,
+                  "y": 19.5,
+                  "right": 1265.46875
+                },
+                {
+                  "x": 1273.46875,
+                  "y": 19.5,
+                  "right": 1348.890625
+                }
+              ],
+              "right": 1428
+            },
+            {
+              "route": "harness",
+              "profileParent": "appHeader",
+              "profileCount": 1,
+              "selected": "global-font",
+              "navY": 55.59375,
+              "actions": [
+                "appHeader",
+                "appHeader"
+              ],
+              "headerHeight": 64,
+              "headerWidth": 1268,
+              "headerScroll": 1268,
+              "metrics": [
+                {
+                  "x": 690.53125,
+                  "y": 19.5,
+                  "right": 753.96875
+                },
+                {
+                  "x": 761.96875,
+                  "y": 19.5,
+                  "right": 834.65625
+                },
+                {
+                  "x": 842.65625,
+                  "y": 19.5,
+                  "right": 913.734375
+                },
+                {
+                  "x": 921.734375,
+                  "y": 19.5,
+                  "right": 997.15625
+                },
+                {
+                  "x": 1005.15625,
+                  "y": 19.5,
+                  "right": 1103
+                },
+                {
+                  "x": 1111,
+                  "y": 19.5,
+                  "right": 1197.296875
+                },
+                {
+                  "x": 1205.296875,
+                  "y": 19.5,
+                  "right": 1265.46875
+                },
+                {
+                  "x": 1273.46875,
+                  "y": 19.5,
+                  "right": 1348.890625
+                }
+              ],
+              "right": 1428
+            },
+            {
+              "route": "usage",
+              "profileParent": "appHeader",
+              "profileCount": 1,
+              "selected": "global-font",
+              "navY": 55.59375,
+              "actions": [
+                "appHeader",
+                "appHeader"
+              ],
+              "headerHeight": 64,
+              "headerWidth": 1268,
+              "headerScroll": 1268,
+              "metrics": [
+                {
+                  "x": 690.53125,
+                  "y": 19.5,
+                  "right": 753.96875
+                },
+                {
+                  "x": 761.96875,
+                  "y": 19.5,
+                  "right": 834.65625
+                },
+                {
+                  "x": 842.65625,
+                  "y": 19.5,
+                  "right": 913.734375
+                },
+                {
+                  "x": 921.734375,
+                  "y": 19.5,
+                  "right": 997.15625
+                },
+                {
+                  "x": 1005.15625,
+                  "y": 19.5,
+                  "right": 1103
+                },
+                {
+                  "x": 1111,
+                  "y": 19.5,
+                  "right": 1197.296875
+                },
+                {
+                  "x": 1205.296875,
+                  "y": 19.5,
+                  "right": 1265.46875
+                },
+                {
+                  "x": 1273.46875,
+                  "y": 19.5,
+                  "right": 1348.890625
+                }
+              ],
+              "right": 1428
+            },
+            {
+              "route": "plugins",
+              "profileParent": "appHeader",
+              "profileCount": 1,
+              "selected": "global-font",
+              "navY": 55.59375,
+              "actions": [
+                "appHeader",
+                "appHeader"
+              ],
+              "headerHeight": 64,
+              "headerWidth": 1268,
+              "headerScroll": 1268,
+              "metrics": [
+                {
+                  "x": 690.53125,
+                  "y": 19.5,
+                  "right": 753.96875
+                },
+                {
+                  "x": 761.96875,
+                  "y": 19.5,
+                  "right": 834.65625
+                },
+                {
+                  "x": 842.65625,
+                  "y": 19.5,
+                  "right": 913.734375
+                },
+                {
+                  "x": 921.734375,
+                  "y": 19.5,
+                  "right": 997.15625
+                },
+                {
+                  "x": 1005.15625,
+                  "y": 19.5,
+                  "right": 1103
+                },
+                {
+                  "x": 1111,
+                  "y": 19.5,
+                  "right": 1197.296875
+                },
+                {
+                  "x": 1205.296875,
+                  "y": 19.5,
+                  "right": 1265.46875
+                },
+                {
+                  "x": 1273.46875,
+                  "y": 19.5,
+                  "right": 1348.890625
+                }
+              ],
+              "right": 1428
+            },
+            {
+              "route": "settings",
+              "profileParent": "appHeader",
+              "profileCount": 1,
+              "selected": "global-font",
+              "navY": 55.59375,
+              "actions": [
+                "appHeader",
+                "appHeader"
+              ],
+              "headerHeight": 64,
+              "headerWidth": 1268,
+              "headerScroll": 1268,
+              "metrics": [
+                {
+                  "x": 690.53125,
+                  "y": 19.5,
+                  "right": 753.96875
+                },
+                {
+                  "x": 761.96875,
+                  "y": 19.5,
+                  "right": 834.65625
+                },
+                {
+                  "x": 842.65625,
+                  "y": 19.5,
+                  "right": 913.734375
+                },
+                {
+                  "x": 921.734375,
+                  "y": 19.5,
+                  "right": 997.15625
+                },
+                {
+                  "x": 1005.15625,
+                  "y": 19.5,
+                  "right": 1103
+                },
+                {
+                  "x": 1111,
+                  "y": 19.5,
+                  "right": 1197.296875
+                },
+                {
+                  "x": 1205.296875,
+                  "y": 19.5,
+                  "right": 1265.46875
+                },
+                {
+                  "x": 1273.46875,
+                  "y": 19.5,
+                  "right": 1348.890625
+                }
+              ],
+              "right": 1428
+            },
+            {
+              "route": "harness",
+              "profileParent": "appHeader",
+              "profileCount": 1,
+              "selected": "global-font",
+              "navY": 55.59375,
+              "actions": [
+                "appHeader",
+                "appHeader"
+              ],
+              "headerHeight": 64,
+              "headerWidth": 1268,
+              "headerScroll": 1268,
+              "metrics": [
+                {
+                  "x": 690.53125,
+                  "y": 19.5,
+                  "right": 753.96875
+                },
+                {
+                  "x": 761.96875,
+                  "y": 19.5,
+                  "right": 834.65625
+                },
+                {
+                  "x": 842.65625,
+                  "y": 19.5,
+                  "right": 913.734375
+                },
+                {
+                  "x": 921.734375,
+                  "y": 19.5,
+                  "right": 997.15625
+                },
+                {
+                  "x": 1005.15625,
+                  "y": 19.5,
+                  "right": 1103
+                },
+                {
+                  "x": 1111,
+                  "y": 19.5,
+                  "right": 1197.296875
+                },
+                {
+                  "x": 1205.296875,
+                  "y": 19.5,
+                  "right": 1265.46875
+                },
+                {
+                  "x": 1273.46875,
+                  "y": 19.5,
+                  "right": 1348.890625
+                }
+              ],
+              "right": 1428
+            },
+            {
+              "route": "profiles",
+              "profileParent": "appHeader",
+              "profileCount": 1,
+              "selected": "global-font",
+              "navY": 55.59375,
+              "actions": [
+                "appHeader",
+                "appHeader"
+              ],
+              "headerHeight": 64,
+              "headerWidth": 1268,
+              "headerScroll": 1268,
+              "metrics": [
+                {
+                  "x": 690.53125,
+                  "y": 19.5,
+                  "right": 753.96875
+                },
+                {
+                  "x": 761.96875,
+                  "y": 19.5,
+                  "right": 834.65625
+                },
+                {
+                  "x": 842.65625,
+                  "y": 19.5,
+                  "right": 913.734375
+                },
+                {
+                  "x": 921.734375,
+                  "y": 19.5,
+                  "right": 997.15625
+                },
+                {
+                  "x": 1005.15625,
+                  "y": 19.5,
+                  "right": 1103
+                },
+                {
+                  "x": 1111,
+                  "y": 19.5,
+                  "right": 1197.296875
+                },
+                {
+                  "x": 1205.296875,
+                  "y": 19.5,
+                  "right": 1265.46875
+                },
+                {
+                  "x": 1273.46875,
+                  "y": 19.5,
+                  "right": 1348.890625
+                }
+              ],
+              "right": 1428
+            }
+          ]
+        },
+        {
+          "size": 14,
+          "width": 1600,
+          "positions": [
+            {
+              "route": "profiles",
+              "profileParent": "appHeader",
+              "profileCount": 1,
+              "selected": "global-font",
+              "navY": 58,
+              "actions": [
+                "appHeader",
+                "appHeader"
+              ],
+              "headerHeight": 64,
+              "headerWidth": 1364,
+              "headerScroll": 1364,
+              "metrics": [
+                {
+                  "x": 834.53125,
+                  "y": 19.5,
+                  "right": 897.96875
+                },
+                {
+                  "x": 905.96875,
+                  "y": 19.5,
+                  "right": 978.65625
+                },
+                {
+                  "x": 986.65625,
+                  "y": 19.5,
+                  "right": 1057.734375
+                },
+                {
+                  "x": 1065.734375,
+                  "y": 19.5,
+                  "right": 1141.15625
+                },
+                {
+                  "x": 1149.15625,
+                  "y": 19.5,
+                  "right": 1247
+                },
+                {
+                  "x": 1255,
+                  "y": 19.5,
+                  "right": 1341.296875
+                },
+                {
+                  "x": 1349.296875,
+                  "y": 19.5,
+                  "right": 1409.46875
+                },
+                {
+                  "x": 1417.46875,
+                  "y": 19.5,
+                  "right": 1492.890625
+                }
+              ],
+              "right": 1580
+            },
+            {
+              "route": "harness",
+              "profileParent": "appHeader",
+              "profileCount": 1,
+              "selected": "global-font",
+              "navY": 58,
+              "actions": [
+                "appHeader",
+                "appHeader"
+              ],
+              "headerHeight": 64,
+              "headerWidth": 1364,
+              "headerScroll": 1364,
+              "metrics": [
+                {
+                  "x": 834.53125,
+                  "y": 19.5,
+                  "right": 897.96875
+                },
+                {
+                  "x": 905.96875,
+                  "y": 19.5,
+                  "right": 978.65625
+                },
+                {
+                  "x": 986.65625,
+                  "y": 19.5,
+                  "right": 1057.734375
+                },
+                {
+                  "x": 1065.734375,
+                  "y": 19.5,
+                  "right": 1141.15625
+                },
+                {
+                  "x": 1149.15625,
+                  "y": 19.5,
+                  "right": 1247
+                },
+                {
+                  "x": 1255,
+                  "y": 19.5,
+                  "right": 1341.296875
+                },
+                {
+                  "x": 1349.296875,
+                  "y": 19.5,
+                  "right": 1409.46875
+                },
+                {
+                  "x": 1417.46875,
+                  "y": 19.5,
+                  "right": 1492.890625
+                }
+              ],
+              "right": 1580
+            },
+            {
+              "route": "usage",
+              "profileParent": "appHeader",
+              "profileCount": 1,
+              "selected": "global-font",
+              "navY": 58,
+              "actions": [
+                "appHeader",
+                "appHeader"
+              ],
+              "headerHeight": 64,
+              "headerWidth": 1364,
+              "headerScroll": 1364,
+              "metrics": [
+                {
+                  "x": 834.53125,
+                  "y": 19.5,
+                  "right": 897.96875
+                },
+                {
+                  "x": 905.96875,
+                  "y": 19.5,
+                  "right": 978.65625
+                },
+                {
+                  "x": 986.65625,
+                  "y": 19.5,
+                  "right": 1057.734375
+                },
+                {
+                  "x": 1065.734375,
+                  "y": 19.5,
+                  "right": 1141.15625
+                },
+                {
+                  "x": 1149.15625,
+                  "y": 19.5,
+                  "right": 1247
+                },
+                {
+                  "x": 1255,
+                  "y": 19.5,
+                  "right": 1341.296875
+                },
+                {
+                  "x": 1349.296875,
+                  "y": 19.5,
+                  "right": 1409.46875
+                },
+                {
+                  "x": 1417.46875,
+                  "y": 19.5,
+                  "right": 1492.890625
+                }
+              ],
+              "right": 1580
+            },
+            {
+              "route": "plugins",
+              "profileParent": "appHeader",
+              "profileCount": 1,
+              "selected": "global-font",
+              "navY": 58,
+              "actions": [
+                "appHeader",
+                "appHeader"
+              ],
+              "headerHeight": 64,
+              "headerWidth": 1364,
+              "headerScroll": 1364,
+              "metrics": [
+                {
+                  "x": 834.53125,
+                  "y": 19.5,
+                  "right": 897.96875
+                },
+                {
+                  "x": 905.96875,
+                  "y": 19.5,
+                  "right": 978.65625
+                },
+                {
+                  "x": 986.65625,
+                  "y": 19.5,
+                  "right": 1057.734375
+                },
+                {
+                  "x": 1065.734375,
+                  "y": 19.5,
+                  "right": 1141.15625
+                },
+                {
+                  "x": 1149.15625,
+                  "y": 19.5,
+                  "right": 1247
+                },
+                {
+                  "x": 1255,
+                  "y": 19.5,
+                  "right": 1341.296875
+                },
+                {
+                  "x": 1349.296875,
+                  "y": 19.5,
+                  "right": 1409.46875
+                },
+                {
+                  "x": 1417.46875,
+                  "y": 19.5,
+                  "right": 1492.890625
+                }
+              ],
+              "right": 1580
+            },
+            {
+              "route": "settings",
+              "profileParent": "appHeader",
+              "profileCount": 1,
+              "selected": "global-font",
+              "navY": 58,
+              "actions": [
+                "appHeader",
+                "appHeader"
+              ],
+              "headerHeight": 64,
+              "headerWidth": 1364,
+              "headerScroll": 1364,
+              "metrics": [
+                {
+                  "x": 834.53125,
+                  "y": 19.5,
+                  "right": 897.96875
+                },
+                {
+                  "x": 905.96875,
+                  "y": 19.5,
+                  "right": 978.65625
+                },
+                {
+                  "x": 986.65625,
+                  "y": 19.5,
+                  "right": 1057.734375
+                },
+                {
+                  "x": 1065.734375,
+                  "y": 19.5,
+                  "right": 1141.15625
+                },
+                {
+                  "x": 1149.15625,
+                  "y": 19.5,
+                  "right": 1247
+                },
+                {
+                  "x": 1255,
+                  "y": 19.5,
+                  "right": 1341.296875
+                },
+                {
+                  "x": 1349.296875,
+                  "y": 19.5,
+                  "right": 1409.46875
+                },
+                {
+                  "x": 1417.46875,
+                  "y": 19.5,
+                  "right": 1492.890625
+                }
+              ],
+              "right": 1580
+            },
+            {
+              "route": "harness",
+              "profileParent": "appHeader",
+              "profileCount": 1,
+              "selected": "global-font",
+              "navY": 58,
+              "actions": [
+                "appHeader",
+                "appHeader"
+              ],
+              "headerHeight": 64,
+              "headerWidth": 1364,
+              "headerScroll": 1364,
+              "metrics": [
+                {
+                  "x": 834.53125,
+                  "y": 19.5,
+                  "right": 897.96875
+                },
+                {
+                  "x": 905.96875,
+                  "y": 19.5,
+                  "right": 978.65625
+                },
+                {
+                  "x": 986.65625,
+                  "y": 19.5,
+                  "right": 1057.734375
+                },
+                {
+                  "x": 1065.734375,
+                  "y": 19.5,
+                  "right": 1141.15625
+                },
+                {
+                  "x": 1149.15625,
+                  "y": 19.5,
+                  "right": 1247
+                },
+                {
+                  "x": 1255,
+                  "y": 19.5,
+                  "right": 1341.296875
+                },
+                {
+                  "x": 1349.296875,
+                  "y": 19.5,
+                  "right": 1409.46875
+                },
+                {
+                  "x": 1417.46875,
+                  "y": 19.5,
+                  "right": 1492.890625
+                }
+              ],
+              "right": 1580
+            },
+            {
+              "route": "profiles",
+              "profileParent": "appHeader",
+              "profileCount": 1,
+              "selected": "global-font",
+              "navY": 58,
+              "actions": [
+                "appHeader",
+                "appHeader"
+              ],
+              "headerHeight": 64,
+              "headerWidth": 1364,
+              "headerScroll": 1364,
+              "metrics": [
+                {
+                  "x": 834.53125,
+                  "y": 19.5,
+                  "right": 897.96875
+                },
+                {
+                  "x": 905.96875,
+                  "y": 19.5,
+                  "right": 978.65625
+                },
+                {
+                  "x": 986.65625,
+                  "y": 19.5,
+                  "right": 1057.734375
+                },
+                {
+                  "x": 1065.734375,
+                  "y": 19.5,
+                  "right": 1141.15625
+                },
+                {
+                  "x": 1149.15625,
+                  "y": 19.5,
+                  "right": 1247
+                },
+                {
+                  "x": 1255,
+                  "y": 19.5,
+                  "right": 1341.296875
+                },
+                {
+                  "x": 1349.296875,
+                  "y": 19.5,
+                  "right": 1409.46875
+                },
+                {
+                  "x": 1417.46875,
+                  "y": 19.5,
+                  "right": 1492.890625
+                }
+              ],
+              "right": 1580
+            }
+          ]
+        },
+        {
+          "size": 14,
+          "width": 1920,
+          "positions": [
+            {
+              "route": "profiles",
+              "profileParent": "appHeader",
+              "profileCount": 1,
+              "selected": "global-font",
+              "navY": 58,
+              "actions": [
+                "appHeader",
+                "appHeader"
+              ],
+              "headerHeight": 64,
+              "headerWidth": 1684,
+              "headerScroll": 1684,
+              "metrics": [
+                {
+                  "x": 1154.53125,
+                  "y": 19.5,
+                  "right": 1217.96875
+                },
+                {
+                  "x": 1225.96875,
+                  "y": 19.5,
+                  "right": 1298.65625
+                },
+                {
+                  "x": 1306.65625,
+                  "y": 19.5,
+                  "right": 1377.734375
+                },
+                {
+                  "x": 1385.734375,
+                  "y": 19.5,
+                  "right": 1461.15625
+                },
+                {
+                  "x": 1469.15625,
+                  "y": 19.5,
+                  "right": 1567
+                },
+                {
+                  "x": 1575,
+                  "y": 19.5,
+                  "right": 1661.296875
+                },
+                {
+                  "x": 1669.296875,
+                  "y": 19.5,
+                  "right": 1729.46875
+                },
+                {
+                  "x": 1737.46875,
+                  "y": 19.5,
+                  "right": 1812.890625
+                }
+              ],
+              "right": 1900
+            },
+            {
+              "route": "harness",
+              "profileParent": "appHeader",
+              "profileCount": 1,
+              "selected": "global-font",
+              "navY": 58,
+              "actions": [
+                "appHeader",
+                "appHeader"
+              ],
+              "headerHeight": 64,
+              "headerWidth": 1684,
+              "headerScroll": 1684,
+              "metrics": [
+                {
+                  "x": 1154.53125,
+                  "y": 19.5,
+                  "right": 1217.96875
+                },
+                {
+                  "x": 1225.96875,
+                  "y": 19.5,
+                  "right": 1298.65625
+                },
+                {
+                  "x": 1306.65625,
+                  "y": 19.5,
+                  "right": 1377.734375
+                },
+                {
+                  "x": 1385.734375,
+                  "y": 19.5,
+                  "right": 1461.15625
+                },
+                {
+                  "x": 1469.15625,
+                  "y": 19.5,
+                  "right": 1567
+                },
+                {
+                  "x": 1575,
+                  "y": 19.5,
+                  "right": 1661.296875
+                },
+                {
+                  "x": 1669.296875,
+                  "y": 19.5,
+                  "right": 1729.46875
+                },
+                {
+                  "x": 1737.46875,
+                  "y": 19.5,
+                  "right": 1812.890625
+                }
+              ],
+              "right": 1900
+            },
+            {
+              "route": "usage",
+              "profileParent": "appHeader",
+              "profileCount": 1,
+              "selected": "global-font",
+              "navY": 58,
+              "actions": [
+                "appHeader",
+                "appHeader"
+              ],
+              "headerHeight": 64,
+              "headerWidth": 1684,
+              "headerScroll": 1684,
+              "metrics": [
+                {
+                  "x": 1154.53125,
+                  "y": 19.5,
+                  "right": 1217.96875
+                },
+                {
+                  "x": 1225.96875,
+                  "y": 19.5,
+                  "right": 1298.65625
+                },
+                {
+                  "x": 1306.65625,
+                  "y": 19.5,
+                  "right": 1377.734375
+                },
+                {
+                  "x": 1385.734375,
+                  "y": 19.5,
+                  "right": 1461.15625
+                },
+                {
+                  "x": 1469.15625,
+                  "y": 19.5,
+                  "right": 1567
+                },
+                {
+                  "x": 1575,
+                  "y": 19.5,
+                  "right": 1661.296875
+                },
+                {
+                  "x": 1669.296875,
+                  "y": 19.5,
+                  "right": 1729.46875
+                },
+                {
+                  "x": 1737.46875,
+                  "y": 19.5,
+                  "right": 1812.890625
+                }
+              ],
+              "right": 1900
+            },
+            {
+              "route": "plugins",
+              "profileParent": "appHeader",
+              "profileCount": 1,
+              "selected": "global-font",
+              "navY": 58,
+              "actions": [
+                "appHeader",
+                "appHeader"
+              ],
+              "headerHeight": 64,
+              "headerWidth": 1684,
+              "headerScroll": 1684,
+              "metrics": [
+                {
+                  "x": 1154.53125,
+                  "y": 19.5,
+                  "right": 1217.96875
+                },
+                {
+                  "x": 1225.96875,
+                  "y": 19.5,
+                  "right": 1298.65625
+                },
+                {
+                  "x": 1306.65625,
+                  "y": 19.5,
+                  "right": 1377.734375
+                },
+                {
+                  "x": 1385.734375,
+                  "y": 19.5,
+                  "right": 1461.15625
+                },
+                {
+                  "x": 1469.15625,
+                  "y": 19.5,
+                  "right": 1567
+                },
+                {
+                  "x": 1575,
+                  "y": 19.5,
+                  "right": 1661.296875
+                },
+                {
+                  "x": 1669.296875,
+                  "y": 19.5,
+                  "right": 1729.46875
+                },
+                {
+                  "x": 1737.46875,
+                  "y": 19.5,
+                  "right": 1812.890625
+                }
+              ],
+              "right": 1900
+            },
+            {
+              "route": "settings",
+              "profileParent": "appHeader",
+              "profileCount": 1,
+              "selected": "global-font",
+              "navY": 58,
+              "actions": [
+                "appHeader",
+                "appHeader"
+              ],
+              "headerHeight": 64,
+              "headerWidth": 1684,
+              "headerScroll": 1684,
+              "metrics": [
+                {
+                  "x": 1154.53125,
+                  "y": 19.5,
+                  "right": 1217.96875
+                },
+                {
+                  "x": 1225.96875,
+                  "y": 19.5,
+                  "right": 1298.65625
+                },
+                {
+                  "x": 1306.65625,
+                  "y": 19.5,
+                  "right": 1377.734375
+                },
+                {
+                  "x": 1385.734375,
+                  "y": 19.5,
+                  "right": 1461.15625
+                },
+                {
+                  "x": 1469.15625,
+                  "y": 19.5,
+                  "right": 1567
+                },
+                {
+                  "x": 1575,
+                  "y": 19.5,
+                  "right": 1661.296875
+                },
+                {
+                  "x": 1669.296875,
+                  "y": 19.5,
+                  "right": 1729.46875
+                },
+                {
+                  "x": 1737.46875,
+                  "y": 19.5,
+                  "right": 1812.890625
+                }
+              ],
+              "right": 1900
+            },
+            {
+              "route": "harness",
+              "profileParent": "appHeader",
+              "profileCount": 1,
+              "selected": "global-font",
+              "navY": 58,
+              "actions": [
+                "appHeader",
+                "appHeader"
+              ],
+              "headerHeight": 64,
+              "headerWidth": 1684,
+              "headerScroll": 1684,
+              "metrics": [
+                {
+                  "x": 1154.53125,
+                  "y": 19.5,
+                  "right": 1217.96875
+                },
+                {
+                  "x": 1225.96875,
+                  "y": 19.5,
+                  "right": 1298.65625
+                },
+                {
+                  "x": 1306.65625,
+                  "y": 19.5,
+                  "right": 1377.734375
+                },
+                {
+                  "x": 1385.734375,
+                  "y": 19.5,
+                  "right": 1461.15625
+                },
+                {
+                  "x": 1469.15625,
+                  "y": 19.5,
+                  "right": 1567
+                },
+                {
+                  "x": 1575,
+                  "y": 19.5,
+                  "right": 1661.296875
+                },
+                {
+                  "x": 1669.296875,
+                  "y": 19.5,
+                  "right": 1729.46875
+                },
+                {
+                  "x": 1737.46875,
+                  "y": 19.5,
+                  "right": 1812.890625
+                }
+              ],
+              "right": 1900
+            },
+            {
+              "route": "profiles",
+              "profileParent": "appHeader",
+              "profileCount": 1,
+              "selected": "global-font",
+              "navY": 58,
+              "actions": [
+                "appHeader",
+                "appHeader"
+              ],
+              "headerHeight": 64,
+              "headerWidth": 1684,
+              "headerScroll": 1684,
+              "metrics": [
+                {
+                  "x": 1154.53125,
+                  "y": 19.5,
+                  "right": 1217.96875
+                },
+                {
+                  "x": 1225.96875,
+                  "y": 19.5,
+                  "right": 1298.65625
+                },
+                {
+                  "x": 1306.65625,
+                  "y": 19.5,
+                  "right": 1377.734375
+                },
+                {
+                  "x": 1385.734375,
+                  "y": 19.5,
+                  "right": 1461.15625
+                },
+                {
+                  "x": 1469.15625,
+                  "y": 19.5,
+                  "right": 1567
+                },
+                {
+                  "x": 1575,
+                  "y": 19.5,
+                  "right": 1661.296875
+                },
+                {
+                  "x": 1669.296875,
+                  "y": 19.5,
+                  "right": 1729.46875
+                },
+                {
+                  "x": 1737.46875,
+                  "y": 19.5,
+                  "right": 1812.890625
+                }
+              ],
+              "right": 1900
+            }
+          ]
+        },
+        {
+          "size": 17,
+          "width": 1440,
+          "positions": [
+            {
+              "route": "profiles",
+              "profileParent": "sidebarActiveProfile",
+              "profileCount": 1,
+              "selected": "global-font",
+              "navY": 112.0625,
+              "actions": [
+                "sidebarHeaderActions",
+                "sidebarHeaderActions"
+              ],
+              "headerHeight": 64,
+              "headerWidth": 1248,
+              "headerScroll": 1248,
+              "metrics": [
+                {
+                  "x": 647.546875,
+                  "y": 16.9375,
+                  "right": 723.703125
+                },
+                {
+                  "x": 731.703125,
+                  "y": 16.9375,
+                  "right": 819.109375
+                },
+                {
+                  "x": 827.109375,
+                  "y": 16.9375,
+                  "right": 912.546875
+                },
+                {
+                  "x": 920.546875,
+                  "y": 16.9375,
+                  "right": 1011.25
+                },
+                {
+                  "x": 1019.25,
+                  "y": 16.9375,
+                  "right": 1137.1875
+                },
+                {
+                  "x": 1145.1875,
+                  "y": 16.9375,
+                  "right": 1249.078125
+                },
+                {
+                  "x": 1257.078125,
+                  "y": 16.9375,
+                  "right": 1329.28125
+                },
+                {
+                  "x": 1337.28125,
+                  "y": 16.9375,
+                  "right": 1427.984375
+                }
+              ],
+              "right": 1427.984375
+            },
+            {
+              "route": "harness",
+              "profileParent": "sidebarActiveProfile",
+              "profileCount": 1,
+              "selected": "global-font",
+              "navY": 112.0625,
+              "actions": [
+                "sidebarHeaderActions",
+                "sidebarHeaderActions"
+              ],
+              "headerHeight": 64,
+              "headerWidth": 1248,
+              "headerScroll": 1248,
+              "metrics": [
+                {
+                  "x": 647.546875,
+                  "y": 16.9375,
+                  "right": 723.703125
+                },
+                {
+                  "x": 731.703125,
+                  "y": 16.9375,
+                  "right": 819.109375
+                },
+                {
+                  "x": 827.109375,
+                  "y": 16.9375,
+                  "right": 912.546875
+                },
+                {
+                  "x": 920.546875,
+                  "y": 16.9375,
+                  "right": 1011.25
+                },
+                {
+                  "x": 1019.25,
+                  "y": 16.9375,
+                  "right": 1137.1875
+                },
+                {
+                  "x": 1145.1875,
+                  "y": 16.9375,
+                  "right": 1249.078125
+                },
+                {
+                  "x": 1257.078125,
+                  "y": 16.9375,
+                  "right": 1329.28125
+                },
+                {
+                  "x": 1337.28125,
+                  "y": 16.9375,
+                  "right": 1427.984375
+                }
+              ],
+              "right": 1427.984375
+            },
+            {
+              "route": "usage",
+              "profileParent": "sidebarActiveProfile",
+              "profileCount": 1,
+              "selected": "global-font",
+              "navY": 112.0625,
+              "actions": [
+                "sidebarHeaderActions",
+                "sidebarHeaderActions"
+              ],
+              "headerHeight": 64,
+              "headerWidth": 1248,
+              "headerScroll": 1248,
+              "metrics": [
+                {
+                  "x": 647.546875,
+                  "y": 16.9375,
+                  "right": 723.703125
+                },
+                {
+                  "x": 731.703125,
+                  "y": 16.9375,
+                  "right": 819.109375
+                },
+                {
+                  "x": 827.109375,
+                  "y": 16.9375,
+                  "right": 912.546875
+                },
+                {
+                  "x": 920.546875,
+                  "y": 16.9375,
+                  "right": 1011.25
+                },
+                {
+                  "x": 1019.25,
+                  "y": 16.9375,
+                  "right": 1137.1875
+                },
+                {
+                  "x": 1145.1875,
+                  "y": 16.9375,
+                  "right": 1249.078125
+                },
+                {
+                  "x": 1257.078125,
+                  "y": 16.9375,
+                  "right": 1329.28125
+                },
+                {
+                  "x": 1337.28125,
+                  "y": 16.9375,
+                  "right": 1427.984375
+                }
+              ],
+              "right": 1427.984375
+            },
+            {
+              "route": "plugins",
+              "profileParent": "sidebarActiveProfile",
+              "profileCount": 1,
+              "selected": "global-font",
+              "navY": 112.0625,
+              "actions": [
+                "sidebarHeaderActions",
+                "sidebarHeaderActions"
+              ],
+              "headerHeight": 64,
+              "headerWidth": 1248,
+              "headerScroll": 1248,
+              "metrics": [
+                {
+                  "x": 647.546875,
+                  "y": 16.9375,
+                  "right": 723.703125
+                },
+                {
+                  "x": 731.703125,
+                  "y": 16.9375,
+                  "right": 819.109375
+                },
+                {
+                  "x": 827.109375,
+                  "y": 16.9375,
+                  "right": 912.546875
+                },
+                {
+                  "x": 920.546875,
+                  "y": 16.9375,
+                  "right": 1011.25
+                },
+                {
+                  "x": 1019.25,
+                  "y": 16.9375,
+                  "right": 1137.1875
+                },
+                {
+                  "x": 1145.1875,
+                  "y": 16.9375,
+                  "right": 1249.078125
+                },
+                {
+                  "x": 1257.078125,
+                  "y": 16.9375,
+                  "right": 1329.28125
+                },
+                {
+                  "x": 1337.28125,
+                  "y": 16.9375,
+                  "right": 1427.984375
+                }
+              ],
+              "right": 1427.984375
+            },
+            {
+              "route": "settings",
+              "profileParent": "sidebarActiveProfile",
+              "profileCount": 1,
+              "selected": "global-font",
+              "navY": 112.0625,
+              "actions": [
+                "sidebarHeaderActions",
+                "sidebarHeaderActions"
+              ],
+              "headerHeight": 64,
+              "headerWidth": 1248,
+              "headerScroll": 1248,
+              "metrics": [
+                {
+                  "x": 647.546875,
+                  "y": 16.9375,
+                  "right": 723.703125
+                },
+                {
+                  "x": 731.703125,
+                  "y": 16.9375,
+                  "right": 819.109375
+                },
+                {
+                  "x": 827.109375,
+                  "y": 16.9375,
+                  "right": 912.546875
+                },
+                {
+                  "x": 920.546875,
+                  "y": 16.9375,
+                  "right": 1011.25
+                },
+                {
+                  "x": 1019.25,
+                  "y": 16.9375,
+                  "right": 1137.1875
+                },
+                {
+                  "x": 1145.1875,
+                  "y": 16.9375,
+                  "right": 1249.078125
+                },
+                {
+                  "x": 1257.078125,
+                  "y": 16.9375,
+                  "right": 1329.28125
+                },
+                {
+                  "x": 1337.28125,
+                  "y": 16.9375,
+                  "right": 1427.984375
+                }
+              ],
+              "right": 1427.984375
+            },
+            {
+              "route": "harness",
+              "profileParent": "sidebarActiveProfile",
+              "profileCount": 1,
+              "selected": "global-font",
+              "navY": 112.0625,
+              "actions": [
+                "sidebarHeaderActions",
+                "sidebarHeaderActions"
+              ],
+              "headerHeight": 64,
+              "headerWidth": 1248,
+              "headerScroll": 1248,
+              "metrics": [
+                {
+                  "x": 647.546875,
+                  "y": 16.9375,
+                  "right": 723.703125
+                },
+                {
+                  "x": 731.703125,
+                  "y": 16.9375,
+                  "right": 819.109375
+                },
+                {
+                  "x": 827.109375,
+                  "y": 16.9375,
+                  "right": 912.546875
+                },
+                {
+                  "x": 920.546875,
+                  "y": 16.9375,
+                  "right": 1011.25
+                },
+                {
+                  "x": 1019.25,
+                  "y": 16.9375,
+                  "right": 1137.1875
+                },
+                {
+                  "x": 1145.1875,
+                  "y": 16.9375,
+                  "right": 1249.078125
+                },
+                {
+                  "x": 1257.078125,
+                  "y": 16.9375,
+                  "right": 1329.28125
+                },
+                {
+                  "x": 1337.28125,
+                  "y": 16.9375,
+                  "right": 1427.984375
+                }
+              ],
+              "right": 1427.984375
+            },
+            {
+              "route": "profiles",
+              "profileParent": "sidebarActiveProfile",
+              "profileCount": 1,
+              "selected": "global-font",
+              "navY": 112.0625,
+              "actions": [
+                "sidebarHeaderActions",
+                "sidebarHeaderActions"
+              ],
+              "headerHeight": 64,
+              "headerWidth": 1248,
+              "headerScroll": 1248,
+              "metrics": [
+                {
+                  "x": 647.546875,
+                  "y": 16.9375,
+                  "right": 723.703125
+                },
+                {
+                  "x": 731.703125,
+                  "y": 16.9375,
+                  "right": 819.109375
+                },
+                {
+                  "x": 827.109375,
+                  "y": 16.9375,
+                  "right": 912.546875
+                },
+                {
+                  "x": 920.546875,
+                  "y": 16.9375,
+                  "right": 1011.25
+                },
+                {
+                  "x": 1019.25,
+                  "y": 16.9375,
+                  "right": 1137.1875
+                },
+                {
+                  "x": 1145.1875,
+                  "y": 16.9375,
+                  "right": 1249.078125
+                },
+                {
+                  "x": 1257.078125,
+                  "y": 16.9375,
+                  "right": 1329.28125
+                },
+                {
+                  "x": 1337.28125,
+                  "y": 16.9375,
+                  "right": 1427.984375
+                }
+              ],
+              "right": 1427.984375
+            }
+          ]
+        },
+        {
+          "size": 17,
+          "width": 1600,
+          "positions": [
+            {
+              "route": "profiles",
+              "profileParent": "sidebarActiveProfile",
+              "profileCount": 1,
+              "selected": "global-font",
+              "navY": 112.0625,
+              "actions": [
+                "sidebarHeaderActions",
+                "sidebarHeaderActions"
+              ],
+              "headerHeight": 64,
+              "headerWidth": 1356,
+              "headerScroll": 1356,
+              "metrics": [
+                {
+                  "x": 799.5625,
+                  "y": 16.9375,
+                  "right": 875.71875
+                },
+                {
+                  "x": 883.71875,
+                  "y": 16.9375,
+                  "right": 971.125
+                },
+                {
+                  "x": 979.125,
+                  "y": 16.9375,
+                  "right": 1064.5625
+                },
+                {
+                  "x": 1072.5625,
+                  "y": 16.9375,
+                  "right": 1163.265625
+                },
+                {
+                  "x": 1171.265625,
+                  "y": 16.9375,
+                  "right": 1289.203125
+                },
+                {
+                  "x": 1297.203125,
+                  "y": 16.9375,
+                  "right": 1401.09375
+                },
+                {
+                  "x": 1409.09375,
+                  "y": 16.9375,
+                  "right": 1481.296875
+                },
+                {
+                  "x": 1489.296875,
+                  "y": 16.9375,
+                  "right": 1580
+                }
+              ],
+              "right": 1580
+            },
+            {
+              "route": "harness",
+              "profileParent": "sidebarActiveProfile",
+              "profileCount": 1,
+              "selected": "global-font",
+              "navY": 112.0625,
+              "actions": [
+                "sidebarHeaderActions",
+                "sidebarHeaderActions"
+              ],
+              "headerHeight": 64,
+              "headerWidth": 1356,
+              "headerScroll": 1356,
+              "metrics": [
+                {
+                  "x": 799.5625,
+                  "y": 16.9375,
+                  "right": 875.71875
+                },
+                {
+                  "x": 883.71875,
+                  "y": 16.9375,
+                  "right": 971.125
+                },
+                {
+                  "x": 979.125,
+                  "y": 16.9375,
+                  "right": 1064.5625
+                },
+                {
+                  "x": 1072.5625,
+                  "y": 16.9375,
+                  "right": 1163.265625
+                },
+                {
+                  "x": 1171.265625,
+                  "y": 16.9375,
+                  "right": 1289.203125
+                },
+                {
+                  "x": 1297.203125,
+                  "y": 16.9375,
+                  "right": 1401.09375
+                },
+                {
+                  "x": 1409.09375,
+                  "y": 16.9375,
+                  "right": 1481.296875
+                },
+                {
+                  "x": 1489.296875,
+                  "y": 16.9375,
+                  "right": 1580
+                }
+              ],
+              "right": 1580
+            },
+            {
+              "route": "usage",
+              "profileParent": "sidebarActiveProfile",
+              "profileCount": 1,
+              "selected": "global-font",
+              "navY": 112.0625,
+              "actions": [
+                "sidebarHeaderActions",
+                "sidebarHeaderActions"
+              ],
+              "headerHeight": 64,
+              "headerWidth": 1356,
+              "headerScroll": 1356,
+              "metrics": [
+                {
+                  "x": 799.5625,
+                  "y": 16.9375,
+                  "right": 875.71875
+                },
+                {
+                  "x": 883.71875,
+                  "y": 16.9375,
+                  "right": 971.125
+                },
+                {
+                  "x": 979.125,
+                  "y": 16.9375,
+                  "right": 1064.5625
+                },
+                {
+                  "x": 1072.5625,
+                  "y": 16.9375,
+                  "right": 1163.265625
+                },
+                {
+                  "x": 1171.265625,
+                  "y": 16.9375,
+                  "right": 1289.203125
+                },
+                {
+                  "x": 1297.203125,
+                  "y": 16.9375,
+                  "right": 1401.09375
+                },
+                {
+                  "x": 1409.09375,
+                  "y": 16.9375,
+                  "right": 1481.296875
+                },
+                {
+                  "x": 1489.296875,
+                  "y": 16.9375,
+                  "right": 1580
+                }
+              ],
+              "right": 1580
+            },
+            {
+              "route": "plugins",
+              "profileParent": "sidebarActiveProfile",
+              "profileCount": 1,
+              "selected": "global-font",
+              "navY": 112.0625,
+              "actions": [
+                "sidebarHeaderActions",
+                "sidebarHeaderActions"
+              ],
+              "headerHeight": 64,
+              "headerWidth": 1356,
+              "headerScroll": 1356,
+              "metrics": [
+                {
+                  "x": 799.5625,
+                  "y": 16.9375,
+                  "right": 875.71875
+                },
+                {
+                  "x": 883.71875,
+                  "y": 16.9375,
+                  "right": 971.125
+                },
+                {
+                  "x": 979.125,
+                  "y": 16.9375,
+                  "right": 1064.5625
+                },
+                {
+                  "x": 1072.5625,
+                  "y": 16.9375,
+                  "right": 1163.265625
+                },
+                {
+                  "x": 1171.265625,
+                  "y": 16.9375,
+                  "right": 1289.203125
+                },
+                {
+                  "x": 1297.203125,
+                  "y": 16.9375,
+                  "right": 1401.09375
+                },
+                {
+                  "x": 1409.09375,
+                  "y": 16.9375,
+                  "right": 1481.296875
+                },
+                {
+                  "x": 1489.296875,
+                  "y": 16.9375,
+                  "right": 1580
+                }
+              ],
+              "right": 1580
+            },
+            {
+              "route": "settings",
+              "profileParent": "sidebarActiveProfile",
+              "profileCount": 1,
+              "selected": "global-font",
+              "navY": 112.0625,
+              "actions": [
+                "sidebarHeaderActions",
+                "sidebarHeaderActions"
+              ],
+              "headerHeight": 64,
+              "headerWidth": 1356,
+              "headerScroll": 1356,
+              "metrics": [
+                {
+                  "x": 799.5625,
+                  "y": 16.9375,
+                  "right": 875.71875
+                },
+                {
+                  "x": 883.71875,
+                  "y": 16.9375,
+                  "right": 971.125
+                },
+                {
+                  "x": 979.125,
+                  "y": 16.9375,
+                  "right": 1064.5625
+                },
+                {
+                  "x": 1072.5625,
+                  "y": 16.9375,
+                  "right": 1163.265625
+                },
+                {
+                  "x": 1171.265625,
+                  "y": 16.9375,
+                  "right": 1289.203125
+                },
+                {
+                  "x": 1297.203125,
+                  "y": 16.9375,
+                  "right": 1401.09375
+                },
+                {
+                  "x": 1409.09375,
+                  "y": 16.9375,
+                  "right": 1481.296875
+                },
+                {
+                  "x": 1489.296875,
+                  "y": 16.9375,
+                  "right": 1580
+                }
+              ],
+              "right": 1580
+            },
+            {
+              "route": "harness",
+              "profileParent": "sidebarActiveProfile",
+              "profileCount": 1,
+              "selected": "global-font",
+              "navY": 112.0625,
+              "actions": [
+                "sidebarHeaderActions",
+                "sidebarHeaderActions"
+              ],
+              "headerHeight": 64,
+              "headerWidth": 1356,
+              "headerScroll": 1356,
+              "metrics": [
+                {
+                  "x": 799.5625,
+                  "y": 16.9375,
+                  "right": 875.71875
+                },
+                {
+                  "x": 883.71875,
+                  "y": 16.9375,
+                  "right": 971.125
+                },
+                {
+                  "x": 979.125,
+                  "y": 16.9375,
+                  "right": 1064.5625
+                },
+                {
+                  "x": 1072.5625,
+                  "y": 16.9375,
+                  "right": 1163.265625
+                },
+                {
+                  "x": 1171.265625,
+                  "y": 16.9375,
+                  "right": 1289.203125
+                },
+                {
+                  "x": 1297.203125,
+                  "y": 16.9375,
+                  "right": 1401.09375
+                },
+                {
+                  "x": 1409.09375,
+                  "y": 16.9375,
+                  "right": 1481.296875
+                },
+                {
+                  "x": 1489.296875,
+                  "y": 16.9375,
+                  "right": 1580
+                }
+              ],
+              "right": 1580
+            },
+            {
+              "route": "profiles",
+              "profileParent": "sidebarActiveProfile",
+              "profileCount": 1,
+              "selected": "global-font",
+              "navY": 112.0625,
+              "actions": [
+                "sidebarHeaderActions",
+                "sidebarHeaderActions"
+              ],
+              "headerHeight": 64,
+              "headerWidth": 1356,
+              "headerScroll": 1356,
+              "metrics": [
+                {
+                  "x": 799.5625,
+                  "y": 16.9375,
+                  "right": 875.71875
+                },
+                {
+                  "x": 883.71875,
+                  "y": 16.9375,
+                  "right": 971.125
+                },
+                {
+                  "x": 979.125,
+                  "y": 16.9375,
+                  "right": 1064.5625
+                },
+                {
+                  "x": 1072.5625,
+                  "y": 16.9375,
+                  "right": 1163.265625
+                },
+                {
+                  "x": 1171.265625,
+                  "y": 16.9375,
+                  "right": 1289.203125
+                },
+                {
+                  "x": 1297.203125,
+                  "y": 16.9375,
+                  "right": 1401.09375
+                },
+                {
+                  "x": 1409.09375,
+                  "y": 16.9375,
+                  "right": 1481.296875
+                },
+                {
+                  "x": 1489.296875,
+                  "y": 16.9375,
+                  "right": 1580
+                }
+              ],
+              "right": 1580
+            }
+          ]
+        },
+        {
+          "size": 17,
+          "width": 1920,
+          "positions": [
+            {
+              "route": "profiles",
+              "profileParent": "appHeader",
+              "profileCount": 1,
+              "selected": "global-font",
+              "navY": 61.0625,
+              "actions": [
+                "appHeader",
+                "appHeader"
+              ],
+              "headerHeight": 64,
+              "headerWidth": 1676,
+              "headerScroll": 1676,
+              "metrics": [
+                {
+                  "x": 1027.9375,
+                  "y": 16.9375,
+                  "right": 1104.09375
+                },
+                {
+                  "x": 1112.09375,
+                  "y": 16.9375,
+                  "right": 1199.5
+                },
+                {
+                  "x": 1207.5,
+                  "y": 16.9375,
+                  "right": 1292.9375
+                },
+                {
+                  "x": 1300.9375,
+                  "y": 16.9375,
+                  "right": 1391.640625
+                },
+                {
+                  "x": 1399.640625,
+                  "y": 16.9375,
+                  "right": 1517.578125
+                },
+                {
+                  "x": 1525.578125,
+                  "y": 16.9375,
+                  "right": 1629.46875
+                },
+                {
+                  "x": 1637.46875,
+                  "y": 16.9375,
+                  "right": 1709.671875
+                },
+                {
+                  "x": 1717.671875,
+                  "y": 16.9375,
+                  "right": 1808.375
+                }
+              ],
+              "right": 1900
+            },
+            {
+              "route": "harness",
+              "profileParent": "appHeader",
+              "profileCount": 1,
+              "selected": "global-font",
+              "navY": 61.0625,
+              "actions": [
+                "appHeader",
+                "appHeader"
+              ],
+              "headerHeight": 64,
+              "headerWidth": 1676,
+              "headerScroll": 1676,
+              "metrics": [
+                {
+                  "x": 1027.9375,
+                  "y": 16.9375,
+                  "right": 1104.09375
+                },
+                {
+                  "x": 1112.09375,
+                  "y": 16.9375,
+                  "right": 1199.5
+                },
+                {
+                  "x": 1207.5,
+                  "y": 16.9375,
+                  "right": 1292.9375
+                },
+                {
+                  "x": 1300.9375,
+                  "y": 16.9375,
+                  "right": 1391.640625
+                },
+                {
+                  "x": 1399.640625,
+                  "y": 16.9375,
+                  "right": 1517.578125
+                },
+                {
+                  "x": 1525.578125,
+                  "y": 16.9375,
+                  "right": 1629.46875
+                },
+                {
+                  "x": 1637.46875,
+                  "y": 16.9375,
+                  "right": 1709.671875
+                },
+                {
+                  "x": 1717.671875,
+                  "y": 16.9375,
+                  "right": 1808.375
+                }
+              ],
+              "right": 1900
+            },
+            {
+              "route": "usage",
+              "profileParent": "appHeader",
+              "profileCount": 1,
+              "selected": "global-font",
+              "navY": 61.0625,
+              "actions": [
+                "appHeader",
+                "appHeader"
+              ],
+              "headerHeight": 64,
+              "headerWidth": 1676,
+              "headerScroll": 1676,
+              "metrics": [
+                {
+                  "x": 1027.9375,
+                  "y": 16.9375,
+                  "right": 1104.09375
+                },
+                {
+                  "x": 1112.09375,
+                  "y": 16.9375,
+                  "right": 1199.5
+                },
+                {
+                  "x": 1207.5,
+                  "y": 16.9375,
+                  "right": 1292.9375
+                },
+                {
+                  "x": 1300.9375,
+                  "y": 16.9375,
+                  "right": 1391.640625
+                },
+                {
+                  "x": 1399.640625,
+                  "y": 16.9375,
+                  "right": 1517.578125
+                },
+                {
+                  "x": 1525.578125,
+                  "y": 16.9375,
+                  "right": 1629.46875
+                },
+                {
+                  "x": 1637.46875,
+                  "y": 16.9375,
+                  "right": 1709.671875
+                },
+                {
+                  "x": 1717.671875,
+                  "y": 16.9375,
+                  "right": 1808.375
+                }
+              ],
+              "right": 1900
+            },
+            {
+              "route": "plugins",
+              "profileParent": "appHeader",
+              "profileCount": 1,
+              "selected": "global-font",
+              "navY": 61.0625,
+              "actions": [
+                "appHeader",
+                "appHeader"
+              ],
+              "headerHeight": 64,
+              "headerWidth": 1676,
+              "headerScroll": 1676,
+              "metrics": [
+                {
+                  "x": 1027.9375,
+                  "y": 16.9375,
+                  "right": 1104.09375
+                },
+                {
+                  "x": 1112.09375,
+                  "y": 16.9375,
+                  "right": 1199.5
+                },
+                {
+                  "x": 1207.5,
+                  "y": 16.9375,
+                  "right": 1292.9375
+                },
+                {
+                  "x": 1300.9375,
+                  "y": 16.9375,
+                  "right": 1391.640625
+                },
+                {
+                  "x": 1399.640625,
+                  "y": 16.9375,
+                  "right": 1517.578125
+                },
+                {
+                  "x": 1525.578125,
+                  "y": 16.9375,
+                  "right": 1629.46875
+                },
+                {
+                  "x": 1637.46875,
+                  "y": 16.9375,
+                  "right": 1709.671875
+                },
+                {
+                  "x": 1717.671875,
+                  "y": 16.9375,
+                  "right": 1808.375
+                }
+              ],
+              "right": 1900
+            },
+            {
+              "route": "settings",
+              "profileParent": "appHeader",
+              "profileCount": 1,
+              "selected": "global-font",
+              "navY": 61.0625,
+              "actions": [
+                "appHeader",
+                "appHeader"
+              ],
+              "headerHeight": 64,
+              "headerWidth": 1676,
+              "headerScroll": 1676,
+              "metrics": [
+                {
+                  "x": 1027.9375,
+                  "y": 16.9375,
+                  "right": 1104.09375
+                },
+                {
+                  "x": 1112.09375,
+                  "y": 16.9375,
+                  "right": 1199.5
+                },
+                {
+                  "x": 1207.5,
+                  "y": 16.9375,
+                  "right": 1292.9375
+                },
+                {
+                  "x": 1300.9375,
+                  "y": 16.9375,
+                  "right": 1391.640625
+                },
+                {
+                  "x": 1399.640625,
+                  "y": 16.9375,
+                  "right": 1517.578125
+                },
+                {
+                  "x": 1525.578125,
+                  "y": 16.9375,
+                  "right": 1629.46875
+                },
+                {
+                  "x": 1637.46875,
+                  "y": 16.9375,
+                  "right": 1709.671875
+                },
+                {
+                  "x": 1717.671875,
+                  "y": 16.9375,
+                  "right": 1808.375
+                }
+              ],
+              "right": 1900
+            },
+            {
+              "route": "harness",
+              "profileParent": "appHeader",
+              "profileCount": 1,
+              "selected": "global-font",
+              "navY": 61.0625,
+              "actions": [
+                "appHeader",
+                "appHeader"
+              ],
+              "headerHeight": 64,
+              "headerWidth": 1676,
+              "headerScroll": 1676,
+              "metrics": [
+                {
+                  "x": 1027.9375,
+                  "y": 16.9375,
+                  "right": 1104.09375
+                },
+                {
+                  "x": 1112.09375,
+                  "y": 16.9375,
+                  "right": 1199.5
+                },
+                {
+                  "x": 1207.5,
+                  "y": 16.9375,
+                  "right": 1292.9375
+                },
+                {
+                  "x": 1300.9375,
+                  "y": 16.9375,
+                  "right": 1391.640625
+                },
+                {
+                  "x": 1399.640625,
+                  "y": 16.9375,
+                  "right": 1517.578125
+                },
+                {
+                  "x": 1525.578125,
+                  "y": 16.9375,
+                  "right": 1629.46875
+                },
+                {
+                  "x": 1637.46875,
+                  "y": 16.9375,
+                  "right": 1709.671875
+                },
+                {
+                  "x": 1717.671875,
+                  "y": 16.9375,
+                  "right": 1808.375
+                }
+              ],
+              "right": 1900
+            },
+            {
+              "route": "profiles",
+              "profileParent": "appHeader",
+              "profileCount": 1,
+              "selected": "global-font",
+              "navY": 61.0625,
+              "actions": [
+                "appHeader",
+                "appHeader"
+              ],
+              "headerHeight": 64,
+              "headerWidth": 1676,
+              "headerScroll": 1676,
+              "metrics": [
+                {
+                  "x": 1027.9375,
+                  "y": 16.9375,
+                  "right": 1104.09375
+                },
+                {
+                  "x": 1112.09375,
+                  "y": 16.9375,
+                  "right": 1199.5
+                },
+                {
+                  "x": 1207.5,
+                  "y": 16.9375,
+                  "right": 1292.9375
+                },
+                {
+                  "x": 1300.9375,
+                  "y": 16.9375,
+                  "right": 1391.640625
+                },
+                {
+                  "x": 1399.640625,
+                  "y": 16.9375,
+                  "right": 1517.578125
+                },
+                {
+                  "x": 1525.578125,
+                  "y": 16.9375,
+                  "right": 1629.46875
+                },
+                {
+                  "x": 1637.46875,
+                  "y": 16.9375,
+                  "right": 1709.671875
+                },
+                {
+                  "x": 1717.671875,
+                  "y": 16.9375,
+                  "right": 1808.375
+                }
+              ],
+              "right": 1900
+            }
+          ]
+        }
+      ],
+      "errors": []
+    },
+    "productionUpdate": "public app.js only; no Harness or model restart"
+  }
+}

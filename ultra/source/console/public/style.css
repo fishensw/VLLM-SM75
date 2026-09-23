@@ -1,3 +1,4 @@
+@scope (body) to (.dsh-surface, body > :not(aside):not(main):not(script):not(style)) {
 :root {
   color-scheme: dark;
   --bg: #0b1019;
@@ -267,9 +268,6 @@ input[type="checkbox"] {
 #harness {
   height: calc(100vh - 145px);
 }
-#harnessFrame {
-  height: calc(100vh - 260px);
-}
 /* Compact workbench layout */
 body {
   height: 100dvh;
@@ -325,8 +323,14 @@ main > section {
 button,
 input,
 select {
-  height: 38px;
+  height: auto;
+  line-height: 1.4;
   padding: 7px 10px;
+}
+button,
+input:not([type="checkbox"]):not([type="radio"]):not([role="switch"]),
+select {
+  min-height: 38px;
 }
 button {
   white-space: nowrap;
@@ -611,7 +615,28 @@ summary {
   color: var(--muted);
 }
 #settings {
-  max-width: 1100px;
+  width:100%; max-width:none;
+}
+#settings .settings-tabs {
+  display:flex;flex:1;align-items:center;flex-wrap:nowrap;gap:8px;
+  margin:0;padding:0;border:0;overflow:visible;
+}
+#settings .settings-tabs button {
+  flex:0 0 auto;white-space:nowrap;border:0;border-radius:7px;
+  padding:7px 14px;color:var(--muted);background:transparent;
+  font-size:calc(16px * var(--ui-fs,1));
+  line-height:calc(24px * var(--ui-fs,1));cursor:pointer;
+}
+#settings .settings-tabs button:hover {
+  color: var(--text);
+  background: color-mix(in srgb, var(--active) 55%, transparent);
+}
+#settings .settings-tabs button.selected {
+  color: var(--blue);
+  background:var(--active);
+}
+#settings [data-settings-panel] {
+  min-width: 0;
 }
 #settings > label {
   margin: 12px 0;
@@ -1066,6 +1091,12 @@ input[role="switch"]:checked:before {
 #monitorFrame {
   height: 900px;
 }
+#usageFrame {
+  width: 100%;
+  height: 900px;
+  border: 0;
+  background: var(--card);
+}
 #overview {
   overflow: visible;
 }
@@ -1073,7 +1104,7 @@ input[role="switch"]:checked:before {
   padding-top: 8px;
 }
 #settings {
-  padding: 12px;
+  padding:20px 0;
 }
 #profileEditor > .actions {
   padding-bottom: 12px;
@@ -1476,11 +1507,11 @@ header h1 {
 .monitor-page #monitorControls button,
 .monitor-page #monitorControls select {
   box-sizing: border-box;
-  height: 34px;
+  height: auto;
   min-height: 34px;
-  max-height: 34px;
-  padding: 0 10px;
-  line-height: 32px;
+  max-height: none;
+  padding: 5px 10px;
+  line-height: 1.4;
   font-size: calc(14px * var(--ui-fs, 1));
   font-weight: 400;
   border: 1px solid var(--line);
@@ -1499,7 +1530,7 @@ header h1 {
   display: inline-flex;
   align-items: center;
   min-height: 34px;
-  line-height: 18px;
+  line-height: calc(18px * var(--ui-fs, 1));
   font-size: calc(14px * var(--ui-fs, 1));
   margin: 0;
   white-space: nowrap;
@@ -1596,7 +1627,7 @@ header h1 {
   border-radius: 6px;
   background: var(--card);
   font-size: calc(13px * var(--ui-fs, 1));
-  line-height: 18px;
+  line-height: calc(18px * var(--ui-fs, 1));
 }
 .chat-status-pill.phase {
   color: var(--blue);
@@ -1765,7 +1796,7 @@ textarea::placeholder {
   margin: 16px 0 0;
 }
 .editor-caption {
-  font-size: 12px;
+  font-size: calc(12px * var(--ui-fs, 1));
   color: var(--muted);
   margin: 0 0 8px;
   letter-spacing: 0.04em;
@@ -1910,7 +1941,7 @@ main:not([data-auth="authenticated"]) > #taskDrawer {
   box-shadow: 0 20px 70px #0002;
 }
 .login-card h2 {
-  font-size: 26px;
+  font-size: calc(26px * var(--ui-fs, 1));
   margin: 12px 0;
 }
 .login-card p {
@@ -1930,7 +1961,7 @@ main:not([data-auth="authenticated"]) > #taskDrawer {
 }
 .login-card details {
   margin-top: 24px;
-  font-size: 12px;
+  font-size: calc(12px * var(--ui-fs, 1));
 }
 .login-card code {
   overflow-wrap: anywhere;
@@ -1938,7 +1969,7 @@ main:not([data-auth="authenticated"]) > #taskDrawer {
 .eyebrow {
   display: block;
   letter-spacing: 0.13em;
-  font-size: 10px;
+  font-size: calc(10px * var(--ui-fs, 1));
   color: var(--muted);
   margin-top: 20px;
 }
@@ -2027,3 +2058,281 @@ select:focus-visible {
 .header-only header {
   margin-bottom: 0;
 }
+
+/* The SM75 console owns navigation; DSH stays inside its workspace page. */
+.sidebar-menu {
+  position: absolute;
+  bottom: 56px;
+  left: 16px;
+  right: 16px;
+}
+.sidebar-menu > button,
+.sidebar-menu > div > button {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border-color: transparent;
+}
+.sidebar-menu > button.active,
+.sidebar-menu > div > button:hover {
+  background: var(--active);
+  color: var(--blue);
+}
+#menuPanel:not([hidden]) {
+  position: absolute;
+  bottom: 42px;
+  left: 0;
+  width: 100%;
+  padding: 5px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  box-shadow: 0 8px 24px #0006;
+  z-index: 5;
+}
+#harness:not([hidden]) {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  height: auto;
+  overflow: hidden;
+}
+@media (max-width: 768px) {
+  .sidebar-menu { position: static; }
+  #menuPanel:not([hidden]) { position: relative; bottom: auto; }
+}
+
+
+/* Profile settings: one save action and conditional cache configuration. */
+#profileEditor {width:100%; max-width:none; margin:0; padding: 8px 0 28px; min-width: 0;}
+#profileEditor .profile-toolbar {display: grid; grid-template-columns: minmax(180px,1fr) auto; gap: 8px 24px; margin: 0; padding: 14px 0; border-bottom: 1px solid var(--line); top: 0;}
+#profileEditor .profile-toolbar .help {grid-column: 1 / -1; margin: 0;}
+.profile-save-actions {display:flex; gap:8px; flex-wrap:wrap; align-items:end;}
+#profileEditor .editor-section {border: 1px solid var(--line); border-radius: 12px; padding: 20px; background: var(--card); margin: 16px 0 0; min-width: 0;}
+#profileEditor .editor-caption {font-size: calc(15px * var(--ui-fs, 1)); font-weight: 650; color: var(--text); letter-spacing: 0; margin: 0 0 16px;}
+#profileEditor .editor-row {grid-template-columns: repeat(4, minmax(0,1fr)); gap: 14px 16px;}
+#profileEditor .editor-row > *, #profileEditor label, #profileEditor input, #profileEditor select {min-width: 0; max-width: 100%; box-sizing: border-box;}
+#profileEditor label {gap: 7px; font-size: calc(13px * var(--ui-fs, 1));}
+#profileEditor input:not([type=checkbox]), #profileEditor select {width: 100%; min-height: 36px;}
+#profileEditor .help {font-size: calc(12px * var(--ui-fs, 1)); line-height: 1.7; color:var(--muted); margin: 12px 0 0;}
+#profileEditor .model-row {grid-template-columns: minmax(110px,1fr) minmax(180px,3fr) minmax(120px,1fr);}
+#profileEditor .model-row > .span3 {grid-column: auto;}
+#profileEditor .feature-cards {grid-template-columns: minmax(180px,280px); padding-top: 14px;}
+#profileEditor .feature-card {padding: 0 12px; background: var(--bg);}
+#profileEditor .feature-head {min-height: 36px;}
+#profileEditor .editor-fold {padding: 0; overflow: hidden;}
+#profileEditor .editor-fold > summary {padding: 17px 20px; font-size: calc(14px * var(--ui-fs, 1)); font-weight: 600; cursor: pointer; margin: 0;}
+#profileEditor .editor-fold > summary > span {font-size: calc(12px * var(--ui-fs, 1)); font-weight: 400; color: var(--muted); margin-left: 16px;}
+#profileEditor .section-body {padding: 0 20px 20px;}
+#profileEditor .template-load {grid-template-columns: minmax(180px,1fr) auto; padding-bottom: 18px; margin-bottom: 18px; border-bottom: 1px solid var(--line);}
+#profileEditor .combo-row {grid-template-columns: repeat(4,minmax(0,1fr));}
+#profileEditor .combo-row > .span2 {grid-column: span 1;}
+#profileEditor #comboDflashRow, #profileEditor #comboMtpRow {margin-top: 14px; grid-template-columns: 3fr 1fr;}
+.context-cache-grid {display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; align-items:start;}
+#profileEditor .two-columns {grid-template-columns: repeat(2,minmax(0,1fr));}
+#profileEditor .full-width {grid-column:1 / -1;}
+#profileEditor #contextMetadata {margin: -6px 0 16px;}
+.yarn-controls {display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px; margin:18px 0 14px;}
+#profileEditor .inline-switch {display:flex; flex-direction:row; align-items:center; gap:16px;}
+#profileEditor .inline-switch input {margin:0;}
+#profileEditor .editor-help, #profileEditor .inline-details {border:0; border-top:1px solid var(--line); border-radius:0; background:transparent; margin:16px 0 0; padding:12px 0 0;}
+#profileEditor .editor-help > summary, #profileEditor .inline-details > summary {font-size:calc(12px * var(--ui-fs, 1)); color:var(--muted); cursor:pointer;}
+#profileEditor .inline-details[open] > summary {margin-bottom:14px;}
+#nativeCacheFields, #lmcacheFields {margin-top:16px;}
+#profileEditor .cache-status:empty {display:none;}
+#profileEditor .cache-status {margin-top:12px;}
+#profileEditor #powerSettings > .editor-row {grid-template-columns: minmax(220px,1fr) minmax(220px,1fr);}
+#profileEditor #powerSettings > .editor-row > .span2 {grid-column:auto;}
+#profileEditor #pstateFields {display:block; grid-column:1 / -1;}
+#profileEditor #pstateFields .editor-row {grid-template-columns:repeat(3,minmax(0,1fr));}
+#profileEditor .parameter-section {background:var(--bg);}
+#profileEditor #editorPreview {margin:0 20px 20px; overflow:auto; max-width:calc(100% - 40px);}
+@media (max-width:1100px) {
+  .context-cache-grid {grid-template-columns:1fr; gap:0;}
+  #profileEditor .editor-fold > summary > span {display:block; margin:6px 0 0 17px;}
+}
+@media (max-width:760px) {
+  #profileEditor .profile-toolbar {grid-template-columns:1fr;}
+  #profileEditor .profile-save-actions {justify-content:flex-end;}
+  #profileEditor .editor-section {padding:16px;}
+  #profileEditor .editor-fold {padding:0;}
+  #profileEditor .section-body {padding:0 16px 16px;}
+  #profileEditor .editor-row, #profileEditor .combo-row, #profileEditor .model-row {grid-template-columns:repeat(2,minmax(0,1fr));}
+  #profileEditor .model-row > .span3 {grid-column:span 2;}
+  #profileEditor .editor-row > .span3 {grid-column:span 2;}
+}
+@media (max-width:480px) {
+  #profileEditor .editor-row, #profileEditor .two-columns, #profileEditor .combo-row, #profileEditor .model-row, #profileEditor #powerSettings > .editor-row, #profileEditor #pstateFields .editor-row, #profileEditor #comboDflashRow {grid-template-columns:minmax(0,1fr);}
+  #profileEditor .editor-row > .span2, #profileEditor .editor-row > .span3 {grid-column:auto;}
+}
+
+@media (max-width:1100px) {
+
+}
+
+}
+
+/* Native DSH surfaces share this document; generic console controls stop at
+   their boundary so native conversation, approvals and tools keep their styles. */
+:root {--sm75-sidebar-width:max(196px,calc(168px * var(--ui-fs,1)));}
+body {margin:0;}
+#consoleSidebar {box-sizing:border-box;display:flex;flex-direction:column;width:var(--sm75-sidebar-width);height:100dvh;padding:18px 14px;gap:0;}
+#consoleSidebar .brand {flex:none;margin:0 0 14px;white-space:nowrap;}
+#consoleSidebar #nav {flex:none;margin:0;gap:2px;}
+#consoleSidebar #nav button {min-height:34px;padding:7px 12px;}
+#workspaceSidebar {flex:1;min-height:0;margin-top:16px;overflow:hidden;}
+#consoleSidebar .sidebar-menu {position:relative;inset:auto;flex:none;margin-top:auto;padding-top:12px;}
+#consoleSidebar .sidebar-menu #menuPanel {position:absolute;bottom:100%;left:0;right:0;z-index:80;padding:6px;background:var(--card);border:1px solid var(--line);border-radius:10px;}
+#consoleSidebar .sidebar-foot {position:static;margin-top:8px;flex:none;font-size:calc(13px * var(--ui-fs, 1));}
+body > main[data-auth="authenticated"] {margin-left:var(--sm75-sidebar-width);width:calc(100% - var(--sm75-sidebar-width));max-width:none;}
+.workspace-page > #harness {padding:0;border:0;border-radius:0;min-height:0;}
+#harness {display:flex;flex-direction:column;overflow:hidden;}
+#harness > #root {flex:1;min-height:0;width:100%;border:0;border-radius:0;}
+.dsh-surface {font-family:var(--dsw-font-family,system-ui,"Microsoft YaHei",sans-serif);font-size:calc(14px * var(--ui-fs, 1));line-height:1.5;color:var(--dsw-alias-label-primary);box-sizing:border-box;}
+.dsh-surface *, .dsh-surface *::before, .dsh-surface *::after {box-sizing:border-box;}
+.sm75-native-frame {position:relative;display:grid;grid-template-rows:minmax(0,1fr);height:100%;min-height:0;overflow:hidden;background:var(--dsw-alias-bg-base);}
+.sm75-native-main {display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden;}
+.sm75-native-right {position:relative;min-width:0;min-height:0;}
+.sm75-native-overlay {position:absolute;inset:0;pointer-events:none;z-index:30;}
+.sm75-native-overlay > * {pointer-events:auto;}
+.sm75-native-resizer {position:absolute;top:0;bottom:0;width:5px;cursor:col-resize;z-index:40;}
+.sm75-native-resizer:hover {background:var(--blue);}
+.sm75-workspace-browser {display:flex;flex-direction:column;height:100%;min-height:0;gap:10px;}
+.sm75-workspace-list {flex:1;min-height:0;overflow:hidden;}
+.sm75-new-session {width:100%;flex:none;border:1px solid var(--line);background:var(--field);color:var(--text);border-radius:8px;padding:8px 12px;font:inherit;cursor:pointer;}
+.sm75-native-menu-item {display:block;text-align:left;width:100%;padding:8px 10px;min-height:34px;background:transparent;border:0;border-radius:6px;font:inherit;color:var(--text);cursor:pointer;}
+.sm75-native-menu-item:hover,.sm75-native-menu-item[aria-current] {background:var(--field);}
+#nativeOverlays:empty {display:none;}
+#nativeOverlays [role="dialog"] {max-width:calc(100vw - 32px);}
+.sm75-settings-fields {font:calc(14px * var(--ui-fs, 1))/1.6 system-ui,"Microsoft YaHei",sans-serif;color:var(--text);}
+.sm75-settings-fields h2 {font-size:calc(16px * var(--ui-fs, 1));margin:0 0 12px;}
+.sm75-settings-fields p {color:var(--muted);font-size:calc(13px * var(--ui-fs, 1));}
+.sm75-settings-fields label {display:flex;flex-direction:column;gap:6px;margin:10px 0;}
+.sm75-settings-fields input,.sm75-settings-fields select,.sm75-settings-fields textarea,.sm75-settings-fields button {font:inherit;color:var(--text);background:var(--field);border:1px solid var(--line);padding:8px 10px;border-radius:7px;max-width:100%;box-sizing:border-box;}
+.sm75-settings-fields button {cursor:pointer;}
+.sm75-settings-fields input[type=checkbox] {width:18px;height:18px;}
+.sm75-settings-fields .cards,.sm75-settings-fields .hardware-cards {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;}
+.sm75-settings-fields .actions {display:flex;flex-wrap:wrap;gap:8px;margin:12px 0;}
+.sm75-settings-fields .hardware-card {padding:12px;border:1px solid var(--line);border-radius:8px;}
+[hidden] {display:none!important;}
+@media(max-width:650px) {
+  body {display:flex;flex-direction:column;height:100dvh;min-height:0;overflow:hidden;}
+  #consoleSidebar {position:relative;width:100%;height:auto;min-height:0;max-height:40dvh;padding:12px 16px;flex:0 1 auto;}
+  #consoleSidebar #nav {display:flex;overflow-x:auto;}
+  #consoleSidebar #nav button {white-space:nowrap;}
+  #consoleSidebar .sidebar-foot {display:none;}
+  #workspaceSidebar {flex:1 1 130px;height:auto;min-height:60px;max-height:160px;}
+  #consoleSidebar .sidebar-menu {padding-top:6px;}
+  body > main[data-auth="authenticated"] {margin-left:0!important;width:100%!important;height:auto!important;flex:1;min-height:0;}
+}
+
+/* Shared application chrome: one navigation, one fixed-height toolbar. */
+/* Native modules also style body; retain the original console inheritance. */
+html > body {font-family:system-ui,"Microsoft YaHei",sans-serif;font-size:calc(16px * var(--ui-fs,1));line-height:1.6;}
+body > main[data-auth="authenticated"] {padding:0 20px 20px; height:100dvh; min-height:0; display:flex; flex-direction:column; overflow:hidden;}
+body > main > section:not([hidden]) {flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;margin:0;padding:20px 0;box-sizing:border-box;}
+body > main > #harness:not([hidden]) {padding:0;}
+#consoleSidebar {padding:16px 12px;}
+#consoleSidebar #nav button {font-size:calc(16px * var(--ui-fs, 1));min-height:34px;line-height:calc(20px * var(--ui-fs, 1));}
+#consoleSidebar .sidebar-foot {margin-top:auto;padding-top:12px;}
+#consoleSidebar .brand {font-size:calc(16px * var(--ui-fs, 1));gap:8px;}
+#consoleSidebar .brand img {width:28px;height:28px;}
+#appHeader:not([hidden]) {
+  display:flex;align-items:center;flex-wrap:nowrap;gap:8px;
+  height:64px;min-height:64px;max-height:64px;flex:0 0 64px;
+  margin:0;padding:0;border-bottom:1px solid var(--line);
+  overflow:visible;white-space:nowrap;
+}
+#appHeader #title {flex:1 1 100px;min-width:64px;max-width:none;font-size:calc(16px * var(--ui-fs, 1));font-weight:650;line-height:calc(24px * var(--ui-fs, 1));white-space:nowrap;}
+#appHeader #active {flex:0 1 140px;min-width:96px;max-width:140px;width:140px;height:34px;padding:4px 24px 4px 8px;font-size:calc(14px * var(--ui-fs, 1));text-overflow:ellipsis;}
+#appHeader #liveSummary {order:0;flex:0 0 auto;min-width:max-content;max-width:none;padding:0;overflow:visible;}
+#appHeader > button {display:inline-flex;flex:0 0 auto;align-items:center;justify-content:center;height:auto;min-height:32px;min-width:30px;max-width:none;margin:0;padding:4px 7px;font-size:calc(16px * var(--ui-fs, 1));line-height:calc(22px * var(--ui-fs, 1));border-radius:7px;}
+#appHeader #taskToggle {gap:4px;font-size:calc(15px * var(--ui-fs, 1));}
+#appHeader #taskCount {font-size:calc(13px * var(--ui-fs, 1));font-variant-numeric:tabular-nums;}
+#appHeader #state {display:none;}
+#appHeader #workspaceToolbar {flex:1 1 auto;min-width:0;max-width:none;margin:0;}
+#workspaceToolbar .sm75-conversation-header {display:flex;flex-direction:row;align-items:center;gap:6px;height:40px;min-height:0;padding:0;margin:0;border:0;background:transparent;}
+#workspaceToolbar [data-conversation-header-leading]:empty {display:none;}
+#workspaceToolbar [data-slot="conversation.session.header"] {display:flex;align-items:center;flex:1;min-width:0;gap:6px;}
+#workspaceToolbar [data-slot="conversation.session.header"] > div:first-child {display:flex;align-items:center;flex:1;min-width:0;gap:4px;margin:0;padding:0;height:auto;}
+#workspaceToolbar nav {display:flex;flex:1;min-width:0;margin:0;gap:4px;font-size:calc(14px * var(--ui-fs, 1));white-space:nowrap;}
+#workspaceToolbar nav > span {min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+#workspaceToolbar [data-conversation-tabs] {display:flex;flex:0 0 auto;gap:2px;margin:0;padding:0;height:auto;min-height:32px;border:0;align-items:center;}
+#workspaceToolbar [data-conversation-tabs] > button {padding:4px 6px;font-size:calc(14px * var(--ui-fs, 1));line-height:calc(22px * var(--ui-fs, 1));white-space:nowrap;border-radius:6px;}
+#workspaceToolbar [data-conversation-tabs] > button[aria-selected=true] {color:var(--blue);background:var(--field);}
+#workspaceToolbar [data-conversation-header-corner] {position:static;display:flex;gap:2px;margin:0;padding:0;flex:0 0 auto;}
+#workspaceToolbar button {height:auto;min-height:32px;max-height:none;}
+#workspaceToolbar [data-slot="conversation.session.header.actions"] {flex:0 0 auto;}
+#notice:empty {display:none;}
+#notice:not(:empty) {flex:none;margin:10px 0 0;font-size:calc(14px * var(--ui-fs, 1));}
+#profiles #profileEditor {width:100%;max-width:none;margin:0;padding-top:8px;}
+#profiles #profileCards {width:100%;max-width:none;}
+#profiles #profileEditor .profile-toolbar {width:100%;margin:0;}
+#profiles #profileEditor label {font-size:calc(14px * var(--ui-fs, 1));}
+#profiles #profileEditor .help {font-size:calc(14px * var(--ui-fs, 1));}
+#settings .settings-heading {display:flex;align-items:center;gap:16px;border-bottom:1px solid var(--line);padding:0 0 12px;margin:0 0 12px;}
+#settings .settings-tabs {display:flex;flex:1;flex-wrap:nowrap;gap:8px;margin:0;padding:0;border:0;overflow:visible;}
+#settings .settings-tabs button {flex:0 0 auto;white-space:nowrap;font-size:calc(16px * var(--ui-fs, 1));line-height:calc(24px * var(--ui-fs, 1));padding:7px 14px;border:0;background:transparent;border-radius:7px;}
+#settings .settings-tabs button.selected {background:var(--active);color:var(--blue);}
+#settings #saveUnifiedSettings {margin:0;white-space:nowrap;font-size:calc(14px * var(--ui-fs, 1));}
+#settings > [data-settings-panel] {width:100%;max-width:none;box-sizing:border-box;border:1px solid var(--line);border-radius:10px;padding:20px;background:var(--card);}
+#settingsSaveHint {font-size:calc(13px * var(--ui-fs, 1));margin:0 0 18px;min-height:20px;}
+#nativeSettingsSurface {width:100%;max-width:none;margin:0;}
+#nativeSettingsSurface .sm75-native-settings {width:100%;max-width:none;}
+#nativeSettingsSurface .sm75-native-settings-section {width:100%;max-width:none;border:1px solid var(--line);border-radius:10px;padding:20px;background:var(--card);margin:0 0 16px;}
+#nativeSettingsSurface [data-slot="settings.section"] {max-width:none;width:100%;}
+#nativeSettingsSurface .sm75-native-settings-actions:empty {display:none;}
+#settings label {font-size:calc(14px * var(--ui-fs, 1));}
+#settings input,#settings select,#settings textarea {font-size:calc(14px * var(--ui-fs, 1));}
+#monitorControls {display:flex;align-items:center;gap:10px;flex:none;padding:0 0 16px;}
+#monitorControls button,#monitorControls select {font-size:calc(14px * var(--ui-fs, 1));}
+@media (min-width:1600px) {
+  #appHeader {gap:10px;}
+  #appHeader #active {flex-basis:156px;max-width:156px;width:156px;}
+}
+@media (max-width:1450px) and (min-width:1000px) {
+  :root {--sm75-sidebar-width:164px;}
+  body > main[data-auth="authenticated"] {padding-left:16px;padding-right:16px;}
+  #appHeader {gap:5px;}
+  #appHeader #active {flex-basis:108px;max-width:108px;width:108px;}
+}
+
+/* The native title yields space before metrics; controls remain individually reachable. */
+#workspaceToolbar [data-conversation-header-leading] {display:none;}
+#workspaceToolbar [data-slot="conversation.session.header"] > div:first-child > div:first-child {display:flex;flex:1;min-width:0;gap:8px;align-items:center;}
+#workspaceToolbar nav {min-width:48px;}
+#workspaceToolbar [data-slot="conversation.session.header"] > div:first-child > div:first-child > div {flex:0 0 auto;}
+#workspaceToolbar [data-slot="conversation.session.header"] > div:first-child > div:nth-child(2) {display:flex;flex:0 0 auto;gap:2px;}
+#workspaceToolbar [data-slot="conversation.session.header.actions"] > span {display:inline-flex;align-items:center;flex:none;white-space:nowrap;}
+@media (max-width:1740px) {
+  #workspaceToolbar [data-slot="conversation.session.header.actions"] > span {display:block;width:16px;height:16px;overflow:hidden;font-size:calc(14px * var(--ui-fs, 1));line-height:calc(16px * var(--ui-fs, 1));}
+  #workspaceToolbar [data-slot="conversation.session.header.actions"] > span > svg {display:block;width:16px;height:16px;}
+  #appHeader #workspaceToolbar {min-width:256px;}
+}
+
+@media (max-width:1450px) and (min-width:1000px) {
+  :root {--sm75-sidebar-width:max(148px,calc(138px * var(--ui-fs,1)));}
+  body > main[data-auth="authenticated"] {padding-left:12px;padding-right:12px;}
+  #consoleSidebar {padding-left:8px;padding-right:8px;}
+  #consoleSidebar .brand {font-size:calc(16px * var(--ui-fs, 1));gap:6px;}
+  #consoleSidebar .brand img {width:24px;height:24px;}
+  #appHeader:not([hidden]) {gap:4px;}
+  #appHeader #workspaceToolbar {min-width:224px;}
+  #workspaceToolbar [data-slot="conversation.session.header"] > div:first-child {gap:2px;}
+  #workspaceToolbar [data-slot="conversation.session.header"] > div:first-child > div:first-child {gap:4px;}
+  #workspaceToolbar [data-conversation-tabs] {gap:0;}
+  #workspaceToolbar [data-conversation-tabs] > button {padding-left:3px;padding-right:3px;}
+  #workspaceToolbar .sm75-conversation-header {gap:2px;}
+}
+
+#appHeader #sm75P8,#appHeader #signout,#appHeader #monitorLogs {width:30px;min-width:30px;max-width:30px;padding:0;}
+
+/* Auxiliary controls share the primary sidebar when larger text needs room. */
+#sidebarActiveProfile:empty,#sidebarHeaderActions:empty {display:none;}
+#sidebarActiveProfile {flex:none;margin:0 0 12px;}
+#sidebarActiveProfile #active {width:100%;min-width:0;max-width:100%;font-size:calc(14px * var(--ui-fs,1));}
+#sidebarHeaderActions {display:flex;align-items:center;gap:8px;flex:none;margin-top:auto;padding-top:12px;}
+#sidebarHeaderActions button {display:inline-flex;align-items:center;justify-content:center;gap:4px;min-height:34px;font-size:calc(16px * var(--ui-fs,1));}
+#sidebarHeaderActions #taskCount {font-size:calc(13px * var(--ui-fs,1));}
+#sidebarHeaderActions:not(:empty) + .sidebar-foot {margin-top:0;}

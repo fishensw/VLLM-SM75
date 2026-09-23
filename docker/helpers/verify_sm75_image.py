@@ -12,10 +12,13 @@ from pathlib import Path
 import torch
 
 EXPECTED_PACKAGES = {
-    "vllm": "0.29.0",
+    "vllm": "0.30.0",
     "flashinfer-python": "0.6.18",
     "flashinfer-cubin": "0.6.18",
     "transformers": "5.15.1",
+    "triton": "3.7.1",
+    "cuda-python": "12.9.7",
+    "cuda-bindings": "12.9.7",
 }
 
 

@@ -1,11 +1,34 @@
 # syntax=docker/dockerfile:1.7
 
-ARG BASE_IMAGE=vllm/vllm-openai:v0.29.0-cu129@sha256:7ef5a35d1ef8ce2cf9d671dd91eec6e367c5849262e0362b4d3d4a26be0d87d2
+ARG BASE_IMAGE=vllm/vllm-openai:v0.30.0-cu129@sha256:58fdb6bb123a81aa53f46fa4652ad8cc87e817bd1077c9832c6258ef12c1c688
 
 FROM ${BASE_IMAGE} AS sm75-base
 RUN uv pip uninstall --system flashinfer-jit-cache && \
     uv pip install --system --no-cache --no-deps flashinfer-python==0.6.18 flashinfer-cubin==0.6.18 \
         --extra-index-url https://flashinfer.ai/whl/
+
+# The pinned official cu129 image contains Torch 2.14/cu130 after its optional
+# connector install, while its vLLM/torchvision wheels require Torch 2.13.
+# Restore the CUDA 12.9 ABI before compiling any extension; keep the official
+# /etc/uv-overrides.txt NCCL pin. Resolve exact CUDA wheel and Triton versions.
+RUN uv pip install --system --no-cache \
+        --index https://download.pytorch.org/whl/cu129 \
+        torch==2.13.0+cu129 triton==3.7.1 && \
+    python3 -c 'import torch, importlib.metadata as m; assert torch.__version__ == "2.13.0+cu129"; assert torch.version.cuda == "12.9"; assert m.version("triton") == "3.7.1"'
+
+# CUDA 12/13 wheels share .so paths. A version-only downgrade leaves overwritten
+# files behind, so remove conflicting distributions and reinstall all four.
+RUN uv pip uninstall --system nvidia-cudnn-cu13 nvidia-cusparselt-cu13 \
+        nvidia-nccl-cu13 nvidia-nvshmem-cu13 && \
+    uv pip install --system --no-cache --no-deps \
+        --reinstall-package nvidia-cudnn-cu12 --reinstall-package nvidia-cusparselt-cu12 \
+        --reinstall-package nvidia-nccl-cu12 --reinstall-package nvidia-nvshmem-cu12 \
+        nvidia-cudnn-cu12==9.20.0.48 nvidia-cusparselt-cu12==0.8.1 \
+        nvidia-nccl-cu12==2.30.7 nvidia-nvshmem-cu12==3.4.5
+# Keep CUDA Python API consistent with Torch and the optional LMCache wheel.
+RUN uv pip install --system --no-cache --no-deps cuda-python==12.9.7 cuda-bindings==12.9.7
+COPY docker/helpers/verify_cuda_libraries.py /tmp/verify_cuda_libraries.py
+RUN python3 /tmp/verify_cuda_libraries.py && rm /tmp/verify_cuda_libraries.py
 
 FROM sm75-base AS flashqla-builder
 
@@ -36,7 +59,7 @@ ARG BUILD_DATE
 ARG SOURCE_REVISION
 ARG BASE_IMAGE_ID
 ARG VLLM_SM75_RELEASE=vllm-sm75
-ARG UPSTREAM_VLLM_COMMIT=98dff2a81d747d1dba01a47f939f48c3526d4206
+ARG UPSTREAM_VLLM_COMMIT=ced6857afa0ea7b2e3f0846a62e1394e90f15607
 ARG ONECAT_FLASHQLA_COMMIT=187b932dbd11940f0bcf52fb3675dd47fd69f313
 
 LABEL org.opencontainers.image.created="${BUILD_DATE}" \
@@ -46,7 +69,7 @@ LABEL org.opencontainers.image.created="${BUILD_DATE}" \
       org.opencontainers.image.title="VLLM-SM75" \
       org.opencontainers.image.description="VLLM-SM75: FlashQLA-SM75 GDN prefill with Triton decode" \
       ai.vllm.upstream.commit="${UPSTREAM_VLLM_COMMIT}" \
-      ai.vllm.upstream.version="v0.29.0" \
+      ai.vllm.upstream.version="v0.30.0" \
       ai.vllm.flashqla.commit="${ONECAT_FLASHQLA_COMMIT}" \
       ai.vllm.sm75.release="${VLLM_SM75_RELEASE}"
 
@@ -81,6 +104,10 @@ COPY vllm/model_executor/kernels/linear/mixed_precision/marlin.py \
     /tmp/sm75-overlay/model_executor/kernels/linear/mixed_precision/marlin.py
 COPY vllm/model_executor/kernels/linear/scaled_mm/marlin.py \
     /tmp/sm75-overlay/model_executor/kernels/linear/scaled_mm/marlin.py
+COPY vllm/model_executor/kernels/linear/scaled_mm/cutlass.py \
+    /tmp/sm75-overlay/model_executor/kernels/linear/scaled_mm/cutlass.py
+COPY vllm/model_executor/kernels/linear/scaled_mm/humming.py \
+    /tmp/sm75-overlay/model_executor/kernels/linear/scaled_mm/humming.py
 COPY vllm/model_executor/layers/quantization/utils/firefly.py \
     /tmp/sm75-overlay/model_executor/layers/quantization/utils/firefly.py
 COPY vllm/model_executor/layers/quantization/utils/firefly.cu \
@@ -147,6 +174,12 @@ RUN python3 /tmp/verify_sm75_image.py && \
     test -s /opt/vllm-sm75/source/flash_qla_sm75/SOURCE.md && \
     rm -f /tmp/verify_sm75_image.py
 
+COPY docker/speculative /opt/vllm-sm75/speculative
+COPY docker/helpers/install_speculative.py /tmp/install_speculative.py
+RUN python3 /tmp/install_speculative.py && rm /tmp/install_speculative.py
+COPY docker/speculative /opt/vllm-sm75/source/docker/speculative
+COPY tests /opt/vllm-sm75/source/tests
+
 FROM runtime AS selector-tests
 
 RUN uv pip install --system pytest==9.1.0 && \
@@ -156,7 +189,13 @@ RUN uv pip install --system pytest==9.1.0 && \
         /opt/vllm-sm75/source/tests/entrypoints/serve/utils/test_api_utils.py::test_sensitive_args_are_redacted_without_mutating_input \
         /opt/vllm-sm75/source/tests/config/test_model_dtype_override.py \
         /opt/vllm-sm75/source/tests/v1/engine/test_auto_sleep.py \
-        -v > /tmp/selector-pytest.log 2>&1
+        /opt/vllm-sm75/source/tests/model_executor/test_dflash_quantization.py \
+        /opt/vllm-sm75/source/tests/model_executor/test_dflash_warmup.py \
+        /opt/vllm-sm75/source/tests/model_executor/test_v030_firefly_api.py \
+        /opt/vllm-sm75/source/tests/model_executor/test_v030_cutlass_fp8_selection.py \
+        /opt/vllm-sm75/source/tests/model_executor/test_v030_humming_fp8_selection.py \
+        /opt/vllm-sm75/source/tests/entrypoints/serve/instrumentator/test_monitor_control_api.py \
+        -v > /tmp/selector-pytest.log 2>&1 || { cat /tmp/selector-pytest.log; exit 1; }
 
 FROM runtime AS verified-runtime
 
@@ -169,9 +208,6 @@ FROM verified-runtime AS final
 # Inherit the official ENTRYPOINT ["vllm", "serve"] and unset CMD.
 # Keep upstream CLI startup presentation and default UI assets.
 
-COPY docker/speculative /opt/vllm-sm75/speculative
-COPY docker/helpers/install_speculative.py /tmp/install_speculative.py
-RUN python3 /tmp/install_speculative.py && rm /tmp/install_speculative.py
 # 容器内 pstate 管理: 固定版本二进制 + 启动包装脚本(GPL-3.0, 见 NOTICE)。
 # 容器运行时不会挂载 libnvidia-api.so.1, run.sh 在 POWER_MODE=pstate 时只读挂载宿主库。
 ARG NVIDIA_PSTATE_VERSION=1.0.9

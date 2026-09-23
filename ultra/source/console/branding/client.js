@@ -8,8 +8,11 @@ async function checkWebSession() {
       cache: "no-store",
       signal: AbortSignal.timeout(10000),
     });
-    if (r.ok && !(await r.json()).authenticated)
-      location.replace("/?returnTo=%2Fdsh%2F");
+    if (r.ok && !(await r.json()).authenticated) {
+      if (window.parent !== window)
+        window.parent.postMessage({type: "sm75-session-expired"}, location.origin);
+      else location.replace("/");
+    }
   } catch {
     /* A temporary transport failure is not a logout. */
   } finally {
@@ -47,7 +50,42 @@ window.__ModuleLoader__.load({
         "工作台",
       );
     }
+    function SettingsLauncher({openSettings}) {
+      React.useEffect(() => {
+        if (window.parent === window) return;
+        const receive = event => {
+          if (event.origin !== location.origin || event.source !== window.parent) return;
+          if (event.data?.type === "sm75-harness-action" && event.data.action === "settings") openSettings();
+        };
+        window.addEventListener("message", receive);
+        window.parent.postMessage({type: "sm75-dsh-ready"}, location.origin);
+        return () => window.removeEventListener("message", receive);
+      }, [openSettings]);
+      return window.parent === window
+        ? React.createElement("button", {onClick: openSettings}, "设置")
+        : null;
+    }
     function apply(ctx) {
+      ctx.slots.inject("settings.launcher", () =>
+        ctx.slots.register({name: "settings.launcher"}, SettingsLauncher));
+      ctx.effect(() => {
+        if (window.parent === window) return;
+        const receive = event => {
+          if (event.origin !== location.origin || event.source !== window.parent) return;
+          if (event.data?.type === "sm75-harness-action" && event.data.action === "usage") {
+            document.dispatchEvent(new KeyboardEvent("keydown", {key: "Escape"}));
+            ctx.layout.selectPanel("sm75-usage");
+          }
+          if (event.data?.type === "sm75-theme" && ["dark", "light"].includes(event.data.mode)
+              && ctx.theme.getTheme().active.colorScheme !== event.data.mode)
+            ctx.theme.setTheme(event.data.mode);
+        };
+        const off = ctx.on("theme/change", snapshot => window.parent.postMessage({
+          type: "sm75-dsh-preferences", mode: snapshot.active.colorScheme, fontSize: snapshot.fontSize,
+        }, location.origin));
+        window.addEventListener("message", receive);
+        return () => {off(); window.removeEventListener("message", receive);};
+      }, "sm75: embedded settings, Watcher and theme bridge");
       for (const [name, Component] of [
         ["sidebar.brand.mark", Mark],
         ["sidebar.brand.name", Name],
@@ -55,6 +93,6 @@ window.__ModuleLoader__.load({
       ])
         ctx.slots.inject(name, () => ctx.slots.register({ name }, Component));
     }
-    return { apply, inject: ["slots"] };
+    return { apply, inject: ["slots", "layout", "theme"] };
   },
 });

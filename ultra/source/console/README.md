@@ -1,12 +1,12 @@
-# SM75 本地候选控制台
+# SM75 本地控制台
 
-独立管理服务，Node.js 22。启动：
+控制台采用 Node.js 22.23.2；生产 Ultra 中以单容器模式运行。独立控制台可用于已安装引擎的管理，启动：
 
 ```bash
 SM75_CONSOLE_ROOT=/absolute/path/console-data node console/server.mjs
 ```
 
-默认地址 `http://127.0.0.1:1616`，登录凭据首次生成在数据目录的 `key` 文件。局域网使用 `SM75_CONSOLE_HOST=0.0.0.0` 并设置 `SM75_CONSOLE_PUBLIC_HOST`；所有管理 API 必须登录。Harness 代理默认端口 1617，需要同时可访问。
+默认地址 `http://127.0.0.1:1616`，登录凭据首次生成在数据目录的 `key` 文件。局域网使用 `SM75_CONSOLE_HOST=0.0.0.0` 并设置 `SM75_CONSOLE_PUBLIC_HOST`；所有管理 API 必须登录。Ultra 的根地址始终提供现有 SM75 主界面。主侧栏平级提供快速会话、工作台、模型库、运行配置、性能监控、模型测试、使用统计、插件和设置。设置使用横向六页签：外观显示、助手工具、模型连接、参数模板、部署硬件、账号访问。DSH 原生内容在同一 DOM 中挂载，资源与实时连接均经过控制台认证。使用统计由 Watcher 原生 Insights 提供，切换页面保留已加载视图。旧 `/dsh/` 入口仅兼容返回根地址，内部代理端口 1617 无需另外公开。
 
 已有原生环境可通过 `SM75_VLLM_BIN=/absolute/path/venv/bin/vllm` 指定引擎入口。启动程序失败会直接返回错误，详细原因写入对应配置日志。
 
@@ -16,9 +16,19 @@ SM75_CONSOLE_ROOT=/absolute/path/console-data node console/server.mjs
 
 模型与编译缓存分离。所有候选编译产物写入配置中的 `cacheRoot`。vLLM、Triton、FlashInfer、TorchInductor、PyTorch 扩展与 CUDA 驱动缓存均持久化。FlashInfer 原生路径通过基础目录下的 `.cache/flashinfer` 映射，避免变量含义导致重复嵌套。
 
-Harness 固定 `0.1.5-rc.1`，运行于独立无 GPU 容器，仅挂载自己的 home 和 workspace，内部只监听回环地址。控制台代理完成原生认证，浏览器不获取原生 token。当前本地离线镜像复用 v0.1.4 基础层和已下载 Node/DSH 运行环境；标准 Dockerfile 使用 Node 基础镜像。
+Harness 固定 `0.1.7-alpha.2`。Ultra 中由独立进程以 UID/GID 1000 运行，使用 `/dsh/home` 和 `/dsh/workspace`，不继承管理凭据，屏蔽 GPU，且仅监听回环地址。控制台代理使用上游原生认证握手，浏览器不获取原生 token 或 cookie。非 single-container 的旧独立 Harness 镜像构建和创建入口已移除，返回明确错误；旧受管容器停止入口保留。
 
-运行测试：`node --test console/test/*.test.mjs`。Chat 代理单测使用模拟上游，不代表实际模型推理或工具调用验收。真实模型、休眠/P8 和零重复编译以 GPU 测试记录为准。
+`sm75-plugins.patch.json` 管理插件装配与容器首次工作区的默认目录，不覆盖整个上游模型配置。已有工作区由上游注册表保留；首次目录位于 `/dsh/workspace/deepseek-harness/` 下，无需桌面 XDG 服务。工作台通过原生设置服务更新 `sm75-local`，保留其它模型提供方和原生 Models 页面持久化能力；切换本地模型时重设默认模型并清除旧推理强度。已有 `settings.yaml` 先检查为 Harness 用户持有的普通文件，再只更新本地模型字段，交上游一次性导入；导入后不重建旧文件。
+
+DSH 原生对话、会话列表、工具与设置通过 React portal 挂载到 SM75 主界面的侧栏、公共顶栏和内容区域，共用同一 DOM 与原生运行时；使用原生布局与设置服务切换页面，保留动态会话标题、原生主题和字号。工作台会话工具与实时指标合并到 64 px 单行公共顶栏，列表和编辑表单使用内容区全宽。
+
+“设置 → 外观显示 → 全局字号”统一调整侧栏、表单、工作台、Watcher、监控与模型测试页面，保留标题、正文和辅助文字的原有层级。字号范围为 12–17，默认 14；侧栏默认基准恢复为 16 px。连续调整会等待正确的保存顺序，刷新后保留选择。大字号下若顶栏空间不足，运行配置选择器、任务和退出按钮移到现有主侧栏，保持直接可见；指标本身仍为单行。
+
+首方加载器仅在管理会话有效、同源 `/harness-ui/` 引导文档校验通过后，使用官方 `transport.ownsHost` 接口启用原生设置持久化；拒绝未知 transport、跨源地址和重定向。该声明只决定客户端设置模式，HTTP、RPC 和 WebSocket 仍逐请求执行管理台认证与来源校验。局域网管理地址因此可使用原生模型目录与设置保存，而无需将远程地址伪装成 loopback。采样仅在已校验版本及唯一位置的服务端适配点注入，安装和所有客户端脚本语法均有构建检查。
+
+默认中文回复由部署提示和原生插件指导共同提供。`sm75-workspace-tools` 注册 `list_directory`，使用官方 `fs.resolve`、`fs.contains` 和 `fs.listDir`，要求当前会话工作区并拒绝越界目标；返回直属条目、空目录与分页信息，不调用 shell。命令沙盒不可用时仍保持拒绝执行，由智能体用中文说明并改用可用的原生文件工具；没有放宽容器权限或关闭沙盒。
+
+运行测试：`node --test console/test/*.test.mjs`。统一 UI 的本轮记录见 [工作台整合验收](../../../docs/validation/v0.1.6-workbench-integration.md) 与 [结构化结果](../../../docs/validation/v0.1.6-unified-ui-results.json)。Chat 代理单测使用模拟上游，不代表实际模型推理或工具调用验收。真实模型、休眠/P8 和零重复编译以 GPU 测试记录为准。
 
 
 看板提供 MTP / DFlash2 接受率（接受草稿 tokens ÷ 提出草稿 tokens）、平均接受长度（1 + 接受 tokens ÷ 验证轮次，含主模型补充 token）和各位置接受比例。趋势只绘制发生投机验证的区间，缺测与空闲留空。普通模式显示未配置投机解码。

@@ -16,23 +16,25 @@ BUILD_MODE="${BUILD_MODE:-full}"
 case "$EDITION:$BUILD_MODE" in standard:full|standard:fast|ultra:full|ultra:ui) ;;
     *) echo 'Use EDITION=standard|ultra; BUILD_MODE=full, standard fast, or ultra ui' >&2; exit 2;; esac
 command -v docker >/dev/null
-BASE_IMAGE="${BASE_IMAGE:-vllm/vllm-openai:v0.29.0-cu129@sha256:7ef5a35d1ef8ce2cf9d671dd91eec6e367c5849262e0362b4d3d4a26be0d87d2}"
+BASE_IMAGE="${BASE_IMAGE:-vllm/vllm-openai:v0.30.0-cu129@sha256:58fdb6bb123a81aa53f46fa4652ad8cc87e817bd1077c9832c6258ef12c1c688}"
 SOURCE_REVISION="${SOURCE_REVISION:-$(git -C "$ROOT" rev-parse HEAD 2>/dev/null || printf 'source-archive')}"
 if [[ "$EDITION" == ultra ]]; then
     if [[ "$BUILD_MODE" == ui ]]; then
         : "${RUNTIME_IMAGE:?Set RUNTIME_IMAGE to an audited ultra runtime image}"
         docker image inspect "$RUNTIME_IMAGE" >/dev/null
         export DOCKER_BUILDKIT=0
-        exec docker build --network none --memory 1g --memory-swap 1g \
+        exec docker build --network "${BUILD_NETWORK:-default}" --memory 1g --memory-swap 1g \
             --cpu-period 100000 --cpu-quota 100000 --file "$ROOT/ultra/Dockerfile.candidate" \
             --build-arg BASE_IMAGE="$RUNTIME_IMAGE" --build-arg SOURCE_REVISION="$SOURCE_REVISION" \
             --build-arg SOURCE_SHA256="${SOURCE_SHA256:-}" \
+            --build-arg INSTALL_LMCACHE="${INSTALL_LMCACHE:-0}" \
             --tag "${IMAGE:-vllm-sm75:v${VERSION}-ultra-ui}" "$ROOT/ultra"
     fi
     VLLM_IMAGE="${VLLM_IMAGE:-vllm-sm75:v${VERSION}}"
     docker image inspect "$VLLM_IMAGE" >/dev/null
     exec docker build --file "$ROOT/ultra/Dockerfile" \
         --build-arg VLLM_IMAGE="$VLLM_IMAGE" --build-arg SOURCE_REVISION="$SOURCE_REVISION" \
+        --build-arg INSTALL_LMCACHE="${INSTALL_LMCACHE:-0}" \
         --tag "${IMAGE:-vllm-sm75:v${VERSION}-ultra}" "$ROOT/ultra"
 fi
 file=Dockerfile

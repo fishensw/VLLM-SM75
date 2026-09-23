@@ -2,7 +2,7 @@
 # SPDX-FileCopyrightText: Copyright contributors to the vLLM project
 """SM75 overlay: MarlinLinearKernel + firefly(int4→int8 prefill)混合。
 
-全文件拷贝自上游 v0.28.0, 仅新增 firefly 分支(env 门控, off=上游行为):
+基于上游 v0.30.0, 新增 firefly 分支(env 门控, off=上游行为):
   - process_weights_after_loading: repack 前快照干净 int4 布局 [N, K/8] + scale
   - apply_weights: 大 M(prefill)走 int8 cutlass(IMMA), 小 M(decode)走上游 int4 Marlin
 
@@ -18,10 +18,8 @@ import vllm.envs as envs
 from vllm.model_executor.layers.quantization.utils.marlin_utils import (
     MARLIN_SUPPORTED_GROUP_SIZES,
     apply_gptq_marlin_linear,
-    check_marlin_supports_shape,
     marlin_act_int8_process_scales,
-    marlin_is_k_full,
-    marlin_make_empty_g_idx,
+    marlin_make_empty,
     marlin_make_workspace_new,
     marlin_pad_dim,
     marlin_pad_qweight,
@@ -29,7 +27,6 @@ from vllm.model_executor.layers.quantization.utils.marlin_utils import (
     marlin_padded_nk,
     marlin_permute_bias,
     marlin_permute_scales,
-    marlin_sort_g_idx,
     marlin_zero_points,
     query_marlin_supported_quant_types,
     unpack_cols,
@@ -41,7 +38,6 @@ from vllm.model_executor.layers.quantization.utils.firefly import (
     int8_prefill_linear,
 )
 from vllm.model_executor.parameter import BasevLLMParameter, permute_param_layout_
-from vllm.model_executor.utils import replace_parameter
 from vllm.platforms import current_platform
 from vllm.scalar_type import scalar_types
 
@@ -80,8 +76,6 @@ def _ff_hybrid_linear(
     w_q: torch.Tensor,
     w_s_marlin: torch.Tensor,
     w_zp_marlin: torch.Tensor,
-    w_gidx: torch.Tensor,
-    g_idx_sort_indices: torch.Tensor,
     workspace: torch.Tensor,
     input_global_scale: torch.Tensor,
     bias: torch.Tensor,
@@ -95,7 +89,6 @@ def _ff_hybrid_linear(
     gs: int,
     min_m: int,
     has_zp: bool,
-    is_k_full: bool,
     use_recip: bool,
 ) -> torch.Tensor:
     m = x.numel() // x.shape[-1]
@@ -121,13 +114,10 @@ def _ff_hybrid_linear(
         weight=w_q,
         weight_scale=w_s_marlin,
         weight_zp=w_zp_marlin,
-        g_idx=w_gidx,
-        g_idx_sort_indices=g_idx_sort_indices,
         workspace=workspace,
         wtype=wtype,
         input_size_per_partition=size_k,
         output_size_per_partition=size_n,
-        is_k_full=is_k_full,
         input_global_scale=(
             input_global_scale if input_global_scale.numel() > 0 else None
         ),
@@ -142,8 +132,6 @@ def _(
     _w_q,
     _w_s_marlin,
     _w_zp_marlin,
-    _w_gidx,
-    _g_idx_sort_indices,
     _workspace,
     _input_global_scale,
     _bias,
@@ -157,7 +145,6 @@ def _(
     _gs,
     _min_m,
     _has_zp,
-    _is_k_full,
     _use_recip,
 ):
     return torch.empty(x.shape[:-1] + (size_n,), dtype=x.dtype, device=x.device)
@@ -190,16 +177,6 @@ class MarlinLinearKernel(MPLinearKernel):
                 f"{MARLIN_SUPPORTED_GROUP_SIZES}",
             )
 
-        if c.has_g_idx:
-            # Act-order couples K to the full-model group layout, so tile
-            # padding is not supported; keep the strict shape check.
-            return check_marlin_supports_shape(
-                c.partition_weight_shape[1],  # out_features
-                c.partition_weight_shape[0],  # in_features
-                c.full_weight_shape[0],  # in_features
-                c.group_size,
-            )
-
         # A group straddling TP ranks cannot be fixed by padding.
         if (
             c.group_size != -1
@@ -224,11 +201,13 @@ class MarlinLinearKernel(MPLinearKernel):
         # 反量化统一 w_deq=(q-zp)*s, 对称 zp=8 是其特例(不回归)。
         # 只有 hard 模式: 不常驻副本, prefill 现从 marlin 布局反。B1-hard 反推
         # 仅针对 has_perm=false, act-order(g_idx 排序)不支持 → 禁用(回退上游)。
+        # v0.30 MPLinearLayerConfig no longer carries has_g_idx. Keep the
+        # legacy guard for external configs, without requiring the removed field.
         return (
             firefly_active_int4()
             and self.config.weight_type in (scalar_types.uint4b8, scalar_types.uint4)
             and self.config.act_type in (torch.float16, torch.bfloat16)
-            and not self.config.has_g_idx
+            and not getattr(self.config, "has_g_idx", False)
         )
 
     def _firefly_m_large(self, x: torch.Tensor) -> bool:
@@ -254,22 +233,15 @@ class MarlinLinearKernel(MPLinearKernel):
                 getattr(layer, self.w_s_name).data * 512
             )
 
-        row_parallel = c.partition_weight_shape[0] != c.full_weight_shape[0]
-        self.is_k_full = marlin_is_k_full(c.has_g_idx, row_parallel)
-
         size_k, size_n = c.partition_weight_shape
-        if c.has_g_idx:
-            # Act-order shapes were strictly validated in can_implement.
-            padded_n, padded_k = size_n, size_k
-        else:
-            padded_n, padded_k = marlin_padded_nk(size_n, size_k, c.group_size)
+        padded_n, padded_k = marlin_padded_nk(size_n, size_k, c.group_size)
 
         # firefly 回退: act-order int4 模型 B1-hard 不支持, firefly 禁用 → 上游 Marlin。
         if (
             firefly_active_int4()
             and c.weight_type in (scalar_types.uint4b8, scalar_types.uint4)
             and c.act_type in (torch.float16, torch.bfloat16)
-            and c.has_g_idx
+            and getattr(c, "has_g_idx", False)
         ):
             _ff_int4_fallback_log()
 
@@ -302,10 +274,8 @@ class MarlinLinearKernel(MPLinearKernel):
             device, existing=getattr(self, "workspace", None)
         )
 
-        # Default names since marlin requires empty parameters for these,
+        # Default name since marlin requires empty parameter for zp,
         # TODO: remove this requirement from marlin (allow optional tensors)
-        if self.w_gidx_name is None:
-            self.w_gidx_name = "g_idx"
         if self.w_zp_name is None:
             self.w_zp_name = "w_zp"
 
@@ -316,7 +286,6 @@ class MarlinLinearKernel(MPLinearKernel):
                 marlin_pad_qweight(
                     x.data.contiguous(), size_n, size_k, padded_n, padded_k
                 ),
-                perm=layer.g_idx_sort_indices,
                 size_k=padded_k,
                 size_n=padded_n,
                 num_bits=c.weight_type.size_bits,
@@ -357,18 +326,6 @@ class MarlinLinearKernel(MPLinearKernel):
                 layer.input_global_scale = None
             return x
 
-        if c.has_g_idx:
-            g_idx, g_idx_sort_indices = marlin_sort_g_idx(
-                getattr(layer, self.w_gidx_name)
-            )
-            self._transform_param(layer, self.w_gidx_name, lambda _: g_idx)
-            replace_parameter(
-                layer, "g_idx_sort_indices", g_idx_sort_indices, prefer_copy=True
-            )
-        else:
-            setattr(layer, self.w_gidx_name, marlin_make_empty_g_idx(device))
-            layer.g_idx_sort_indices = marlin_make_empty_g_idx(device)
-
         if c.zero_points:
             grouped_k = size_k // c.group_size if c.group_size != -1 else 1
             padded_grouped_k = padded_k // c.group_size if c.group_size != -1 else 1
@@ -396,7 +353,7 @@ class MarlinLinearKernel(MPLinearKernel):
                 ),
             )
         else:
-            setattr(layer, self.w_zp_name, marlin_make_empty_g_idx(device))
+            setattr(layer, self.w_zp_name, marlin_make_empty(device))
         self._transform_param(layer, self.w_q_name, transform_w_q)
         self._transform_param(layer, self.w_s_name, transform_w_s)
 
@@ -435,7 +392,7 @@ class MarlinLinearKernel(MPLinearKernel):
         # input_global_scale/bias/w_zp_clean 用空张量表示 None(custom op 不收 None)。
         if self._firefly_enabled():
             c = self.config
-            w_q, w_s, w_zp, w_gidx = self._get_weight_params(layer)
+            w_q, w_s, w_zp = self._get_weight_params(layer)
             empty = torch.empty(0, device=x.device)
             igs = getattr(layer, "input_global_scale", None)
             igs_t = igs.data if igs is not None else empty
@@ -447,8 +404,6 @@ class MarlinLinearKernel(MPLinearKernel):
                 w_q,
                 w_s,
                 w_zp,
-                w_gidx,
-                layer.g_idx_sort_indices,
                 self.workspace,
                 igs_t,
                 bias_t,
@@ -462,28 +417,20 @@ class MarlinLinearKernel(MPLinearKernel):
                 layer._firefly_gs,
                 envs.VLLM_FIREFLY_MIN_M,
                 c.zero_points,
-                self.is_k_full,
                 envs.VLLM_FIREFLY_DEQUANT_MODEL == "fast",
             )
 
         c = self.config
-        w_q, w_s, w_zp, w_gidx = self._get_weight_params(layer)
-
-        # `process_weights_after_loading` will ensure w_zp and w_gidx are not
-        #  None for marlin
-
+        w_q, w_s, w_zp = self._get_weight_params(layer)
         return apply_gptq_marlin_linear(
             input=x,
             weight=w_q,
             weight_scale=w_s,
             weight_zp=w_zp,  # type: ignore
-            g_idx=w_gidx,  # type: ignore
-            g_idx_sort_indices=layer.g_idx_sort_indices,
             workspace=self.workspace,
             wtype=c.weight_type,
             input_size_per_partition=c.partition_weight_shape[0],
             output_size_per_partition=c.partition_weight_shape[1],
-            is_k_full=self.is_k_full,
             input_global_scale=getattr(layer, "input_global_scale", None),
             bias=bias,
             input_dtype=c.act_type,

@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 class BuildContract(unittest.TestCase):
     def test_official_prebuilt_base(self):
         text = (ROOT / 'docker/Dockerfile').read_text(encoding='utf-8')
-        self.assertIn('vllm/vllm-openai:v0.29.0-cu129@sha256:', text)
+        self.assertIn('vllm/vllm-openai:v0.30.0-cu129@sha256:', text)
         script = (ROOT / 'docker/build.sh').read_text(encoding='utf-8')
         self.assertNotIn('git clone', script)
         self.assertNotIn('git init', script)
@@ -32,7 +32,7 @@ class BuildContract(unittest.TestCase):
             package = Path(tmp) / 'site-packages/vllm'
             evidence = Path(tmp) / 'evidence/speculative-files.json'
             result = install(ROOT / 'docker/speculative', package, evidence)
-            self.assertEqual(len(result), 8)
+            self.assertEqual(len(result), 9)
             self.assertTrue(evidence.is_file())
             self.assertTrue((package.parent / 'sm75_fa2_graph.py').is_file())
 

@@ -33,7 +33,7 @@ assert "FROM final AS ultra-final" in combined
 assert "COPY ultra/source /opt/sm75-workbench" in combined
 combined += """
 FROM ultra-final AS ultra-tests
-RUN node --test /opt/sm75-workbench/console/test/*.test.mjs > /tmp/ultra-node-tests.log 2>&1
+RUN node --test /opt/sm75-workbench/console/test/*.test.mjs > /tmp/ultra-node-tests.log 2>&1 || { cat /tmp/ultra-node-tests.log; exit 1; }
 FROM ultra-final AS ultra-verified
 COPY --from=ultra-tests /tmp/ultra-node-tests.log /opt/vllm-sm75/evidence/ultra-node-tests.log
 """

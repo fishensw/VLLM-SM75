@@ -38,7 +38,6 @@ def expected(repo):
     for source in sorted((repo / "docker/speculative").rglob("*.py")):
         add(source, source.relative_to(repo / "docker/speculative").as_posix(), 2, "speculative-overlay")
     standard = dict(records)
-    add(repo / "ultra/overlay/monitor.py", "vllm/entrypoints/serve/instrumentator/monitor.py", 3, "ultra-monitor-override")
     return {"sourceCommit": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=repo, text=True).strip(),
             "standard": list(standard.values()), "ultra": list(records.values())}
 

@@ -11,10 +11,10 @@ export function engineStatus(data = {}) {
   if (data.running !== true) return { text: "状态待确认", tone: "unknown", power: "" };
   const idle = data.powerState?.mode === "idle";
   const power = data.powerMode !== "pstate" ? ""
-    : idle ? "P-State 空闲 P8（已进入）"
-    : data.powerState?.mode === "active" ? "P-State 驱动自动"
-    : "P-State 等待生效";
-  return { text: data.fresh ? "模型进程运行" : "模型进程运行 · 等待采样",
+    : idle ? "P8已进入"
+    : data.powerState?.mode === "active" ? "驱动自动"
+    : "P8待生效";
+  return { text: data.fresh ? "模型运行" : "运行·待采样",
     tone: data.fresh ? "low" : "medium", power };
 }
 
@@ -24,17 +24,18 @@ export function mountLiveSummary(
 ) {
   const root = host.shadowRoot || host.attachShadow({ mode: "open" });
   root.innerHTML = `<style>
-    :host{display:block;min-width:0;max-width:100%;color:var(--text,var(--dsw-alias-label-primary,inherit));font:400 calc(13px * var(--ui-fs,1))/1.5 var(--dsw-font-family,system-ui)}
+    :host{display:block;min-width:0;max-width:100%;color:var(--text,var(--dsw-alias-label-primary,inherit));font:400 calc(14px * var(--ui-fs,1))/1.5 var(--dsw-font-family,system-ui)}
     :host([hidden]){display:none}
-    .bar{display:flex;align-items:center;gap:14px;min-height:36px;box-sizing:border-box;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:thin;white-space:nowrap}
-    .status,.item{display:inline-flex;align-items:baseline;gap:5px;flex-shrink:0}
-    .status{align-items:center;gap:7px;padding-right:14px;border-right:1px solid var(--line,var(--dsw-alias-border-l3,#ccd3dc))}
+    .bar{display:flex;flex-wrap:nowrap;align-items:center;gap:8px;min-height:36px;box-sizing:border-box;overflow:visible;white-space:nowrap}
+    .status,.item{display:inline-flex;flex-wrap:nowrap;align-items:baseline;gap:2px;flex:0 0 auto;white-space:nowrap}
+    .status{align-items:center;gap:5px;padding-right:6px;font-size:calc(15px * var(--ui-fs,1));border-right:1px solid var(--line,var(--dsw-alias-border-l3,#ccd3dc))}
     .dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0}
     .label,.unit,.power{color:var(--muted,var(--dsw-alias-label-secondary,#8993a2))}
-    .power:not(:empty)::before{content:'·';margin-right:7px}
+    .power:not(:empty)::before{content:'·';margin-right:5px}
     .power.idle{color:var(--green,var(--dsw-alias-state-success-primary,#087f69))}
-    b{font:inherit;font-weight:600;font-variant-numeric:tabular-nums}
-    .unit{font-size:inherit}.item{gap:4px}
+    b{display:inline-block;min-inline-size:var(--value-width,3ch);font:700 calc(16px * var(--ui-fs,1))/1.5 var(--dsw-font-family,system-ui);font-variant-numeric:tabular-nums;text-align:right}
+    .label,.unit{font-size:calc(14px * var(--ui-fs,1))}
+    .item[data-metric=temperature]{--value-width:2ch}
     [data-level=low]{color:var(--gpu-low,var(--dsw-alias-state-success-primary,#087f69))}
     [data-level=medium]{color:var(--gpu-medium,var(--dsw-alias-state-warn-primary,#8a6500))}
     [data-level=elevated]{color:var(--gpu-elevated,#c2680a)}
@@ -80,6 +81,7 @@ export function mountLiveSummary(
   const cells = fields.map(([key, label, unit, title]) => {
     const cell = document.createElement("span");
     cell.className = "item";
+    cell.dataset.metric = key;
     cell.title = title;
     cell.innerHTML = `<span class="label"></span><b>—</b><span class="unit"></span>`;
     cell.querySelector(".label").textContent = label;
@@ -99,6 +101,7 @@ export function mountLiveSummary(
     power.classList.toggle("idle", data.running === true && data.powerState?.mode === "idle");
     status.title = [data.profile, "引擎全局指标 · 每 5 秒更新",
       data.sampledAt ? "采样：" + new Date(data.sampledAt).toLocaleTimeString() : "等待采样",
+      data.running === true && !data.fresh ? "等待新采样，当前吞吐与缓存数据不可用" : "",
       Number.isFinite(data.powerState?.idle_remaining) && data.powerState?.mode === "active"
         ? `距空闲 P8 约 ${Math.max(0, data.powerState.idle_remaining)} 秒` : ""].filter(Boolean).join("\n");
     for (const { key, cell, value, title } of cells) {
