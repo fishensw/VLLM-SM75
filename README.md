@@ -6,6 +6,8 @@
 
 面向 NVIDIA Turing / SM75（Tesla T4、T10 等）的 vLLM 0.30.0 适配，保留 GDN、FP8/AWQ、FP8 KV、MTP/DFlash2、Firefly、CPU KV、自动休眠和监控等功能。标准版提供推理 API；Ultra 在相同推理核心上提供 Web 管理、快速会话和工作台。
 
+QQ 交流群：**878924874**
+
 ## 2. 更新说明
 
 本版主要更新如下；推理及缓存相关功能由标准版和 Ultra 共用。

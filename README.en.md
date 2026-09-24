@@ -6,6 +6,8 @@
 
 A vLLM adaptation for NVIDIA Turing / SM75 GPUs, including Tesla T4 and T10. It focuses on Qwen hybrid GDN models, FP8/AWQ weights, FP8 KV, and DFlash2. GDN uses FlashQLA-SM75 prefill and Triton decode.
 
+QQ community group: **878924874**
+
 ## 2. Updates
 
 - Adapt to vLLM 0.30.0 while retaining existing SM75, GDN, FP8 KV, Firefly, sleep and monitoring support.
