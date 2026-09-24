@@ -20,8 +20,6 @@ QQ 交流群：**878924874**
 - **Ultra 工作台**：升级到 Harness 0.1.7-alpha.2，固定 Node 22.23.2 和 pnpm 11.7.0。
 - **Ultra 面板**：新增上下文与缓存配置区，支持选择默认 CPU KV 或 LMCache。
 
-详细修复来源、PR 状态和验收边界见 [版本说明](docs/releases/v0.1.6.md)。[issue #13](https://github.com/fishensw/VLLM-SM75/issues/13) 的原始 checkpoint 尚未完全确认；不将局部算子修复或短请求通过表述为所有 DFlash2 问题已解决。
-
 ## 3. 标准版与 Ultra 功能对比
 
 | 功能 | 标准版 | Ultra |

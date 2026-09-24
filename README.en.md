@@ -17,8 +17,6 @@ QQ community group: **878924874**
 - Ultra pins Harness 0.1.7-alpha.2, Node 22.23.2 and pnpm 11.7.0.
 - Ultra adds context and cache controls, with a choice of default CPU KV or LMCache.
 
-See [source references and limits](docs/releases/v0.1.6.md). Short-request and kernel success do not establish that every case in [issue #13](https://github.com/fishensw/VLLM-SM75/issues/13) is resolved.
-
 ## 3. Standard vs Ultra
 
 | Feature | Standard | Ultra |
