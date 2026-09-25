@@ -47,6 +47,7 @@ def main() -> None:
         "model_executor/layers/quantization/utils/marlin_utils_fp8.py",
         "model_executor/layers/quantization/utils/firefly.py",
         "model_executor/layers/quantization/utils/firefly.cu",
+        "model_executor/layers/quantization/utils/firefly_int8.py",
         "distributed/device_communicators/firefly_allreduce.py",
         "distributed/device_communicators/firefly_allreduce.cu",
         "distributed/device_communicators/cuda_communicator.py",
@@ -83,6 +84,29 @@ def main() -> None:
     envs_text = envs_file.read_text()
     if "vllm.envs_sm75.apply()" not in envs_text:
         envs_file.write_text(envs_text + envs_hook)
+
+    # firefly int8 (W8A16/W8A8): 不整文件覆盖上游 compressed_tensors.py, 改为
+    # 向文件尾部追加 import + maybe_apply() —— 模块加载时打 monkey-patch,
+    # 早于任何 get_scheme 调用 (每个 Linear 层 get_quant_method 时被调)。
+    # VLLM_FIREFLY 开启时命中的 int8 per-channel 层 (W8A16/W8A8) 切到
+    # firefly int8 GEMM, 关则 maybe_apply 直接 return (no-op, 不碰上游)。
+    # probe 取注入后才出现的 maybe_apply 行做幂等判断, 手法与 envs hook 一致。
+    ct_file = (
+        package_root
+        / "model_executor/layers/quantization/compressed_tensors/compressed_tensors.py"
+    )
+    ct_hook = (
+        "\n\n# vllm-sm75 overlay: firefly int8 权重 (W8A16/W8A8) 接 firefly int8 "
+        "GEMM (idempotent)。\n"
+        "from vllm.model_executor.layers.quantization.utils import (\n"
+        "    firefly_int8 as _ff_int8,\n"
+        ")\n"
+        "\n"
+        "_ff_int8.maybe_apply()\n"
+    )
+    ct_text = ct_file.read_text()
+    if "_ff_int8.maybe_apply()" not in ct_text:
+        ct_file.write_text(ct_text + ct_hook)
 
     third_party_source = source_root / "third_party/flash_qla_sm75"
     third_party_destination = package_root / "third_party/flash_qla_sm75"
