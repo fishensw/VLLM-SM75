@@ -126,9 +126,25 @@ curl -f http://127.0.0.1:18001/health
 docker logs --tail 80 vllm-sm75-next-ultra-0924
 ```
 
-已有同名纯API容器时，切换前需停止并移除该容器，保留原模型、缓存、镜像及数据；不要让两个容器同时占用同一组GPU。脚本不会自动删除或停止任何已有容器。
+### 现有 Next 镜像热更新
 
-**验证范围**：原最终镜像的八卡、256K单路、并发4混合负载验证仍如上所述；新增面板入口已通过本地配置初始化、参数一致性、启停管理和数据保护测试，尚未完成该入口的八卡容器实测。
+无需重新构建或下载镜像。更新本分支文件，在仓库目录执行：
+
+```bash
+git pull --ff-only origin vllm-sm75-next-0924
+```
+
+将上方的 `MODEL_ROOT`、`CACHE_ROOT` 设置为现有部署的实际目录，`ULTRA_DATA_ROOT` 使用独立的 Next 面板目录。已有纯 API 容器时，执行以下切换：
+
+```bash
+export CONTAINER_NAME=vllm-sm75-next-ultra-0924
+docker stop "$CONTAINER_NAME"
+docker rename "$CONTAINER_NAME" "${CONTAINER_NAME}-before-panel-$(date +%Y%m%d-%H%M%S)"
+bash scripts/run-next.sh
+```
+
+这次切换会短暂中断推理，用同一镜像创建带1615端口的新容器，原容器保留为停止状态。模型和缓存沿用原目录。后续只更新面板入口文件时，更新仓库后重启这个 Next 容器即可，已保存的面板配置继续保留。
+
 
 仅需推理 API 时，可继续设置 `MODEL_ROOT`、`CACHE_ROOT`、`VLLM_API_KEY` 后运行 `bash scripts/run-next-api.sh`；该模式不启动1615面板。
 
@@ -186,7 +202,6 @@ VLLM_FLASHINFER_WORKSPACE_BUFFER_SIZE=134217728
 - 长上下文和混合并发仍受KV及临时显存约束，长请求预填充可能影响短请求延迟。
 - 当前路线关闭QSA并跳过indexer，不作原生QSA等价性承诺。
 - 输出可能包含思考标签，调用方应按实际接口格式处理。
-- Ultra控制台源码与默认入口保留；上述命令通过独立推理模式运行，控制台模型编排未完成完整验证。
 - 推荐参数和模型准备不能替代具体业务的质量与稳定性验收。
 
 ## 8. 项目文件
