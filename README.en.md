@@ -10,4 +10,6 @@ The final `vllm-sm75-next-ultra-0924:latest` image was built and validated in a 
 
 The repository Dockerfile subsequently consolidated the original layered build procedure and has not itself been rerun. This distinction does not mean the final image or its capacity checks were left untested. Prefill parity and full production-quality validation are not claimed. No benchmark datasets or private deployment records are added by this branch.
 
+The launch template publishes port 18001 on all host IPv4 interfaces by default and requires a user-supplied API key. Clients use `http://<server-ip>:18001/v1` with that key. Set `API_BIND=127.0.0.1` only for local-only access.
+
 For the general-purpose project, see [VLLM-SM75 main](https://github.com/fishensw/VLLM-SM75/tree/main).

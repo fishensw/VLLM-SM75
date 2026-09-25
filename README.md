@@ -84,11 +84,16 @@ docker build \
 
 ## 5. 推荐八卡启动方式
 
-修改模型和缓存目录后执行：
+修改模型和缓存目录后执行。默认监听宿主全部IPv4地址，供其他机器通过服务器IP访问；请在防火墙中仅允许需要访问的网络。
 
 ```bash
 export MODEL_ROOT=/srv/models
 export CACHE_ROOT=/srv/vllm-next/cache
+export API_BIND=0.0.0.0
+export API_PORT=18001
+read -rsp "设置 API Key: " VLLM_API_KEY; echo
+export VLLM_API_KEY
+: "${VLLM_API_KEY:?API Key不能为空}"
 mkdir -p "$CACHE_ROOT"
 
 docker run -d \
@@ -100,28 +105,37 @@ docker run -d \
   --memory-swap 240g \
   --ulimit memlock=-1 \
   --ulimit nofile=1048576:1048576 \
-  -p 127.0.0.1:18001:8000 \
+  -p "${API_BIND}:${API_PORT}:8000" \
   --mount "type=bind,src=$MODEL_ROOT,dst=/models,readonly" \
   --mount "type=bind,src=$CACHE_ROOT,dst=/cache" \
   -e VLLM_CACHE_ROOT=/cache/vllm \
   -e TRITON_CACHE_DIR=/cache/triton \
   --entrypoint python3 \
   vllm-sm75-next-ultra-0924:latest \
-  /opt/flashnext/serve.py
+  /opt/flashnext/serve.py --api-key "$VLLM_API_KEY"
 ```
 
 该命令启动推理API模式。参数由镜像内的 `/opt/flashnext/selected-config.json` 加载，对应仓库文件 [config/selected-config.json](config/selected-config.json)。
 
 模型目录只读挂载，编译缓存单独持久化。首次启动可能进行CUDA编译，应等待模型加载和服务初始化完成。
 
-检查服务：
+在服务器本机检查服务：
 
 ```bash
 curl -f http://127.0.0.1:18001/health
 docker logs --tail 80 vllm-sm75-next-ultra-0924
 ```
 
-API地址为 `http://127.0.0.1:18001/v1`，模型名称为 `Flash-Next-TP8`。默认端口仅对宿主本机开放。
+客户端填写 API Base URL `http://<服务器IP>:18001/v1`，模型名称 `Flash-Next-TP8`，API Key 填启动时设置的值。`0.0.0.0` 是监听地址，不是客户端访问地址。
+
+在客户端机器验证（先设置相同的 `VLLM_API_KEY`，并替换服务器IP）：
+
+```bash
+curl -f "http://<服务器IP>:18001/v1/models" \
+  -H "Authorization: Bearer $VLLM_API_KEY"
+```
+
+也可设置以上环境变量后运行 `bash scripts/run-next.sh`。仅需本机访问时，可主动将 `API_BIND` 改为 `127.0.0.1`。
 
 ## 6. 推荐参数
 
