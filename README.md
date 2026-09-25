@@ -153,8 +153,16 @@ curl -f http://127.0.0.1:18001/health
 | `--gpu-memory-utilization` | `0.90` |
 | `--block-size` | `32`，实际布局可能由引擎调整 |
 | `--enable-prefix-caching` | 开启 |
-| `--engram-config` | `{"cpu_offload":true}` |
+| `--engram-config`（B9） | `{"cpu_offload":true}`；仅卸载PLE embedding表，key/value投影保持FP16并驻留GPU |
 | `--gdn-prefill-backend` | `flashqla_sm75` |
+
+**B9对应参数：**
+
+```bash
+--engram-config '{"cpu_offload":true}'
+```
+
+当前 v0.1.6 Next 配置已包含此项。B9修复的是旧 `--cpu-offload-params ple` 范围过宽、连PLE key/value投影也被卸载的问题；这里仅将PLE embedding表放在CPU，投影留在GPU。不要额外添加旧的 `--cpu-offload-params ple`，以免再次卸载投影。
 
 MTP配置：
 
