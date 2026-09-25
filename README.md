@@ -89,12 +89,11 @@ docker build \
 ```bash
 export MODEL_ROOT=/srv/models
 export CACHE_ROOT=/srv/vllm-next/cache
+export ULTRA_DATA_ROOT=/srv/vllm-next/ultra
+export CONSOLE_PORT=1615
 export API_BIND=0.0.0.0
 export API_PORT=18001
-read -rsp "设置 API Key: " VLLM_API_KEY; echo
-export VLLM_API_KEY
-: "${VLLM_API_KEY:?API Key不能为空}"
-mkdir -p "$CACHE_ROOT"
+mkdir -p "$CACHE_ROOT" "$ULTRA_DATA_ROOT/console" "$ULTRA_DATA_ROOT/home" "$ULTRA_DATA_ROOT/workspace"
 
 docker run -d \
   --name vllm-sm75-next-ultra-0924 \
@@ -105,61 +104,39 @@ docker run -d \
   --memory-swap 240g \
   --ulimit memlock=-1 \
   --ulimit nofile=1048576:1048576 \
+  -p "${API_BIND}:${CONSOLE_PORT}:1615" \
   -p "${API_BIND}:${API_PORT}:8000" \
   --mount "type=bind,src=$MODEL_ROOT,dst=/models,readonly" \
-  --mount "type=bind,src=$CACHE_ROOT,dst=/cache" \
-  -e VLLM_CACHE_ROOT=/cache/vllm \
-  -e TRITON_CACHE_DIR=/cache/triton \
-  --entrypoint python3 \
+  --mount "type=bind,src=$CACHE_ROOT,dst=/data/cache" \
+  --mount "type=bind,src=$ULTRA_DATA_ROOT/console,dst=/data" \
+  --mount "type=bind,src=$ULTRA_DATA_ROOT/home,dst=/dsh/home" \
+  --mount "type=bind,src=$ULTRA_DATA_ROOT/workspace,dst=/dsh/workspace" \
+  --mount "type=bind,src=$(pwd)/next-ultra.mjs,dst=/opt/flashnext/next-ultra.mjs,readonly" \
+  -e SM75_CONSOLE_ROOT=/data \
+  -e SM75_SINGLE_CONTAINER=1 \
+  --entrypoint /usr/local/bin/node \
   vllm-sm75-next-ultra-0924:latest \
-  /opt/flashnext/serve.py \
-  --api-key "$VLLM_API_KEY" \
-  --speculative-config '{"method":"mtp","num_speculative_tokens":5,"model":"/models/fp8ple/runtime/mtp-int4-g32"}'
+  /opt/flashnext/next-ultra.mjs
 ```
 
-该命令显式开启 **MTP5（5步投机解码）**，草稿路径为 `/models/fp8ple/runtime/mtp-int4-g32`；该路径对应宿主的 `$MODEL_ROOT/fp8ple/runtime/mtp-int4-g32`，需提前准备独立草稿权重。镜像内置配置原本已启用相同的MTP5，这里直接列出以便查看。
+该命令同时启动1615面板，由面板自动加载 **TP8＋MTP5＋256K＋并发4**。完整参数来自镜像内的 `/opt/flashnext/selected-config.json`；MTP配置为 `{"method":"mtp","num_speculative_tokens":5,"model":"/models/fp8ple/runtime/mtp-int4-g32"}`，对应草稿权重需提前准备。
 
-该命令启动推理API模式。其余参数由镜像内的 `/opt/flashnext/selected-config.json` 加载，对应仓库文件 [config/selected-config.json](config/selected-config.json)。
+在仓库根目录执行上述命令，`ULTRA_DATA_ROOT` 使用独立的 Next 面板数据目录。模型目录只读挂载，缓存和面板配置持久化；后续重启保留面板中的修改。
 
-模型目录只读挂载，编译缓存单独持久化。首次启动可能进行CUDA编译，应等待模型加载和服务初始化完成。
-
-在服务器本机检查服务：
-
-```bash
-curl -f http://127.0.0.1:18001/health
-docker logs --tail 80 vllm-sm75-next-ultra-0924
-```
-
-客户端填写 API Base URL `http://<服务器IP>:18001/v1`，模型名称 `Flash-Next-TP8`，API Key 填启动时设置的值。`0.0.0.0` 是监听地址，不是客户端访问地址。
-
-在客户端机器验证（先设置相同的 `VLLM_API_KEY`，并替换服务器IP）：
-
-```bash
-curl -f "http://<服务器IP>:18001/v1/models" \
-  -H "Authorization: Bearer $VLLM_API_KEY"
-```
-
-也可设置以上环境变量后运行 `bash scripts/run-next-api.sh`。仅需本机访问时，可主动将 `API_BIND` 改为 `127.0.0.1`。
-
-### 面板启动
-
-需要 Ultra 面板时，使用以下方式启动，替代上面的纯 API 命令。模型和缓存目录沿用上方设置：
-
-```bash
-export ULTRA_DATA_ROOT=/srv/vllm-next/ultra
-export CONSOLE_PORT=1615
-bash scripts/run-next.sh
-```
-
-`ULTRA_DATA_ROOT` 使用独立的 Next 面板数据目录。脚本同时映射 `1615:1615` 和 `18001:8000`，自动启动面板，并导入、启动 **TP8＋MTP5＋256K＋并发4** 推荐配置。后续重启保留面板中的修改。两种启动方式选一种，同一组GPU只运行一个实例。
-
-浏览器访问 `http://<服务器IP>:1615`。在宿主机读取登录 token：
+浏览器访问 `http://<服务器IP>:1615`，在宿主机读取面板登录 token：
 
 ```bash
 docker exec vllm-sm75-next-ultra-0924 node /opt/sm75-workbench/console/auth-cli.mjs show
 ```
 
-面板模式的推理 API Key 在面板中查看或修改，与面板登录 token 不同，无需设置 `VLLM_API_KEY`。API 地址仍为 `http://<服务器IP>:18001/v1`；模型加载进度可在面板的引擎日志中查看。
+推理 API Base URL 为 `http://<服务器IP>:18001/v1`，模型名称为 `Flash-Next-TP8`。API Key 在面板中查看或修改，与面板登录 token 不同。
+
+首次启动需等待编译和模型加载完成，可在面板查看引擎日志。在服务器本机检查服务：
+
+```bash
+curl -f http://127.0.0.1:1615/
+curl -f http://127.0.0.1:18001/health
+```
 
 ## 6. 推荐参数
 
