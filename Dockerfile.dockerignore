@@ -1,0 +1,11 @@
+*
+!Dockerfile
+!patches/
+!patches/**
+!config/
+!config/**
+!tests/
+!tests/**
+!serve.py
+**/__pycache__
+**/*.pyc

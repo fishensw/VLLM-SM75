@@ -1,117 +1,188 @@
-# vLLM-SM75 v0.1.6
+# vllm-sm75-next-0924
 
-[English](README.en.md) · [发布说明](docs/releases/v0.1.6.md) · [参数模板](docs/configuration-v0.1.6.md) · [完整构建](docker/BUILD.md)
+基于 [vLLM-SM75 v0.1.6](https://github.com/fishensw/VLLM-SM75) Ultra 的 **Flash-Next 八卡专用分支**，面向 **8×Tesla T10 / NVIDIA Turing SM75**，提供 Qwen3.8-Flash-Next W4A16 FP8 PLE 的运行适配和推荐配置。
 
-## 1. 简要说明
+采用 **TP8＋Expert Parallel、FP16、FP8 KV、MTP5**，配置 **256K 总上下文与并发上限4**。保留 Ultra 控制台入口，提供可直接使用的 OpenAI 兼容推理 API 启动方式。
 
-面向 NVIDIA Turing / SM75（Tesla T4、T10 等）的 vLLM 0.30.0 适配，保留 GDN、FP8/AWQ、FP8 KV、MTP/DFlash2、Firefly、CPU KV、自动休眠和监控等功能。标准版提供推理 API；Ultra 在相同推理核心上提供 Web 管理、快速会话和工作台。
+## 1. 适用范围
 
-QQ 交流群：**878924874**
+| 项目 | 配置 |
+|---|---|
+| GPU | 8×Tesla T10，每卡16GB，SM75 |
+| 基础版本 | vllm-sm75 v0.1.6 Ultra / vLLM 0.30.0 |
+| 主模型 | Qwen3.8-Flash-Next-W4A16-FP8PLE |
+| 并行方式 | TP8＋EP |
+| 推理精度 | 主模型FP16，W4专家权重，FP8 PLE与FP8 KV |
+| MTP | 独立INT4 group32草稿，5步投机解码 |
+| 上下文 | `max-model-len=262144`，包含输入与输出 |
+| 并发 | `max-num-seqs=4`，面向单路256K及四路混合长度请求 |
 
-## 2. 更新说明
+本分支集中维护上述硬件与模型组合。四路并发不表示四个请求可以同时各占满256K。
 
-本版主要更新如下；推理及缓存相关功能由标准版和 Ultra 共用。
+## 2. Next 专用适配
 
-- **引擎适配**：适配 vLLM 0.30.0，保留 SM75、GDN、FP8 KV、Firefly、自动休眠和监控等原有功能。
-- **DFlash2 修复**：修复量化 context KV、草稿权重映射和 CUTLASS 能力判断；SM75 避开 Humming 提前溢出的路径，回退到 Marlin。
-- **编译缓存隔离**：更新内部编译标识，避免复用不匹配的内核和权重布局缓存。
-- **长上下文配置**：新增 YaRN 1M、每卡 GPU KV 和整组 CPU KV 的独立设置，保留模型原生位置编码字段。
-- **LMCache 分层缓存**：可选 CPU L1、磁盘 L2 与重启复用，默认不安装本项目固定扩展、不启用。
-- **Ultra 工作台**：升级到 Harness 0.1.7-alpha.2，固定 Node 22.23.2 和 pnpm 11.7.0。
-- **Ultra 面板**：新增上下文与缓存配置区，支持选择默认 CPU KV 或 LMCache。
+本分支包含运行时补丁及配置模板，不能只将启动参数套用到未适配的原版镜像。
 
-## 3. 标准版与 Ultra 功能对比
+- **FP16兼容**：调整主模型和MTP中的HC参数精度，适配SM75运行路径。
+- **FP8 PLE访问**：使用原始字节搬运处理PLE查询，保留原反量化逻辑。
+- **B9放置策略**：PLE embedding表卸载到CPU，PLE key/value投影保留在GPU。
+- **H1 HC优化**：对适用投影形状启用GEMV实现，其他形状保留回退路径。
+- **MTP融合归一化**：减少MTP中两处归一化的临时显存分配。
+- **MTP Graph配置**：采用PIECEWISE CUDA Graph，覆盖1/2/4路请求对应的验证批次。
 
-| 功能 | 标准版 | Ultra |
-| --- | --- | --- |
-| OpenAI 兼容 API、SM75 推理核心 | 有 | 相同核心 |
-| 普通推理 / MTP / DFlash2 | 启动参数 | 面板配置及启动参数 |
-| 引擎监控、投机开关 | `:8000/monitor`，需按引擎鉴权 | 工作台集成，确认实际生效状态 |
-| P-State 常驻省电 / 自动休眠 | 环境变量 | 每个运行配置的电源设置 |
-| 模型、启动参数、编译缓存管理 | 命令行 | Web 管理、模板、导入导出 |
-| YaRN、GPU KV、CPU KV | 显式参数 | 可视化配置并校验 |
-| LMCache CPU＋磁盘 | 可选扩展层；同容器管理缓存服务 | 可选安装；面板管理进程与缓存目录 |
-| 对话、图片附件、工具工作区 | 使用外部客户端 | 快速对话＋Harness 工作台 |
-| 管理员登录、网段策略、历史用量 | 由外部管理系统提供 | 内置 |
-| 默认端口 | 推理 8000 | 管理 1615；推理 8000 |
+当前沿用关闭QSA、跳过indexer的兼容路线，并包含继承的Torch编译适配；这些改动仅用于本分支隔离镜像，不作为所有SM75模型的通用默认。
 
-选标准版适合已有前端和运维流程；Ultra 适合在一个容器中管理模型与工作台。相同参数下不应把面板本身描述为推理加速。两版不要同时争用同一组 GPU。
+## 3. 环境与模型准备
 
-## 4. 性能参考
+运行环境需要Linux x86_64、Docker、NVIDIA Container Toolkit，以及兼容Turing的NVIDIA驱动。八张GPU应由本服务独占使用。
 
-本轮完整镜像实测：4×T10 16 GiB、PCIe 3.0 ×8、TP4、同一 FP8 目标和 DFlash2 draft7、CPU KV 8 GiB、每卡 GPU KV 约 3.06 GiB。固定输入、三位置检索＋长篇续写、输出 512 token，各项预热后三次中位数。全部 27 个性能样本完成检索和输出，零缓存命中、零抢占。
+主模型：[albucino/Qwen3.8-Flash-Next-W4A16-FP8PLE](https://huggingface.co/albucino/Qwen3.8-Flash-Next-W4A16-FP8PLE)。
 
-| 输入 | v0.1.5 Ultra Prefill / Decode | v0.1.6 标准版 Prefill / Decode | v0.1.6 Ultra Prefill / Decode |
-| --- | ---: | ---: | ---: |
-| 8192 | 1271.71 / 62.74 | 1282.27 / 65.78 | 1281.34 / 60.49 |
-| 32768 | 1203.77 / 58.84 | 1209.02 / 64.46 | 1207.62 / 63.47 |
-| 131072 | 976.08 / 59.85 | 977.80 / 53.01 | 978.08 / 58.73 |
+按以下结构准备模型目录：
 
-单位为 tok/s。Prefill 是输入/TTFT；decode 扣除首批流式 token，详见 [完整条件、接受率及证据](docs/validation/v0.1.6-full-images.md)。标准版 128K decode 比旧版低 11.43%；Ultra 各长度与旧版差值均未越过 5%吞吐容差。**跨版本以及标准版/Ultra 之间的续写 token 哈希不同，严格等价验收未通过**，不能承诺无损替换或把差值归因于面板本身。
-
-标准版和 Ultra 均两次通过 261632 输入＋512 输出的 256K 持续生成，零抢占，四次输出 token 一致；重复请求没有 CPU KV 回读，仍重新 prefill。旧[FP8](docs/validation/v0.1.4.md)/[AWQ](docs/validation/v0.1.4-awq.md)表采用不同工作负载和计时口径，不与本表混用。
-
-**上下文口径：** `max-model-len` 包含输入＋输出。YaRN1M 是位置编码及配置能力；CPU KV / LMCache 复用前缀，不增加活动请求可用的 GPU 注意力容量。实际完成生成且通过内容检查的长度才记为实测通过。
-
-## 5. 快速构建与启动
-
-### 依赖与构建流程
-
-- Linux x86_64、Bash、Git、Docker / BuildKit；构建机需访问 Docker Hub、PyPI、PyTorch wheel 索引、FlashInfer 和 npm。宿主不需要安装 PyTorch/CUDA 编译工具；隔离流程的源码打包另需 Python 3（仅标准库）。
-- 运行机需兼容 Turing 的 NVIDIA 驱动与 NVIDIA Container Toolkit，先确认容器能访问 GPU。本轮宿主驱动为 610.43.02，这不是最低版本声明。
-- 镜像内部固定 vLLM 0.30.0、Torch 2.13.0、CUDA 12.9、Transformers 5.15.1、FlashInfer 0.6.18；移除不适用于 SM75 的 FlashInfer JIT cache。完整清单见 [版本清单](docs/releases/v0.1.6-release-manifest.json)。
-- 标准版：官方固定摘要基座 → 编译 SM75 FlashQLA → 安装适配 → 构建检查。Ultra：相同标准版 → 锁定 Harness/Node 依赖 → 控制台与插件。
-- 全量构建需要保存数十 GiB 的基础层、缓存和产物，建议预留 **200 GiB** 空间；本轮隔离 worker 使用 **8 GiB RAM、2 CPU、MAX_JOBS=1**。这不是模型推理的内存预算。
-
-本地正式 Ultra 镜像标签为 `vllm-sm75:v0.1.6-ultra`。以下是从发布源码完整构建的流程；在独立 Linux 构建机确认版本号后执行：
-
-```bash
-git clone https://github.com/fishensw/VLLM-SM75.git
-cd VLLM-SM75
-# 使用本次发布源码或已核对的提交；确认 docker/VERSION 为 0.1.6。
-cat docker/VERSION
-MAX_JOBS=1 bash docker/build.sh
-EDITION=ultra bash docker/build.sh
-# 若需要 LMCache，第二步改用：
-# EDITION=ultra INSTALL_LMCACHE=1 bash docker/build.sh
+```text
+/srv/models/
+└── fp8ple/
+    ├── config.json
+    ├── tokenizer相关文件
+    ├── 模型权重及索引文件
+    └── runtime/
+        └── mtp-int4-g32/
+            ├── config.json
+            ├── mtp-dense.safetensors
+            └── mtp-routed-experts-int4.safetensors
 ```
 
-得到 `vllm-sm75:v0.1.6` 和 `vllm-sm75:v0.1.6-ultra`。构建不会自动启动模型。若复用本轮验收归档，标签为 `local/vllm-sm75:v0.1.6-rc1` / `local/vllm-sm75:v0.1.6-ultra-rc1`，用 `IMAGE` 覆盖启动标签，见 [归档校验与导入](docs/validation/v0.1.6-full-images.md#构建与产物)。生产 Unraid 的未隔离完整导出入口仍被拦截；使用 [隔离构建流程](docker/BUILD.md#隔离完整构建) 保留宿主资源保护。
+目录示意只列出关键文件，部署时需保留完整模型及草稿文件。
 
-### 标准版：先验证基本推理
+**MTP草稿需要单独准备。** 主模型下载不包含本配置使用的全部草稿权重。当前配置对应本地RTN INT4 group32草稿，来源为 `RadixArk/Qwen3.8-Flash-Next-NVFP4` 的转换产物；本仓库不分发权重，也尚未提供完整的草稿转换流程。具体依赖见 [PROVENANCE.md](PROVENANCE.md)。
 
-先将完整目标模型和匹配草稿下载到宿主模型目录；下列路径均需替换。启动脚本的默认模板按 **4 卡 T10、TP4** 编写。
+PLE表卸载和推理运行时需要主机内存。下方模板的 `240g` 是容器内存上限，不是固定预占或最低内存声明，应结合宿主容量配置。
+
+## 4. 构建镜像
+
+先按 [主项目构建说明](https://github.com/fishensw/VLLM-SM75#5-快速构建与启动)准备未应用本分支补丁的 `vllm-sm75:v0.1.6-ultra` 基础镜像，再在本分支目录执行：
+
+```bash
+docker build \
+  --build-arg BASE_IMAGE=vllm-sm75:v0.1.6-ultra \
+  -t vllm-sm75-next-ultra-0924:latest .
+```
+
+补丁安装会检查源码匹配情况。同名基础镜像标签可能变化，版本来源以 `PROVENANCE.md` 为准；不要对已经安装本分支补丁的镜像重复应用。
+
+> 发布准备状态：当前仓库Dockerfile由原分层构建流程整理合并，尚需完成合并构建复核。不能将已有派生镜像的验证直接等同于这个Dockerfile已完成验证。
+
+## 5. 推荐八卡启动方式
+
+修改模型和缓存目录后执行：
 
 ```bash
 export MODEL_ROOT=/srv/models
-export MODEL=/models/Qwen3.8-27B-FP8
-export VLLM_SM75_CACHE_ROOT=/srv/vllm-sm75/cache
-export VLLM_SM75_MODEL_CACHE_ROOT=/srv/vllm-sm75/downloads
-export VLLM_API_KEY='replace-with-your-api-key'
-export PSTATE_NVAPI_LIB=/usr/lib64/libnvidia-api.so.1  # 换成实际驱动库路径
-VARIANT=base POWER_MODE=pstate MAX_MODEL_LEN=32768 CPU_KV_GIB=2 bash docker/run.sh
-curl --fail http://localhost:8000/health
-curl --fail http://localhost:8000/v1/models -H "Authorization: Bearer $VLLM_API_KEY"
+export CACHE_ROOT=/srv/vllm-next/cache
+mkdir -p "$CACHE_ROOT"
+
+docker run -d \
+  --name vllm-sm75-next-ultra-0924 \
+  --gpus all \
+  --restart no \
+  --shm-size 64g \
+  --memory 240g \
+  --memory-swap 240g \
+  --ulimit memlock=-1 \
+  --ulimit nofile=1048576:1048576 \
+  -p 127.0.0.1:18001:8000 \
+  --mount "type=bind,src=$MODEL_ROOT,dst=/models,readonly" \
+  --mount "type=bind,src=$CACHE_ROOT,dst=/cache" \
+  -e VLLM_CACHE_ROOT=/cache/vllm \
+  -e TRITON_CACHE_DIR=/cache/triton \
+  --entrypoint python3 \
+  vllm-sm75-next-ultra-0924:latest \
+  /opt/flashnext/serve.py
 ```
 
-首次启动会加载权重、编译和捕获 CUDA Graph；以 `/health` 和实际生成成功判断就绪。接入 DFlash2、256K、YaRN、CPU KV、LMCache 的可复制参数与效果见 [配置推荐模板](docs/configuration-v0.1.6.md)。
+该命令启动推理API模式。参数由镜像内的 `/opt/flashnext/selected-config.json` 加载，对应仓库文件 [config/selected-config.json](config/selected-config.json)。
 
-### Ultra：面板与首次登录
+模型目录只读挂载，编译缓存单独持久化。首次启动可能进行CUDA编译，应等待模型加载和服务初始化完成。
+
+检查服务：
 
 ```bash
-ULTRA_DATA_ROOT=/srv/vllm-sm75/ultra MODEL_ROOT=/srv/models \
-  PSTATE_NVAPI_LIB=/usr/lib64/libnvidia-api.so.1 \
-  EDITION=ultra bash docker/run.sh
-# 在宿主终端读取首次自动生成的 Web 登录 token：
-docker exec vllm-sm75-ultra node /opt/sm75-workbench/console/auth-cli.mjs show
+curl -f http://127.0.0.1:18001/health
+docker logs --tail 80 vllm-sm75-next-ultra-0924
 ```
 
-打开 `http://<局域网IP>:1615` 登录，在面板登记 `/models` 下模型，创建运行配置，再启动推理。Web token 位于 `<ULTRA_DATA_ROOT>/console/key`，与模型 API key 分开。默认只启动管理服务。
+API地址为 `http://127.0.0.1:18001/v1`，模型名称为 `Flash-Next-TP8`。默认端口仅对宿主本机开放。
 
-**P-State 必备：** 匹配宿主驱动的 NVAPI `libnvidia-api.so.1`，以及由 NVIDIA Toolkit `utility` 提供的 NVML。标准启动脚本默认空闲 1800 秒、确认 60 秒、低态 8、高态 **16（恢复驱动自动控制，不是硬件 P16）**。Ultra 未设置电源项时的默认空闲为 1 秒、确认 60 秒；每份配置独立保存；当前“导入配置”不会带入电源字段，会回到上述默认值，保存前请在电源区重新填写。保留原数据目录升级的既有配置不受此导入行为影响。一个 GPU 只使用一个 P-State 控制器；不要设为 0/0。完整参数和单位见 [电源模板](docs/configuration-v0.1.6.md#电源模式与单位)。
+## 6. 推荐参数
 
-升级 Ultra 保留原 `/data`、`/data/cache`、`/dsh/home`、`/dsh/workspace`；先用独立目录验收，再按 [升级与回退](ultra/README.md#首次使用与升级) 切换。首次安装命令不能用来覆盖现有数据。
+| 参数 | 推荐值 |
+|---|---|
+| `--dtype` / `--hf-overrides` | `float16` / `{"dtype":"float16"}` |
+| `--tensor-parallel-size` | `8` |
+| `--enable-expert-parallel` | 开启 |
+| `--max-model-len` | `262144` |
+| `--max-num-seqs` | `4` |
+| `--max-num-batched-tokens` | `4096` |
+| `--kv-cache-dtype` | `fp8_e4m3` |
+| `--kv-cache-memory-bytes` | `2147483648`，每卡2GiB |
+| `--gpu-memory-utilization` | `0.90` |
+| `--block-size` | `32`，实际布局可能由引擎调整 |
+| `--enable-prefix-caching` | 开启 |
+| `--engram-config` | `{"cpu_offload":true}` |
+| `--gdn-prefill-backend` | `flashqla_sm75` |
 
----
+MTP配置：
 
-[历史发布](docs/releases/v0.1.5-ultra.zh-CN.md) · [休眠与缓存](docs/sleep-and-cache.md) · [LMCache 详细说明](docs/lmcache.md) · [LICENSE](LICENSE)
+```json
+{
+  "method": "mtp",
+  "num_speculative_tokens": 5,
+  "model": "/models/fp8ple/runtime/mtp-int4-g32"
+}
+```
+
+Graph配置：
+
+```json
+{
+  "mode": 0,
+  "cudagraph_mode": "PIECEWISE",
+  "cudagraph_capture_sizes": [1, 2, 4, 6, 12, 24]
+}
+```
+
+镜像内置环境变量：
+
+```text
+OMP_NUM_THREADS=1
+VLLM_SM75_QWEN38_HC_GEMV=1
+VLLM_FLASHINFER_WORKSPACE_BUFFER_SIZE=134217728
+```
+
+显式KV字节数控制KV分配，不能仅通过 `gpu-memory-utilization` 推断总显存占用。不要直接提高预填充批次或Graph捕获尺寸，运行时仍需预留显存。
+
+## 7. 使用边界
+
+- MTP收益取决于输入与草稿接受率，推荐配置不保证所有任务都更快；当前尚未实现prefill性能完全不退化。
+- 长上下文和混合并发仍受KV及临时显存约束，长请求预填充可能影响短请求延迟。
+- 当前路线关闭QSA并跳过indexer，不作原生QSA等价性承诺。
+- 输出可能包含思考标签，调用方应按实际接口格式处理。
+- Ultra控制台源码与默认入口保留；上述命令通过独立推理模式运行，控制台模型编排未完成完整验证。
+- 推荐参数和模型准备不能替代具体业务的质量与稳定性验收。
+
+## 8. 项目文件
+
+```text
+Dockerfile                  镜像构建
+patches/                    Flash-Next / SM75运行时适配
+config/selected-config.json  八卡推荐配置
+serve.py                    固化参数启动入口
+scripts/run-next.sh              参数化Docker启动脚本
+tests/next/                 Next GPU验证脚本
+启动参数.md                 完整启动说明
+PATCHES.md                  补丁范围与集成说明
+PROVENANCE.md               版本和模型依赖
+```
+
+本分支README不包含性能榜单或原始测试数据。主项目的通用介绍、其它硬件与模型方案请参阅 [VLLM-SM75](https://github.com/fishensw/VLLM-SM75)。

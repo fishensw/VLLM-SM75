@@ -18,3 +18,7 @@ ultra/source/lmcache/patches/LICENSE text eol=lf
 .gitattributes text eol=lf
 .gitignore text eol=lf
 .dockerignore text eol=lf
+
+# Next branch deployment metadata
+PATCH-SHA256SUMS text eol=lf
+config/example.env text eol=lf
