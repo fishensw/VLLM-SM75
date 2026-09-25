@@ -12,6 +12,4 @@ The repository Dockerfile subsequently consolidated the original layered build p
 
 The recommended `scripts/run-next.sh` starts the Ultra panel on host port 1615 and the inference API on host port 18001. A dedicated persistent `ULTRA_DATA_ROOT` is required. On first launch, the panel imports the tested TP8 + MTP5 / 256K / concurrency-4 configuration and automatically starts the engine. Later launches preserve panel edits and credentials. The panel manages its own API key, separate from the Web login token. API-only mode remains available as `scripts/run-next-api.sh`.
 
-Existing Next images can use the panel update without rebuilding: update this branch, retain the current model/cache paths, set a dedicated `ULTRA_DATA_ROOT`, then replace the API-only container using `scripts/run-next.sh`. The switch briefly interrupts inference because publishing port 1615 requires a new container. See the Chinese README for the exact commands.
-
 For the general-purpose project, see [VLLM-SM75 main](https://github.com/fishensw/VLLM-SM75/tree/main).
