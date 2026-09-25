@@ -112,10 +112,14 @@ docker run -d \
   -e TRITON_CACHE_DIR=/cache/triton \
   --entrypoint python3 \
   vllm-sm75-next-ultra-0924:latest \
-  /opt/flashnext/serve.py --api-key "$VLLM_API_KEY"
+  /opt/flashnext/serve.py \
+  --api-key "$VLLM_API_KEY" \
+  --speculative-config '{"method":"mtp","num_speculative_tokens":5,"model":"/models/fp8ple/runtime/mtp-int4-g32"}'
 ```
 
-该命令启动推理API模式。参数由镜像内的 `/opt/flashnext/selected-config.json` 加载，对应仓库文件 [config/selected-config.json](config/selected-config.json)。
+该命令显式开启 **MTP5（5步投机解码）**，草稿路径为 `/models/fp8ple/runtime/mtp-int4-g32`；该路径对应宿主的 `$MODEL_ROOT/fp8ple/runtime/mtp-int4-g32`，需提前准备独立草稿权重。镜像内置配置原本已启用相同的MTP5，这里直接列出以便查看。
+
+该命令启动推理API模式。其余参数由镜像内的 `/opt/flashnext/selected-config.json` 加载，对应仓库文件 [config/selected-config.json](config/selected-config.json)。
 
 模型目录只读挂载，编译缓存单独持久化。首次启动可能进行CUDA编译，应等待模型加载和服务初始化完成。
 

@@ -11,4 +11,6 @@ docker run -d --name "${CONTAINER_NAME:-vllm-sm75-next-ultra-0924}" \
   --mount "type=bind,src=$MODEL_ROOT,dst=/models,readonly" \
   --mount "type=bind,src=$CACHE_ROOT,dst=/cache" \
   -e VLLM_CACHE_ROOT=/cache/vllm -e TRITON_CACHE_DIR=/cache/triton \
-  --entrypoint python3 "${IMAGE:-vllm-sm75-next-ultra-0924:latest}" /opt/flashnext/serve.py --api-key "$VLLM_API_KEY"
+  --entrypoint python3 "${IMAGE:-vllm-sm75-next-ultra-0924:latest}" /opt/flashnext/serve.py \
+  --api-key "$VLLM_API_KEY" \
+  --speculative-config '{"method":"mtp","num_speculative_tokens":5,"model":"/models/fp8ple/runtime/mtp-int4-g32"}'
