@@ -82,64 +82,55 @@ docker build \
 
 这些验证在整理发布资料和README之前已经完成。仓库Dockerfile是随后对原分层构建流程的合并整理；该合并文件未单独重新执行，不影响上述最终镜像已完成验证的事实，也不代表逐字复现该文件已获验证。
 
-## 5. 推荐八卡启动方式
+## 5. 推荐启动：1615 面板＋Next 配置
 
-修改模型和缓存目录后执行。默认监听宿主全部IPv4地址，供其他机器通过服务器IP访问；请在防火墙中仅允许需要访问的网络。
+首次启动自动创建面板配置 **Flash-Next TP8 · MTP5 · 256K · 并发4**，由面板自动启动和管理推理进程。使用独立的 Next 面板数据目录；已有其他 Ultra 数据目录不会被覆盖。
 
 ```bash
 export MODEL_ROOT=/srv/models
 export CACHE_ROOT=/srv/vllm-next/cache
+export ULTRA_DATA_ROOT=/srv/vllm-next/ultra
+export IMAGE=vllm-sm75-next-ultra-0924:latest
 export API_BIND=0.0.0.0
+export CONSOLE_PORT=1615
 export API_PORT=18001
-read -rsp "设置 API Key: " VLLM_API_KEY; echo
-export VLLM_API_KEY
-: "${VLLM_API_KEY:?API Key不能为空}"
-mkdir -p "$CACHE_ROOT"
-
-docker run -d \
-  --name vllm-sm75-next-ultra-0924 \
-  --gpus all \
-  --restart no \
-  --shm-size 64g \
-  --memory 240g \
-  --memory-swap 240g \
-  --ulimit memlock=-1 \
-  --ulimit nofile=1048576:1048576 \
-  -p "${API_BIND}:${API_PORT}:8000" \
-  --mount "type=bind,src=$MODEL_ROOT,dst=/models,readonly" \
-  --mount "type=bind,src=$CACHE_ROOT,dst=/cache" \
-  -e VLLM_CACHE_ROOT=/cache/vllm \
-  -e TRITON_CACHE_DIR=/cache/triton \
-  --entrypoint python3 \
-  vllm-sm75-next-ultra-0924:latest \
-  /opt/flashnext/serve.py \
-  --api-key "$VLLM_API_KEY" \
-  --speculative-config '{"method":"mtp","num_speculative_tokens":5,"model":"/models/fp8ple/runtime/mtp-int4-g32"}'
+bash scripts/run-next.sh
 ```
 
-该命令显式开启 **MTP5（5步投机解码）**，草稿路径为 `/models/fp8ple/runtime/mtp-int4-g32`；该路径对应宿主的 `$MODEL_ROOT/fp8ple/runtime/mtp-int4-g32`，需提前准备独立草稿权重。镜像内置配置原本已启用相同的MTP5，这里直接列出以便查看。
+脚本同时映射 **1615:1615** 和 **18001:8000**，挂载模型只读目录、独立缓存、面板数据及工作台目录。默认监听全部IPv4地址；请在防火墙中仅允许需要访问的网络。仅需本机访问时设置 `API_BIND=127.0.0.1`。
 
-该命令启动推理API模式。其余参数由镜像内的 `/opt/flashnext/selected-config.json` 加载，对应仓库文件 [config/selected-config.json](config/selected-config.json)。
+脚本将仓库内的 `next-ultra.mjs` 只读挂载到容器，并使用 Node 启动面板，可配合之前已构建的 Next 镜像使用。当前 Dockerfile 也已将该入口加入默认启动流程。不要再为面板模式指定 `--entrypoint python3`。
 
-模型目录只读挂载，编译缓存单独持久化。首次启动可能进行CUDA编译，应等待模型加载和服务初始化完成。
+- **面板**：`http://<服务器IP>:1615`
+- **推理 API Base URL**：`http://<服务器IP>:18001/v1`
+- **模型名称**：`Flash-Next-TP8`
+- **默认 MTP**：`{"method":"mtp","num_speculative_tokens":5,"model":"/models/fp8ple/runtime/mtp-int4-g32"}`
 
-在服务器本机检查服务：
+MTP草稿目录必须提前准备，见上方模型说明。面板可能先于推理服务就绪；首次编译及模型加载期间，请在面板查看引擎日志。
+
+在 Docker 宿主机读取面板登录 token：
 
 ```bash
+docker exec vllm-sm75-next-ultra-0924 node /opt/sm75-workbench/console/auth-cli.mjs show
+```
+
+推理 API Key 由面板独立生成和管理，登录后在 API 访问设置中查看或修改；它与面板登录 token 不同。面板模式无需设置 `VLLM_API_KEY`。
+
+首次初始化从镜像内 `/opt/flashnext/selected-config.json` 导入完整推荐参数，仅将 `--model 路径` 转换为面板所需的位置参数形式。后续重启保留面板中的配置修改、默认配置、自动启动开关和凭据，不反复覆盖。默认不启用依赖额外驱动库的 P-State 管理，也未添加自动休眠参数。
+
+服务检查：
+
+```bash
+curl -f http://127.0.0.1:1615/
 curl -f http://127.0.0.1:18001/health
 docker logs --tail 80 vllm-sm75-next-ultra-0924
 ```
 
-客户端填写 API Base URL `http://<服务器IP>:18001/v1`，模型名称 `Flash-Next-TP8`，API Key 填启动时设置的值。`0.0.0.0` 是监听地址，不是客户端访问地址。
+已有同名纯API容器时，切换前需停止并移除该容器，保留原模型、缓存、镜像及数据；不要让两个容器同时占用同一组GPU。脚本不会自动删除或停止任何已有容器。
 
-在客户端机器验证（先设置相同的 `VLLM_API_KEY`，并替换服务器IP）：
+**验证范围**：原最终镜像的八卡、256K单路、并发4混合负载验证仍如上所述；新增面板入口已通过本地配置初始化、参数一致性、启停管理和数据保护测试，尚未完成该入口的八卡容器实测。
 
-```bash
-curl -f "http://<服务器IP>:18001/v1/models" \
-  -H "Authorization: Bearer $VLLM_API_KEY"
-```
-
-也可设置以上环境变量后运行 `bash scripts/run-next.sh`。仅需本机访问时，可主动将 `API_BIND` 改为 `127.0.0.1`。
+仅需推理 API 时，可继续设置 `MODEL_ROOT`、`CACHE_ROOT`、`VLLM_API_KEY` 后运行 `bash scripts/run-next-api.sh`；该模式不启动1615面板。
 
 ## 6. 推荐参数
 
@@ -205,7 +196,9 @@ Dockerfile                  镜像构建
 patches/                    Flash-Next / SM75运行时适配
 config/selected-config.json  八卡推荐配置
 serve.py                    固化参数启动入口
-scripts/run-next.sh              参数化Docker启动脚本
+scripts/run-next.sh          面板＋Next自动启动
+scripts/run-next-api.sh      仅推理API启动
+next-ultra.mjs               面板默认配置初始化入口
 tests/next/                 Next GPU验证脚本
 启动参数.md                 完整启动说明
 PATCHES.md                  补丁范围与集成说明

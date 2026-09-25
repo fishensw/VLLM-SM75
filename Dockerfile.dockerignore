@@ -7,5 +7,6 @@
 !tests/
 !tests/**
 !serve.py
+!next-ultra.mjs
 **/__pycache__
 **/*.pyc

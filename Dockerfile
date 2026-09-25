@@ -11,3 +11,7 @@ COPY tests/next/ /opt/flashnext/tests/
 ENV OMP_NUM_THREADS=1 VLLM_SM75_QWEN38_HC_GEMV=1 VLLM_FLASHINFER_WORKSPACE_BUFFER_SIZE=134217728
 LABEL next.scope="experimental-flashnext-sm75-tp8" next.release="0924"
 RUN python3 -m py_compile /opt/flashnext/serve.py
+
+COPY next-ultra.mjs /opt/flashnext/next-ultra.mjs
+EXPOSE 1615 8000
+ENTRYPOINT ["/usr/local/bin/node", "/opt/flashnext/next-ultra.mjs"]

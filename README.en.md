@@ -10,6 +10,8 @@ The final `vllm-sm75-next-ultra-0924:latest` image was built and validated in a 
 
 The repository Dockerfile subsequently consolidated the original layered build procedure and has not itself been rerun. This distinction does not mean the final image or its capacity checks were left untested. Prefill parity and full production-quality validation are not claimed. No benchmark datasets or private deployment records are added by this branch.
 
-The launch template publishes port 18001 on all host IPv4 interfaces by default and requires a user-supplied API key. Clients use `http://<server-ip>:18001/v1` with that key. Set `API_BIND=127.0.0.1` only for local-only access.
+The recommended `scripts/run-next.sh` starts the Ultra panel on host port 1615 and the inference API on host port 18001. A dedicated persistent `ULTRA_DATA_ROOT` is required. On first launch, the panel imports the tested TP8 + MTP5 / 256K / concurrency-4 configuration and automatically starts the engine. Later launches preserve panel edits and credentials. The panel manages its own API key, separate from the Web login token. API-only mode remains available as `scripts/run-next-api.sh`.
+
+The new panel bootstrap has local initialization, argument-preservation, process-management and existing-data-protection tests. It has not yet undergone an eight-GPU container validation; previous GPU results apply to the original API launch mode.
 
 For the general-purpose project, see [VLLM-SM75 main](https://github.com/fishensw/VLLM-SM75/tree/main).
