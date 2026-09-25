@@ -6,7 +6,7 @@ set -euo pipefail
 REPO_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 mkdir -p "$CACHE_ROOT" "$ULTRA_DATA_ROOT/console" "$ULTRA_DATA_ROOT/home" "$ULTRA_DATA_ROOT/workspace"
 docker run -d --name "${CONTAINER_NAME:-vllm-sm75-next-ultra-0924}" \
-  --gpus all --restart no --shm-size 64g --memory 240g --memory-swap 240g \
+  --gpus all --restart no --shm-size 64g --memory "${MEMORY_LIMIT:-112g}" --memory-swap "${MEMORY_LIMIT:-112g}" \
   --ulimit memlock=-1 --ulimit nofile=1048576:1048576 \
   -p "${API_BIND:-0.0.0.0}:${CONSOLE_PORT:-1615}:1615" \
   -p "${API_BIND:-0.0.0.0}:${API_PORT:-18001}:8000" \

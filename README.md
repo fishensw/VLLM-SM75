@@ -57,7 +57,7 @@
 
 **MTP草稿需要单独准备。** 主模型下载不包含本配置使用的全部草稿权重。当前配置对应本地RTN INT4 group32草稿，来源为 `RadixArk/Qwen3.8-Flash-Next-NVFP4` 的转换产物；本仓库不分发权重，也尚未提供完整的草稿转换流程。具体依赖见 [PROVENANCE.md](PROVENANCE.md)。
 
-PLE表卸载和推理运行时需要主机内存。下方模板的 `240g` 是容器内存上限，不是固定预占或最低内存声明，应结合宿主容量配置。
+推荐128 GiB主机使用 `--memory 112g --memory-swap 112g`，为系统及其他进程预留约16 GiB；这两个值相同表示不为容器额外提供swap额度。`--shm-size 64g` 是共享内存上限，计入容器内存限额，不是额外预占64 GiB。建议硬件配备128 GiB及以上内存；高于128 GiB时，可按主机可用内存调整上限，至少保留16 GiB给系统，其他服务占用需另扣除。例如256 GiB主机可设为240g。提高内存上限不会自动改变TP8、MTP5、256K或并发4配置。
 
 ## 4. 构建镜像
 
@@ -100,8 +100,8 @@ docker run -d \
   --gpus all \
   --restart no \
   --shm-size 64g \
-  --memory 240g \
-  --memory-swap 240g \
+  --memory 112g \
+  --memory-swap 112g \
   --ulimit memlock=-1 \
   --ulimit nofile=1048576:1048576 \
   -p "${API_BIND}:${CONSOLE_PORT}:1615" \
