@@ -22,12 +22,14 @@ test('first start seeds tested args; panel owns launch and stop; restart preserv
  manager.launch=async (bin,args,env)=>{invocation={bin,args,env};return child;};
  await manager.start(p);
  assert.equal(invocation.bin,'vllm');assert.deepEqual(invocation.args,['serve',...p.args]);
+ assert.equal(invocation.env.NCCL_P2P_LEVEL,process.env.NCCL_P2P_LEVEL ?? 'SYS');
  assert.equal(invocation.env.VLLM_API_KEY,'test-only-key');assert.equal(manager.status(p).running,true);
  await assert.rejects(manager.start({...p,id:'other'}),/停止当前模型/);
  manager.terminate=async c=>{if(c===child)child.emit('exit',0);};await manager.stop(p);assert.equal(manager.status(p).running,false);
- p.name='user edit';fs.writeFileSync(file,JSON.stringify([p]));
+ p.name='user edit';p.env.NCCL_P2P_LEVEL='PIX';fs.writeFileSync(file,JSON.stringify([p]));
  await initializeNext(root,consoleDir,selected);
  assert.equal(JSON.parse(fs.readFileSync(file))[0].name,'user edit');
+ assert.equal(JSON.parse(fs.readFileSync(file))[0].env.NCCL_P2P_LEVEL,'PIX');
  const reopened=new Store(root);assert.equal(reopened.settings().autoStart,false);reopened.close();
 });
 test('unrelated existing panel data is refused without modification',async t=>{

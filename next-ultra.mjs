@@ -31,6 +31,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.ar
   const consoleDir='/opt/sm75-workbench/console';
   process.env.SM75_CONSOLE_ROOT ||= '/data';
   process.env.SM75_SINGLE_CONTAINER='1';
+  process.env.NCCL_P2P_LEVEL ??= 'SYS';
   process.env.SM75_CONSOLE_HOST ||= '0.0.0.0';
   process.env.SM75_CONSOLE_PORT ||= '1615';
   await initializeNext(process.env.SM75_CONSOLE_ROOT, consoleDir,

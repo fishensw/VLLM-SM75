@@ -87,6 +87,17 @@ class ReleaseScripts(unittest.TestCase):
                     self.assertEqual(result.returncode, 0, result.stderr)
                     self.assertEqual(args.count('NCCL_P2P_LEVEL=' + expected), 1)
 
+    def test_next_launchers_preserve_nccl_overrides(self):
+        for script in ('scripts/run-next.sh', 'scripts/run-next-api.sh'):
+            for value, expected in [(None, 'SYS'), ('PIX', 'PIX')]:
+                with self.subTest(script=script, value=value):
+                    result, args = self.invoke(script, MODEL_ROOT='/tmp',
+                        CACHE_ROOT='/tmp/sm75-next-test-cache',
+                        ULTRA_DATA_ROOT='/tmp/sm75-next-test-panel',
+                        NCCL_P2P_LEVEL=value)
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    self.assertEqual(args.count('NCCL_P2P_LEVEL=' + expected), 1)
+
     def test_invalid_mode_cannot_call_docker(self):
         result, args = self.invoke('docker/build.sh', EDITION='unknown')
         self.assertNotEqual(result.returncode, 0)

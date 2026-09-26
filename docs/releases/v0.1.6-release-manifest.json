@@ -164,15 +164,19 @@
       "standard and Ultra public launchers",
       "P-State entrypoint",
       "Ultra native and single-container engine launch",
-      "configuration templates"
+      "configuration templates",
+      "Next image, panel bootstrap and API entrypoint",
+      "Next launch scripts and deployment templates"
     ],
     "validation": {
-      "launchScriptTestsPassed": 9,
+      "launchScriptTestsPassed": 10,
       "ultraConfigAndStandaloneTestsPassed": 14,
       "buildContractTestsPassed": 10,
       "pstateDefaultAndOverrideChecksPassed": 2,
       "gpuRerun": false,
-      "imagesRebuilt": false
+      "imagesRebuilt": false,
+      "nextApiStartupTestsPassed": 1,
+      "nextPanelBootstrapTestsPassed": 2
     }
   }
 }

@@ -5,6 +5,7 @@ set -euo pipefail
 : "${VLLM_API_KEY:?Set VLLM_API_KEY for API authentication}"
 mkdir -p "$CACHE_ROOT"
 docker run -d --name "${CONTAINER_NAME:-vllm-sm75-next-ultra-0924}" \
+  -e NCCL_P2P_LEVEL="${NCCL_P2P_LEVEL-SYS}" \
   --gpus all --restart no --shm-size 64g --memory "${MEMORY_LIMIT:-112g}" --memory-swap "${MEMORY_LIMIT:-112g}" \
   --ulimit memlock=-1 --ulimit nofile=1048576:1048576 \
   -p "${API_BIND:-0.0.0.0}:${API_PORT:-18001}:8000" \

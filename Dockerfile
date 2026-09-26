@@ -1,5 +1,6 @@
 ARG BASE_IMAGE=vllm-sm75:v0.1.6-ultra
 FROM ${BASE_IMAGE}
+ENV NCCL_P2P_LEVEL=SYS
 COPY patches/ /test/
 RUN python3 /test/patch_baseline.py && \
     python3 /test/patch_hc_candidate.py && \

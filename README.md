@@ -112,6 +112,7 @@ docker run -d \
   --mount "type=bind,src=$ULTRA_DATA_ROOT/home,dst=/dsh/home" \
   --mount "type=bind,src=$ULTRA_DATA_ROOT/workspace,dst=/dsh/workspace" \
   --mount "type=bind,src=$(pwd)/next-ultra.mjs,dst=/opt/flashnext/next-ultra.mjs,readonly" \
+  -e NCCL_P2P_LEVEL="${NCCL_P2P_LEVEL-SYS}" \
   -e SM75_CONSOLE_ROOT=/data \
   -e SM75_SINGLE_CONTAINER=1 \
   --entrypoint /usr/local/bin/node \
@@ -179,10 +180,13 @@ Graph配置：
 镜像内置环境变量：
 
 ```text
+NCCL_P2P_LEVEL=SYS
 OMP_NUM_THREADS=1
 VLLM_SM75_QWEN38_HC_GEMV=1
 VLLM_FLASHINFER_WORKSPACE_BUFFER_SIZE=134217728
 ```
+
+`NCCL_P2P_LEVEL` 默认 `SYS`，面板与 API 启动脚本都会传入；显式设置其他值时保留覆盖。已有面板配置无需重写，已有容器需重新创建后继承新增环境变量。
 
 显式KV字节数控制KV分配，不能仅通过 `gpu-memory-utilization` 推断总显存占用。不要直接提高预填充批次或Graph捕获尺寸，运行时仍需预留显存。
 
