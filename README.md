@@ -41,17 +41,11 @@ QQ 交流群：**878924874**
 
 本轮完整镜像实测：4×T10 16 GiB、PCIe 3.0 ×8、TP4、同一 FP8 目标和 DFlash2 draft7、CPU KV 8 GiB、每卡 GPU KV 约 3.06 GiB。固定输入、三位置检索＋长篇续写、输出 512 token，各项预热后三次中位数。全部 27 个性能样本完成检索和输出，零缓存命中、零抢占。
 
-| 输入 | v0.1.5 Ultra Prefill / Decode | v0.1.6 标准版 Prefill / Decode | v0.1.6 Ultra Prefill / Decode |
+| 输入 Token | v0.1.5 Ultra Prefill / Decode（tok/s） | v0.1.6 标准版 Prefill / Decode（tok/s） | v0.1.6 Ultra Prefill / Decode（tok/s） |
 | --- | ---: | ---: | ---: |
 | 8192 | 1271.71 / 62.74 | 1282.27 / 65.78 | 1281.34 / 60.49 |
 | 32768 | 1203.77 / 58.84 | 1209.02 / 64.46 | 1207.62 / 63.47 |
 | 131072 | 976.08 / 59.85 | 977.80 / 53.01 | 978.08 / 58.73 |
-
-单位为 tok/s。Prefill 是输入/TTFT；decode 扣除首批流式 token，详见 [完整条件、接受率及证据](docs/validation/v0.1.6-full-images.md)。标准版 128K decode 比旧版低 11.43%；Ultra 各长度与旧版差值均未越过 5%吞吐容差。**跨版本以及标准版/Ultra 之间的续写 token 哈希不同，严格等价验收未通过**，不能承诺无损替换或把差值归因于面板本身。
-
-标准版和 Ultra 均两次通过 261632 输入＋512 输出的 256K 持续生成，零抢占，四次输出 token 一致；重复请求没有 CPU KV 回读，仍重新 prefill。旧[FP8](docs/validation/v0.1.4.md)/[AWQ](docs/validation/v0.1.4-awq.md)表采用不同工作负载和计时口径，不与本表混用。
-
-**上下文口径：** `max-model-len` 包含输入＋输出。YaRN1M 是位置编码及配置能力；CPU KV / LMCache 复用前缀，不增加活动请求可用的 GPU 注意力容量。实际完成生成且通过内容检查的长度才记为实测通过。
 
 ## 5. 快速构建与启动
 
