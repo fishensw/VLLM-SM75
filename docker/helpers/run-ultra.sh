@@ -24,6 +24,7 @@ exec docker run --detach --name "${CONTAINER_NAME:-vllm-sm75-ultra}" \
   --cap-add SETUID --cap-add SETGID --cap-add KILL --security-opt no-new-privileges \
   --publish "${CONSOLE_PORT:-1615}:1615" --publish "${PORT:-8000}:8000" \
   --env SM75_CONSOLE_ROOT=/data --env SM75_SINGLE_CONTAINER=1 \
+  --env NCCL_P2P_LEVEL="${NCCL_P2P_LEVEL-SYS}" \
   --env MAX_JOBS=1 --env NVCC_THREADS=1 \
   --volume "$ULTRA_DATA_ROOT/console:/data" --volume "$cache:/data/cache" \
   --volume "$ULTRA_DATA_ROOT/home:/dsh/home" --volume "$ULTRA_DATA_ROOT/workspace:/dsh/workspace" \

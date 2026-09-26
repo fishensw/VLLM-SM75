@@ -151,5 +151,28 @@
     "releaseUrl": "https://github.com/fishensw/VLLM-SM75/releases/tag/v0.1.6",
     "scope": "source-code-and-validation-artifacts",
     "containerImagesPublished": false
+  },
+  "startupHotfix": {
+    "id": "nccl-p2p-sys-20260926",
+    "date": "2026-09-26",
+    "defaultEnvironment": {
+      "NCCL_P2P_LEVEL": "SYS"
+    },
+    "explicitOverridesPreserved": true,
+    "scope": [
+      "standard/full/fast image defaults",
+      "standard and Ultra public launchers",
+      "P-State entrypoint",
+      "Ultra native and single-container engine launch",
+      "configuration templates"
+    ],
+    "validation": {
+      "launchScriptTestsPassed": 9,
+      "ultraConfigAndStandaloneTestsPassed": 14,
+      "buildContractTestsPassed": 10,
+      "pstateDefaultAndOverrideChecksPassed": 2,
+      "gpuRerun": false,
+      "imagesRebuilt": false
+    }
   }
 }

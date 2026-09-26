@@ -6,6 +6,7 @@ COPY harness/package.json harness/package-lock.json ./
 RUN npm ci --omit=dev --no-audit --no-fund
 
 FROM ${VLLM_IMAGE}
+ENV NCCL_P2P_LEVEL=SYS
 ARG SOURCE_REVISION=source-archive
 LABEL org.opencontainers.image.title="VLLM-SM75 Ultra" org.opencontainers.image.revision="${SOURCE_REVISION}"
 COPY --from=harness /usr/local/bin/node /usr/local/bin/node

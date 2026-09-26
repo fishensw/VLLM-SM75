@@ -13,7 +13,7 @@ bash docker/build.sh
 EDITION=ultra bash docker/build.sh
 ULTRA_DATA_ROOT=/path/to/ultra MODEL_ROOT=/path/to/models \
   PSTATE_NVAPI_LIB=/usr/lib64/libnvidia-api.so.1 \
-  EDITION=ultra bash docker/run.sh
+  NCCL_P2P_LEVEL=SYS EDITION=ultra bash docker/run.sh
 ```
 
 输出为本地 `vllm-sm75:v<版本>` 与 `vllm-sm75:v<版本>-ultra`，尚无公开镜像发布声明。完整构建在独立构建机进行；生产 Unraid 未隔离导出仍受保护。fast/UI 迭代和参数说明统一见 [构建运行指南](../docker/BUILD.md)，不再维护按 RC 编号复制的命令。
