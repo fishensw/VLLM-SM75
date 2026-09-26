@@ -25,11 +25,18 @@
 | `GPU_KV_BYTES` | bytes / GPU；DFlash2 FP8 3288334336，AWQ 4294967296 | 显式 KV 配额覆盖自动 KV 预算；0 表示不传固定配额 |
 | `CPU_KV_GIB` | GiB / 整个 TP 服务；8 | 启动脚本要求整数；原生 CPU 前缀缓存，0 关闭。Ultra 面板可填写小数。宿主须另留权重加载、进程和系统内存 |
 | `HF_OVERRIDES` | JSON；`{"dtype":"float16"}` | YaRN 等模型覆盖，保留必要 dtype；不同模型字段不可照抄 |
+| `NCCL_P2P_LEVEL` | SYS | 标准版与 Ultra 默认使用 SYS；允许通过启动环境或 Ultra 运行配置显式覆盖 |
 | `VLLM_MARLIN_USE_ATOMIC_ADD` | 0 / 1；默认 0 | Marlin 归约方式；本轮正式参数对照为 1。变更后重新验收速度与输出 |
 | `VARIANT` | base / mtp / dflash2 | MTP 需匹配权重；DFlash2 必须配置 `DRAFT_MODEL` |
 | `POWER_MODE` | pstate / sleep；pstate | 与下文电源变量配套 |
 
 `bash docker/run.sh` 末尾也可附加原生 vLLM 参数；配置同一项时优先使用上表变量，避免重复参数。该启动脚本固定 TP4，其他拓扑应使用经过核对的原生启动配置或 Ultra 参数编辑器。
+
+### NCCL 通信默认值
+
+镜像、标准版启动脚本和 Ultra 引擎启动均默认设置 `NCCL_P2P_LEVEL=SYS`。已有 Ultra 运行配置无需重写；优先使用运行配置中的显式值，其次是容器环境，最后回退到 SYS。
+
+直接使用 `docker run` 或已有镜像时，添加 `-e NCCL_P2P_LEVEL=SYS`。Unraid 在原容器编辑页新增一个“变量”，键为 `NCCL_P2P_LEVEL`、值为 `SYS`；保留原图标、路径和其他可编辑字段。该项属于环境变量，不是 vLLM 命令行参数。修改容器环境后须重新创建容器；修改 Ultra 运行配置中的环境变量后须重新启动对应引擎。
 
 ## 模板 A：32K 基础推理
 
@@ -48,7 +55,7 @@ CONTAINER_NAME=sm75-dflash2-256k VARIANT=dflash2 FORMAT=fp8 \
   DRAFT_MODEL=/models/Qwen3.8-27B-DFlash2 \
   MAX_MODEL_LEN=262144 MAX_NUM_SEQS=4 MAX_NUM_BATCHED_TOKENS=8192 \
   GPU_KV_BYTES=3288334336 CPU_KV_GIB=8 POWER_MODE=pstate \
-  VLLM_MARLIN_USE_ATOMIC_ADD=1 \
+  NCCL_P2P_LEVEL=SYS VLLM_MARLIN_USE_ATOMIC_ADD=1 \
   bash docker/run.sh --mamba-cache-mode align \
   --no-disable-hybrid-kv-cache-manager --enable-prompt-tokens-details
 ```

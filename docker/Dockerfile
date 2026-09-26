@@ -47,6 +47,7 @@ RUN python3 /opt/flashqla-build/source/build_extension.py \
         sort -u)" = "sm_75"
 
 FROM sm75-base AS runtime
+ENV NCCL_P2P_LEVEL=SYS
 
 # Match the reviewed startup fixes rather than resolving a moving latest release.
 RUN uv pip install --system transformers==5.15.1
