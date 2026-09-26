@@ -199,6 +199,7 @@ export class Standalone {
         ["serve", ...args],
         {
           MALLOC_ARENA_MAX: "2",
+          NCCL_P2P_LEVEL: process.env.NCCL_P2P_LEVEL ?? "SYS",
           ...p.env,
           ...(cacheRuntime ? lmcacheEnvironment : {}),
           ...containerCache,

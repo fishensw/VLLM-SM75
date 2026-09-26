@@ -52,6 +52,7 @@ RUN python3 /opt/flashqla-build/source/build_extension.py \
 # 3) runtime base: transformers + patch + 预编译 flashqla .so + 软编译工具
 #    overlay .py 留到容器内 fast_compile.sh
 FROM sm75-base AS runtime
+ENV NCCL_P2P_LEVEL=SYS
 RUN uv pip install --system transformers==5.15.1
 ARG VLLM_SM75_RELEASE=vllm-sm75-fast
 ARG UPSTREAM_VLLM_COMMIT=ced6857afa0ea7b2e3f0846a62e1394e90f15607

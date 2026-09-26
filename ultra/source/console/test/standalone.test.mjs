@@ -114,3 +114,28 @@ test("DSH gets an explicit environment without inherited management credentials"
     123,
   );
 });
+
+test('single-container engine launch inherits NCCL default and explicit overrides', async () => {
+  const previous = process.env.NCCL_P2P_LEVEL;
+  try {
+    for (const [containerValue, profileEnv, expected] of [
+      [undefined, {}, 'SYS'], ['PIX', {}, 'PIX'],
+      ['PIX', {NCCL_P2P_LEVEL:'PHB'}, 'PHB'],
+    ]) {
+      if (containerValue === undefined) delete process.env.NCCL_P2P_LEVEL;
+      else process.env.NCCL_P2P_LEVEL = containerValue;
+      const manager = new Standalone('/tmp', 'test-key');
+      manager.prepareCache = () => ({});
+      const child = new EventEmitter();
+      manager.launch = async (_bin, _args, env) => {
+        assert.equal(env.NCCL_P2P_LEVEL, expected);
+        return child;
+      };
+      await manager.start({id:'nccl', args:['model'], port:8015, env:profileEnv});
+      child.emit('exit', 0);
+    }
+  } finally {
+    if (previous === undefined) delete process.env.NCCL_P2P_LEVEL;
+    else process.env.NCCL_P2P_LEVEL = previous;
+  }
+});

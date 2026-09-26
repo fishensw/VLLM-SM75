@@ -71,7 +71,7 @@ export function makeCommand(profile, apiKey, options={}) {
   const p=validateProfile(profile), name=`sm75-v015-test-${p.id}`;
   const layout=cacheLayout(p.cacheRoot,p.format);
   if (options.mkdir) for(const v of Object.values(layout)) fs.mkdirSync(v,{recursive:true});
-  const env={...p.env,VLLM_API_KEY:apiKey,VLLM_MONITOR:'1'};
+  const env={NCCL_P2P_LEVEL:process.env.NCCL_P2P_LEVEL ?? 'SYS',...p.env,VLLM_API_KEY:apiKey,VLLM_MONITOR:'1'};
   if (p.backend==='native') {
     const base=flashinferWorkspace(p.cacheRoot, options.mkdir);
     const args=lmcacheConnectorArgs(p);const i=args.indexOf('--port');if(i>=0)args[i+1]=String(p.port);else args.push('--port',String(p.port));
