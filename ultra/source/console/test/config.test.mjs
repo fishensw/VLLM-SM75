@@ -10,3 +10,23 @@ test('invalid profile refused before invoking docker',()=>{for(const bad of [{id
 test('workbench namespace gives each engine its own API port without host networking',()=>{const p={id:'fp8',args:['model'],port:8015,format:'fp8',cacheRoot:'/cache',backend:'docker'};const c=makeCommand(p,'secret',{engineNetwork:'container:sm75-v015-test-workbench'});assert.equal(c.args[c.args.indexOf('--network')+1],'container:sm75-v015-test-workbench');assert.equal(c.args[c.args.indexOf('--port')+1],'8015');assert.ok(!c.args.includes('--publish'));assert.throws(()=>makeCommand(p,'secret',{engineNetwork:'host'}));});
 
 test('API key cannot be overridden with equals syntax',()=>{assert.throws(()=>validateProfile({...p,args:['model','--api-key=override']}),/API key/);});
+
+test('engine commands default NCCL to SYS and respect container/profile overrides', () => {
+  const previous = process.env.NCCL_P2P_LEVEL;
+  try {
+    for (const backend of ['native', 'docker']) {
+      delete process.env.NCCL_P2P_LEVEL;
+      const defaults = makeCommand({...p, backend, env:{}}, 'test-key');
+      assert.equal(defaults.env.NCCL_P2P_LEVEL, 'SYS');
+      if (backend === 'docker') assert.ok(defaults.args.includes('NCCL_P2P_LEVEL=SYS'));
+      process.env.NCCL_P2P_LEVEL = 'PIX';
+      assert.equal(makeCommand({...p, backend, env:{}}, 'test-key').env.NCCL_P2P_LEVEL, 'PIX');
+      const custom = makeCommand({...p, backend, env:{NCCL_P2P_LEVEL:'PHB'}}, 'test-key');
+      assert.equal(custom.env.NCCL_P2P_LEVEL, 'PHB');
+      if (backend === 'docker') assert.ok(custom.args.includes('NCCL_P2P_LEVEL=PHB'));
+    }
+  } finally {
+    if (previous === undefined) delete process.env.NCCL_P2P_LEVEL;
+    else process.env.NCCL_P2P_LEVEL = previous;
+  }
+});

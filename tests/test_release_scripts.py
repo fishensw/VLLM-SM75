@@ -25,6 +25,7 @@ class ReleaseScripts(unittest.TestCase):
                    'COMMAND_LOG': logfile.as_posix(), 'SOURCE_REVISION': 'test-source',
                    'VLLM_API_KEY': 'synthetic-test-key', 'VLLM_SM75_CACHE_ROOT': '/tmp/sm75-test-cache',
                    **settings}
+            env = {key: value for key, value in env.items() if value is not None}
             result = subprocess.run([BASH, str(ROOT / script)], env=env, cwd=ROOT,
                                     text=True, capture_output=True)
             calls = logfile.read_text().splitlines() if logfile.exists() else []
@@ -72,6 +73,19 @@ class ReleaseScripts(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         kv = json.loads(args[args.index('--kv-transfer-config')+1])
         self.assertEqual(kv['kv_connector_extra_config']['cpu_bytes_to_use'], 2 * 1024**3)
+
+    def test_nccl_default_and_override_reach_launchers(self):
+        for script, edition in [('docker/run.sh', 'standard'),
+                                ('docker/run.sh', 'ultra'),
+                                ('docker/helpers/run-ultra.sh', 'ultra')]:
+            for value, expected in [(None, 'SYS'), ('PIX', 'PIX')]:
+                with self.subTest(script=script, edition=edition, value=value):
+                    result, args = self.invoke(script, EDITION=edition,
+                        POWER_MODE='sleep', AUTO_SLEEP_IDLE_TIMEOUT='0',
+                        ULTRA_DATA_ROOT='/tmp/sm75-test-ultra', MODEL_ROOT='/tmp',
+                        NCCL_P2P_LEVEL=value)
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    self.assertEqual(args.count('NCCL_P2P_LEVEL=' + expected), 1)
 
     def test_invalid_mode_cannot_call_docker(self):
         result, args = self.invoke('docker/build.sh', EDITION='unknown')
